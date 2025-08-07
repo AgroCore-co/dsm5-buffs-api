@@ -1,35 +1,41 @@
-// @ts-check
-import eslint from '@eslint/js';
-import eslintPluginPrettierRecommended from 'eslint-plugin-prettier/recommended';
-import globals from 'globals';
-import tseslint from 'typescript-eslint';
+import globals from "globals";
+import js from "@eslint/js";
+import typescriptEslint from "typescript-eslint";
+import prettierConfig from "eslint-config-prettier";
 
-export default tseslint.config(
+export default [
+  // Configuração global e para arquivos JavaScript
   {
-    ignores: ['eslint.config.mjs'],
-  },
-  eslint.configs.recommended,
-  ...tseslint.configs.recommendedTypeChecked,
-  eslintPluginPrettierRecommended,
-  {
+    files: ["**/*.js"],
+    ...js.configs.recommended,
     languageOptions: {
       globals: {
         ...globals.node,
-        ...globals.jest,
       },
-      ecmaVersion: 5,
-      sourceType: 'module',
+    },
+  },
+
+  // Configuração principal para arquivos TypeScript
+  {
+    files: ["**/*.ts"], // Aplica apenas a arquivos .ts
+    extends: [
+      ...typescriptEslint.configs.recommendedTypeChecked, // <--- Usa as regras que precisam de tipos
+      ...typescriptEslint.configs.stylisticTypeChecked,
+    ],
+    languageOptions: {
       parserOptions: {
-        projectService: true,
+        project: true, // <--- A MÁGICA ACONTECE AQUI!
         tsconfigRootDir: import.meta.dirname,
       },
     },
-  },
-  {
     rules: {
-      '@typescript-eslint/no-explicit-any': 'off',
-      '@typescript-eslint/no-floating-promises': 'warn',
-      '@typescript-eslint/no-unsafe-argument': 'warn'
+      // Você pode desativar regras específicas aqui, se precisar
+      "@typescript-eslint/no-explicit-any": "off",
+      "@typescript-eslint/no-unsafe-argument": "off", // Pode ser útil no início
+      "@typescript-eslint/no-unsafe-assignment": "off", // Pode ser útil no início
     },
   },
-);
+
+  // Desativa regras de estilo que entram em conflito com o Prettier
+  prettierConfig,
+];

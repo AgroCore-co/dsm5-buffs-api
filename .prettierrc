@@ -1,4 +1,15 @@
 {
   "singleQuote": true,
-  "trailingComma": "all"
+  "trailingComma": "all",
+  "bracketSpacing": true,
+  "bracketSameLine": false,
+  "printWidth": 120,
+  "importOrder": [
+    "<THIRD_PARTY_MODULES>",
+    "^@nestjs/(.*)$",
+    "^src/(.*)$",
+    "^[./]"
+  ],
+  "importOrderSeparation": true,
+  "importOrderSortSpecifiers": true
 }
