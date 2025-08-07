@@ -4,6 +4,7 @@ import { AppService } from './app.service';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { UserModule } from './user/user.module';
+import { BuffaloModule } from './buffalo/buffalo.module';
 
 @Module({
   imports: [
@@ -27,6 +28,7 @@ import { UserModule } from './user/user.module';
       }),
     }),
     UserModule,
+    BuffaloModule,
   ],
   controllers: [AppController],
   providers: [AppService],
