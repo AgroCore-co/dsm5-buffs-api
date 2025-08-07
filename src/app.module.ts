@@ -5,6 +5,7 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { UserModule } from './user/user.module';
 import { BuffaloModule } from './buffalo/buffalo.module';
+import { LotModule } from './lot/lot.module';
 
 @Module({
   imports: [
@@ -12,7 +13,7 @@ import { BuffaloModule } from './buffalo/buffalo.module';
     ConfigModule.forRoot({
       isGlobal: true, // Torna as variáveis de ambiente disponíveis globalmente
     }),
-    // 2. Módulo de Conexão com o Banco de Dados (PostgreSQL)
+    // 2. Módulo de Conexão com o Banco de Dados (PostgreSQL/Supabase)
     TypeOrmModule.forRootAsync({
       imports: [ConfigModule],
       inject: [ConfigService],
@@ -24,11 +25,15 @@ import { BuffaloModule } from './buffalo/buffalo.module';
         password: configService.get<string>('DB_PASSWORD'),
         database: configService.get<string>('DB_DATABASE'),
         entities: [__dirname + '/../**/*.entity{.ts,.js}'], // Onde encontrar as entidades
-        synchronize: true, // ATENÇÃO: true apenas para desenvolvimento!
+        synchronize: true, // ATENÇÃO: true apenas para desenvolvimento
+        ssl: {
+          rejectUnauthorized: false, // Necessário para conexões Supabase
+        },
       }),
     }),
     UserModule,
     BuffaloModule,
+    LotModule,
   ],
   controllers: [AppController],
   providers: [AppService],
