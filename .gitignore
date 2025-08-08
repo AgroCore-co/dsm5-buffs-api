@@ -4,6 +4,9 @@
 /build
 /tmp
 
+#Front para testes
+public
+
 # Logs
 logs
 *.log
