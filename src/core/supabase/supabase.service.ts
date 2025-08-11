@@ -11,7 +11,7 @@ export class SupabaseService {
     const supabaseKey = this.configService.get<string>('SUPABASE_KEY');
 
     if (!supabaseUrl || !supabaseKey) {
-      throw new Error('Supabase URL and Key must be provided!');
+      throw new Error('Supabase URL e Key deve ser fornecido!');
     }
 
     this.supabase = createClient(supabaseUrl, supabaseKey);

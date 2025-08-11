@@ -1,6 +1,8 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
 import { SupabaseClient } from '@supabase/supabase-js';
 import { SupabaseService } from '../../core/supabase/supabase.service';
+import { CreateUsuarioDto } from './dto/create-usuario.dto';
+import { UpdateUsuarioDto } from './dto/update-usuario.dto';
 
 @Injectable()
 export class UsuarioService {
@@ -10,7 +12,40 @@ export class UsuarioService {
     this.supabase = this.supabaseService.getClient();
   }
 
-  // O método findAll continua o mesmo
+  /**
+   * Cria um novo perfil de usuário associado a um ID de autenticação.
+   * @param createUsuarioDto - Dados para o novo perfil.
+   * @param authId - O ID de autenticação (sub) do usuário logado.
+   * @returns O perfil do usuário recém-criado.
+   */
+  async create(createUsuarioDto: CreateUsuarioDto, authId: string) {
+    // Verifica se já existe um perfil para este usuário autenticado
+    const { data: existingProfile } = await this.supabase
+      .from('Usuario')
+      .select('id_usuario')
+      .eq('auth_id', authId)
+      .single();
+
+    if (existingProfile) {
+      throw new ConflictException('Este usuário já possui um perfil cadastrado.');
+    }
+
+    const { data, error } = await this.supabase
+      .from('Usuario')
+      .insert([{ ...createUsuarioDto, auth_id: authId }])
+      .select()
+      .single();
+
+    if (error) {
+      throw new Error(error.message);
+    }
+    return data;
+  }
+
+  /**
+   * Retorna uma lista de todos os usuários.
+   * @returns Um array de todos os usuários.
+   */
   async findAll() {
     const { data, error } = await this.supabase.from('Usuario').select('*');
     if (error) {
@@ -19,35 +54,87 @@ export class UsuarioService {
     return data;
   }
 
-  // MÉTODO MODIFICADO PARA DEPURAÇÃO
+  /**
+   * Encontra um perfil de usuário usando o ID de autenticação do Supabase (o 'sub' do token).
+   * @param id - O ID de autenticação (UUID) do usuário.
+   * @returns O perfil do usuário correspondente.
+   */
   async findOneById(id: string) {
-    // 1. Adicionamos um log para ver o ID que está chegando
-    console.log(`--- INICIANDO BUSCA NO SERVIÇO ---`);
-    console.log(`Procurando no banco pelo auth_id: ${id}`);
-
-    // 2. Removemos o .single() para ver o resultado como um array
     const { data, error } = await this.supabase
       .from('Usuario')
       .select('*')
-      .eq('auth_id', id);
+      .eq('auth_id', id)
+      .single();
 
-    // 3. Adicionamos logs para ver a resposta exata do Supabase
-    console.log(`Resposta do Supabase (data):`, data);
-    console.log(`Resposta do Supabase (error):`, error);
-    console.log(`--- FIM DA BUSCA NO SERVIÇO ---`);
-
-    // Lógica original para tratar a resposta
     if (error) {
-      throw new Error(`Erro retornado pelo Supabase: ${error.message}`);
+      if (error.code === 'PGRST116') {
+        throw new NotFoundException(`Nenhum perfil de usuário encontrado para o ID de autenticação: ${id}`);
+      }
+      throw new Error(error.message);
     }
+    return data;
+  }
 
-    if (!data || data.length === 0) {
-      throw new NotFoundException(
-        `Nenhum perfil de usuário encontrado para o ID: ${id}`,
-      );
+  /**
+   * Encontra um usuário pela sua chave primária (id_usuario).
+   * @param id - O ID numérico (PK) do usuário.
+   * @returns O perfil do usuário correspondente.
+   */
+  async findOne(id: number) {
+    const { data, error } = await this.supabase
+      .from('Usuario')
+      .select('*')
+      .eq('id_usuario', id)
+      .single();
+
+    if (error) {
+      if (error.code === 'PGRST116') {
+        throw new NotFoundException(`Usuário com ID ${id} não encontrado.`);
+      }
+      throw new Error(error.message);
     }
+    return data;
+  }
 
-    // Se tudo deu certo, retorna o primeiro item do array
-    return data[0];
+  /**
+   * Atualiza os dados de um usuário existente.
+   * @param id - O ID numérico (PK) do usuário a ser atualizado.
+   * @param updateUsuarioDto - Os dados a serem atualizados.
+   * @returns O perfil do usuário atualizado.
+   */
+  async update(id: number, updateUsuarioDto: UpdateUsuarioDto) {
+    const { data, error } = await this.supabase
+      .from('Usuario')
+      .update(updateUsuarioDto)
+      .eq('id_usuario', id)
+      .select()
+      .single();
+
+    if (error) {
+      if (error.code === 'PGRST116') {
+        throw new NotFoundException(`Usuário com ID ${id} não encontrado para atualização.`);
+      }
+      throw new Error(error.message);
+    }
+    return data;
+  }
+
+  /**
+   * Remove um usuário do banco de dados.
+   * @param id - O ID numérico (PK) do usuário a ser removido.
+   * @returns Uma mensagem de sucesso.
+   */
+  async remove(id: number) {
+    const { error } = await this.supabase
+      .from('Usuario')
+      .delete()
+      .eq('id_usuario', id);
+
+    if (error) {
+      // O Supabase pode não retornar um erro específico se o ID não existir,
+      // então a verificação de erro genérico é suficiente aqui.
+      throw new Error(error.message);
+    }
+    return { message: `Usuário com ID ${id} deletado com sucesso.` };
   }
 }

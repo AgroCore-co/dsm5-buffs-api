@@ -1,0 +1,53 @@
+import { ApiProperty } from '@nestjs/swagger';
+import { IsString, IsEmail, IsOptional, IsNotEmpty, IsInt, MaxLength } from 'class-validator';
+
+export class CreateUsuarioDto {
+  @ApiProperty({
+    description: 'Nome completo do usuário.',
+    example: 'Fulano de Tal',
+    required: true,
+  })
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(100)
+  nome: string;
+
+  @ApiProperty({
+    description: 'Número de telefone para contato.',
+    example: '11999998888',
+    required: false,
+  })
+  @IsString()
+  @IsOptional()
+  @MaxLength(15)
+  telefone?: string;
+
+  @ApiProperty({
+    description: 'Endereço de e-mail único do usuário.',
+    example: 'fulanodetal@example.com',
+    required: true,
+  })
+  @IsEmail()
+  @IsNotEmpty()
+  @MaxLength(100)
+  email: string;
+
+  @ApiProperty({
+    description: 'Cargo ou função do usuário na organização.',
+    example: 'Gerente de Fazenda',
+    required: false,
+  })
+  @IsString()
+  @IsOptional()
+  @MaxLength(50)
+  cargo?: string;
+
+  @ApiProperty({
+    description: 'ID do endereço associado ao usuário. Deve corresponder a um endereço já cadastrado.',
+    example: 1,
+    required: false,
+  })
+  @IsInt()
+  @IsOptional()
+  id_endereco?: number;
+}

@@ -6,27 +6,24 @@ import { AppModule } from './app.module';
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
-  // Configuração global de validação
   app.useGlobalPipes(new ValidationPipe({
     whitelist: true,
     forbidNonWhitelisted: true,
     transform: true,
   }));
 
-  // Configuração do Swagger
   const config = new DocumentBuilder()
     .setTitle('DSM5 Buffs API')
     .setDescription('API para gerenciamento de búfalos - Sistema de controle pecuário')
     .setVersion('1.0')
-    .addTag('users', 'Operações relacionadas aos usuários')
-    .addTag('buffalos', 'Operações relacionadas aos búfalos')
-    .addTag('lots', 'Operações relacionadas aos lotes')
+    .addTag('usuarios', 'Operações relacionadas aos perfis de usuário')
+    // Adiciona o botão de autorização global para o token JWT
+    .addBearerAuth()
     .build();
 
   const document = SwaggerModule.createDocument(app, config);
   SwaggerModule.setup('api', app, document);
 
-  // Configuração de CORS
   app.enableCors({
     origin: ['http://localhost:3000', 'http://localhost:3001'],
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
