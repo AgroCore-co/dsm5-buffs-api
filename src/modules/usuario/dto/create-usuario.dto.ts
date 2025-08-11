@@ -1,6 +1,10 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { IsString, IsEmail, IsOptional, IsNotEmpty, IsInt, MaxLength } from 'class-validator';
 
+// Este DTO define a estrutura de dados para criar um novo usuário.
+// Usamos 'class-validator' para as regras de validação e '@ApiProperty'
+// para que o Swagger possa documentar cada campo da API.
+
 export class CreateUsuarioDto {
   @ApiProperty({
     description: 'Nome completo do usuário.',

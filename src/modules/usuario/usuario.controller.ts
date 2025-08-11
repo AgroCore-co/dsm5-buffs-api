@@ -6,7 +6,7 @@ import { SupabaseAuthGuard } from '../auth/auth.guard';
 import { User } from '../auth/user.decorator';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 
-@ApiTags('usuarios')
+@ApiTags('Usuários')
 @Controller('usuarios')
 export class UsuarioController {
   constructor(private readonly usuarioService: UsuarioService) {}
