@@ -9,26 +9,41 @@ async function bootstrap() {
   const swaggerDescription = `
   Documentação da API para o sistema de gerenciamento de búfalos (BUFFS).
 
-  ## Autenticação
+  ## Guia Completo: Criando e Autenticando um Usuário
 
-  Esta API utiliza autenticação via JWT (Bearer Token) fornecido pelo Supabase.
-  Para obter um token de acesso, o cliente (frontend/mobile) deve realizar a autenticação diretamente com a API do Supabase usando o SDK apropriado.
+  Esta API é desacoplada da autenticação. O fluxo completo para um novo usuário é gerenciado pelo cliente (frontend) em conjunto com o Supabase e esta API.
 
-  **Fluxo:**
-  1. O usuário faz login no aplicativo cliente usando e-mail e senha.
-  2. O cliente usa o SDK do Supabase para autenticar essas credenciais.
-  3. Após o sucesso, o Supabase retorna um \`access_token\` (JWT).
-  4. Para todas as requisições a esta API que exigem autenticação, inclua o token no cabeçalho \`Authorization\`.
+  ---
 
-  **Exemplo de Cabeçalho:**
-  \`\`\`
-  Authorization: Bearer <seu_token_jwt_do_supabase>
-  \`\`\`
+  ### **Etapa 1: Cadastro (Supabase Auth)**
+  O usuário se cadastra no frontend. O frontend **NÃO** chama a nossa API para isso. Ele usa o SDK do Supabase.
+  - **Função a ser chamada no frontend:** \`supabase.auth.signUp({ email, password })\`
+  - **Resultado:** Uma "conta de acesso" é criada no Supabase. Se a confirmação de email estiver ativa, um email será enviado.
+
+  ---
+
+  ### **Etapa 2: Login e Obtenção do Token (Supabase Auth)**
+  Após confirmar o email (se aplicável), o usuário faz login.
+  - **Função a ser chamada no frontend:** \`supabase.auth.signInWithPassword()\` ou \`signInWithOAuth({ provider: 'google' })\`
+  - **Resultado:** O Supabase retorna uma sessão válida contendo um **access_token (JWT)**. Este token é a chave para acessar nossa API.
+
+  ---
+
+  ### **Etapa 3: Criação do Perfil de Dados (Nossa API)**
+  Com o token em mãos, o frontend faz a primeira chamada para nossa API para criar o perfil do usuário.
+  - **Endpoint a ser chamado:** \`POST /usuarios\`
+  - **Autenticação:** A requisição **DEVE** conter o cabeçalho \`Authorization: Bearer <seu_token_jwt>\`.
+  - **Corpo da Requisição:** O corpo deve conter os dados do perfil (nome, telefone, etc.), **MAS NÃO DEVE CONTER O CAMPO 'EMAIL'**, pois ele é extraído automaticamente do token.
+
+  ---
+
+  ### **Etapa 4: Requisições Autenticadas (Nossa API)**
+  Para todas as outras operações em endpoints protegidos (ex: \`GET /usuarios/me\`), o frontend deve continuar enviando o cabeçalho \`Authorization: Bearer <seu_token_jwt>\`.
   `;
 
   const config = new DocumentBuilder()
     .setTitle('BUFFS API')
-    .setDescription(swaggerDescription) // Usamos a nova descrição detalhada
+    .setDescription(swaggerDescription)
     .setVersion('1.0')
     .addTag('Usuários', 'Gerenciamento de perfis de usuários')
     .addTag('Rebanho - Búfalos', 'Gerenciamento de búfalos individuais')

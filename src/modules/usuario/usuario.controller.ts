@@ -13,17 +13,30 @@ export class UsuarioController {
 
   @Post()
   @UseGuards(SupabaseAuthGuard)
-  @ApiBearerAuth() // Indica que este endpoint requer um token JWT
-  @ApiOperation({ summary: 'Cria um novo perfil de usuário' })
+  @ApiBearerAuth('JWT-auth') // O nome 'JWT-auth' corresponde ao definido no main.ts
+  @ApiOperation({
+    summary: 'Cria o perfil de dados de um novo usuário',
+    description: `Cria o perfil de dados (nome, cargo, etc.) para um usuário **previamente autenticado**. 
+    Este endpoint deve ser chamado **após** o usuário ter se cadastrado via Supabase Auth e ter feito login pela primeira vez.
+    O \`email\` do usuário é extraído automaticamente do token JWT. **Não inclua o campo \`email\` no corpo da requisição**.`,
+  })
   @ApiResponse({ status: 201, description: 'O perfil foi criado com sucesso.' })
-  @ApiResponse({ status: 401, description: 'Não autorizado.' })
-  @ApiResponse({ status: 409, description: 'Este usuário já possui um perfil.' })
+  @ApiResponse({ status: 400, description: 'Requisição inválida (ex: id_endereco não existe).' })
+  @ApiResponse({ status: 401, description: 'Não autorizado. Token JWT inválido ou ausente.' })
+  @ApiResponse({ status: 409, description: 'Este usuário já possui um perfil cadastrado.' })
   create(@Body() createUsuarioDto: CreateUsuarioDto, @User() user: any) {
-    return this.usuarioService.create(createUsuarioDto, user.sub);
+    const dadosCompletosParaCriacao = {
+      ...createUsuarioDto,
+      email: user.email,
+    };
+    return this.usuarioService.create(dadosCompletosParaCriacao, user.sub);
   }
 
   @Get()
-  @ApiOperation({ summary: 'Lista todos os perfis de usuário' })
+  @ApiOperation({
+    summary: 'Lista todos os perfis de usuário',
+    description: 'Retorna uma lista de todos os perfis de usuário cadastrados no banco de dados. Este é um endpoint público.',
+  })
   @ApiResponse({ status: 200, description: 'Lista de usuários retornada com sucesso.' })
   findAll() {
     return this.usuarioService.findAll();
@@ -31,38 +44,52 @@ export class UsuarioController {
 
   @Get('me')
   @UseGuards(SupabaseAuthGuard)
-  @ApiBearerAuth()
-  @ApiOperation({ summary: 'Retorna o perfil do usuário logado' })
+  @ApiBearerAuth('JWT-auth')
+  @ApiOperation({
+    summary: 'Retorna o perfil do usuário logado',
+    description: 'Busca e retorna o perfil de dados completo do usuário que está fazendo a requisição, com base no token JWT fornecido.',
+  })
   @ApiResponse({ status: 200, description: 'Perfil do usuário retornado com sucesso.' })
   @ApiResponse({ status: 401, description: 'Não autorizado.' })
-  @ApiResponse({ status: 404, description: 'Perfil não encontrado.' })
+  @ApiResponse({ status: 404, description: 'Perfil não encontrado para o usuário autenticado.' })
   findMyProfile(@User() user: any) {
     return this.usuarioService.findOneById(user.sub);
   }
 
   @Get(':id')
-  @ApiOperation({ summary: 'Busca um perfil de usuário pelo ID' })
+  @ApiOperation({
+    summary: 'Busca um perfil de usuário pelo ID numérico',
+    description: 'Retorna um perfil de usuário específico com base no seu ID primário (numérico) no banco de dados. Este é um endpoint público.',
+  })
   @ApiResponse({ status: 200, description: 'Perfil do usuário retornado com sucesso.' })
-  @ApiResponse({ status: 404, description: 'Usuário não encontrado.' })
+  @ApiResponse({ status: 404, description: 'Usuário com o ID fornecido não encontrado.' })
   findOne(@Param('id', ParseIntPipe) id: number) {
     return this.usuarioService.findOne(id);
   }
 
   @Patch(':id')
   @UseGuards(SupabaseAuthGuard)
-  @ApiBearerAuth()
-  @ApiOperation({ summary: 'Atualiza um perfil de usuário' })
+  @ApiBearerAuth('JWT-auth')
+  @ApiOperation({
+    summary: 'Atualiza um perfil de usuário',
+    description:
+      'Atualiza os dados de um perfil de usuário existente. Requer autenticação. (Nota: A lógica de permissão, como permitir que apenas o próprio usuário ou um admin atualize, deve ser implementada no futuro).',
+  })
   @ApiResponse({ status: 200, description: 'Perfil atualizado com sucesso.' })
   @ApiResponse({ status: 401, description: 'Não autorizado.' })
-  @ApiResponse({ status: 404, description: 'Usuário não encontrado.' })
+  @ApiResponse({ status: 404, description: 'Usuário não encontrado para atualização.' })
   update(@Param('id', ParseIntPipe) id: number, @Body() updateUsuarioDto: UpdateUsuarioDto) {
     return this.usuarioService.update(id, updateUsuarioDto);
   }
 
   @Delete(':id')
   @UseGuards(SupabaseAuthGuard)
-  @ApiBearerAuth()
-  @ApiOperation({ summary: 'Deleta um perfil de usuário' })
+  @ApiBearerAuth('JWT-auth')
+  @ApiOperation({
+    summary: 'Deleta um perfil de usuário',
+    description:
+      'Remove um perfil de usuário do banco de dados. Esta ação não pode ser desfeita. Requer autenticação. (Nota: A lógica de permissão deve ser implementada no futuro).',
+  })
   @ApiResponse({ status: 200, description: 'Usuário deletado com sucesso.' })
   @ApiResponse({ status: 401, description: 'Não autorizado.' })
   @ApiResponse({ status: 404, description: 'Usuário não encontrado.' })

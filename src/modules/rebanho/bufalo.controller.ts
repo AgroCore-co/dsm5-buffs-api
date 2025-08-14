@@ -23,7 +23,11 @@ export class BufaloController {
 
   @Get()
   @ApiOperation({ summary: 'Listar todos os búfalos do rebanho' })
-  @ApiResponse({ status: 200, description: 'Lista de búfalos retornada com sucesso.' })
+  @ApiResponse({
+    status: 200,
+    description: 'Lista de búfalos retornada com sucesso.',
+  })
+  @ApiResponse({ status: 401, description: 'Não autorizado.' })
   findAll() {
     return this.bufaloService.findAll();
   }
@@ -32,6 +36,7 @@ export class BufaloController {
   @ApiOperation({ summary: 'Buscar um búfalo específico pelo ID' })
   @ApiParam({ name: 'id', description: 'ID do búfalo', type: Number })
   @ApiResponse({ status: 200, description: 'Dados do búfalo.' })
+  @ApiResponse({ status: 401, description: 'Não autorizado.' })
   @ApiResponse({ status: 404, description: 'Búfalo não encontrado.' })
   findOne(@Param('id', ParseIntPipe) id: number) {
     return this.bufaloService.findOne(id);
@@ -39,8 +44,13 @@ export class BufaloController {
 
   @Patch(':id')
   @ApiOperation({ summary: 'Atualizar os dados de um búfalo' })
-  @ApiParam({ name: 'id', description: 'ID do búfalo a ser atualizado', type: Number })
+  @ApiParam({
+    name: 'id',
+    description: 'ID do búfalo a ser atualizado',
+    type: Number,
+  })
   @ApiResponse({ status: 200, description: 'Búfalo atualizado com sucesso.' })
+  @ApiResponse({ status: 401, description: 'Não autorizado.' })
   @ApiResponse({ status: 404, description: 'Búfalo não encontrado.' })
   update(@Param('id', ParseIntPipe) id: number, @Body() updateBufaloDto: UpdateBufaloDto) {
     return this.bufaloService.update(id, updateBufaloDto);
@@ -48,8 +58,13 @@ export class BufaloController {
 
   @Delete(':id')
   @ApiOperation({ summary: 'Remover um búfalo do rebanho' })
-  @ApiParam({ name: 'id', description: 'ID do búfalo a ser removido', type: Number })
+  @ApiParam({
+    name: 'id',
+    description: 'ID do búfalo a ser removido',
+    type: Number,
+  })
   @ApiResponse({ status: 204, description: 'Búfalo removido com sucesso.' })
+  @ApiResponse({ status: 401, description: 'Não autorizado.' })
   @ApiResponse({ status: 404, description: 'Búfalo não encontrado.' })
   remove(@Param('id', ParseIntPipe) id: number) {
     return this.bufaloService.remove(id);

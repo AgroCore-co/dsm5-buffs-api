@@ -1,5 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsString, IsEmail, IsOptional, IsNotEmpty, IsInt, MaxLength } from 'class-validator';
+import { IsString, IsOptional, IsNotEmpty, IsInt, MaxLength } from 'class-validator';
 
 // Este DTO define a estrutura de dados para criar um novo usuário.
 // Usamos 'class-validator' para as regras de validação e '@ApiProperty'
@@ -25,16 +25,6 @@ export class CreateUsuarioDto {
   @IsOptional()
   @MaxLength(15)
   telefone?: string;
-
-  @ApiProperty({
-    description: 'Endereço de e-mail único do usuário.',
-    example: 'fulanodetal@example.com',
-    required: true,
-  })
-  @IsEmail()
-  @IsNotEmpty()
-  @MaxLength(100)
-  email: string;
 
   @ApiProperty({
     description: 'Cargo ou função do usuário na organização.',
