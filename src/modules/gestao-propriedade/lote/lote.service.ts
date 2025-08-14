@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { SupabaseClient } from '@supabase/supabase-js';
-import { SupabaseService } from '../../core/supabase/supabase.service';
-import { CreateLoteDto } from './dto/create-lote.dto';
+import { SupabaseService } from '../../../core/supabase/supabase.service';
+import { CreateLoteDto } from './dto/create-lote.dto'; 
 
 @Injectable()
 export class LoteService {

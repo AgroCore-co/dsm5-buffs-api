@@ -6,7 +6,7 @@ import { SupabaseModule } from './core/supabase/supabase.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { UsuarioModule } from './modules/usuario/usuario.module';
 import { RebanhoModule } from './modules/rebanho/bufalo.module';
-import { GestaoPropriedadeModule } from './modules/gestao-propriedade/lote.module';
+import { GestaoPropriedadeModule } from './modules/gestao-propriedade/gestao-propriedade.module';
 
 @Module({
   imports: [
@@ -16,7 +16,6 @@ import { GestaoPropriedadeModule } from './modules/gestao-propriedade/lote.modul
     UsuarioModule,
     RebanhoModule,
     GestaoPropriedadeModule,
-
   ],
   controllers: [AppController],
   providers: [AppService],
