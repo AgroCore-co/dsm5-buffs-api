@@ -13,7 +13,7 @@ export class CreateGrupoDto {
   nome_grupo: string;
 
   @ApiProperty({
-    description: 'Nível de maturidade do grupo (B-Bebê, N-Novilho, V-Vaca, T-Touro).',
+    description: 'Nível de maturidade do grupo (B-Bezerro, N-Novilho, V-Vaca, T-Touro).',
     example: 'N',
     required: false,
     maxLength: 1,

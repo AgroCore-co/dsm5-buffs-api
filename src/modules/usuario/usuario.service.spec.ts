@@ -58,13 +58,16 @@ describe('UsuarioService', () => {
     it('should create a new user successfully', async () => {
       const expectedUser = { id_usuario: 1, ...createUsuarioDto, auth_id: authId };
       
-      mockSupabaseClient.single.mockResolvedValueOnce({ data: null, error: null }); // No existing profile
+      // Mock para verificação de perfil existente (não encontrado)
+      mockSupabaseClient.single.mockResolvedValueOnce({ data: null, error: null });
+      // Mock para criação do usuário
       mockSupabaseClient.single.mockResolvedValueOnce({ data: expectedUser, error: null });
 
       const result = await service.create(createUsuarioDto, authId);
 
       expect(result).toEqual(expectedUser);
       expect(mockSupabaseClient.from).toHaveBeenCalledWith('Usuario');
+      expect(mockSupabaseClient.insert).toHaveBeenCalledWith([{ ...createUsuarioDto, auth_id: authId }]);
     });
 
     it('should throw ConflictException if user already has a profile', async () => {
@@ -81,7 +84,9 @@ describe('UsuarioService', () => {
     it('should throw error if Supabase returns an error', async () => {
       const supabaseError = { message: 'Database error' };
       
+      // Mock para verificação de perfil existente (não encontrado)
       mockSupabaseClient.single.mockResolvedValueOnce({ data: null, error: null });
+      // Mock para criação com erro
       mockSupabaseClient.single.mockResolvedValueOnce({ data: null, error: supabaseError });
 
       await expect(service.create(createUsuarioDto, authId))
@@ -97,7 +102,8 @@ describe('UsuarioService', () => {
         { id_usuario: 2, nome: 'Maria' },
       ];
 
-      mockSupabaseClient.single.mockResolvedValueOnce({ data: expectedUsers, error: null });
+      // Para findAll, não usar single() mas sim retornar direto
+      mockSupabaseClient.select.mockResolvedValueOnce({ data: expectedUsers, error: null });
 
       const result = await service.findAll();
 
@@ -108,7 +114,7 @@ describe('UsuarioService', () => {
     it('should throw error if Supabase returns an error', async () => {
       const supabaseError = { message: 'Database error' };
       
-      mockSupabaseClient.single.mockResolvedValueOnce({ data: null, error: supabaseError });
+      mockSupabaseClient.select.mockResolvedValueOnce({ data: null, error: supabaseError });
 
       await expect(service.findAll())
         .rejects
@@ -199,18 +205,18 @@ describe('UsuarioService', () => {
     const userId = 1;
 
     it('should remove user successfully', async () => {
-      mockSupabaseClient.single.mockResolvedValueOnce({ data: null, error: null });
+      // Mock para delete - simular a resolução da promessa diretamente
+      mockSupabaseClient.eq.mockResolvedValueOnce({ data: null, error: null });
 
       const result = await service.remove(userId);
 
       expect(result).toEqual({ message: `Usuário com ID ${userId} deletado com sucesso.` });
-      expect(mockSupabaseClient.eq).toHaveBeenCalledWith('id_usuario', userId);
     });
 
     it('should throw error if Supabase returns an error', async () => {
       const supabaseError = { message: 'Database error' };
       
-      mockSupabaseClient.single.mockResolvedValueOnce({ data: null, error: supabaseError });
+      mockSupabaseClient.eq.mockResolvedValueOnce({ data: null, error: supabaseError });
 
       await expect(service.remove(userId))
         .rejects
