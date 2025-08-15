@@ -7,7 +7,7 @@ import { SupabaseAuthGuard } from '../../auth/auth.guard';
 
 @ApiBearerAuth('JWT-auth')
 @UseGuards(SupabaseAuthGuard)
-@ApiTags('Gestão - Endereços')
+@ApiTags('Gestão de Propriedade - Endereços')
 @Controller('enderecos')
 export class EnderecoController {
   constructor(private readonly enderecoService: EnderecoService) {}
