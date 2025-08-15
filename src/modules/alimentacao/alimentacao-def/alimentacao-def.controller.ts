@@ -1,0 +1,80 @@
+import { Controller, Get, Post, Body, UseGuards, Param, Patch, Delete, ParseIntPipe } from '@nestjs/common';
+import { AlimentacaoDefService } from './alimentacao-def.service';
+import { CreateAlimentacaoDefDto } from './dto/create-alimentacao-def.dto';
+import { UpdateAlimentacaoDefDto } from './dto/update-alimentacao-def.dto';
+import { ApiTags, ApiBearerAuth, ApiOperation, ApiResponse, ApiParam } from '@nestjs/swagger';
+import { SupabaseAuthGuard } from '../../auth/auth.guard';
+
+@ApiBearerAuth('JWT-auth')
+@UseGuards(SupabaseAuthGuard)
+@ApiTags('Alimentação - Definições')
+@Controller('alimentacoes-def')
+export class AlimentacaoDefController {
+  constructor(private readonly alimentacaoDefService: AlimentacaoDefService) {}
+
+  @Get()
+  @ApiOperation({
+    summary: 'Lista todas as alimentações definidas',
+    description: 'Retorna uma lista de todas as alimentações definidas cadastradas no sistema, ordenadas alfabeticamente.',
+  })
+  @ApiResponse({ status: 200, description: 'Lista de alimentações definidas retornada com sucesso.' })
+  @ApiResponse({ status: 401, description: 'Não autorizado.' })
+  findAll() {
+    return this.alimentacaoDefService.findAll();
+  }
+
+  @Get(':id')
+  @ApiOperation({
+    summary: 'Busca uma alimentação definida específica',
+    description: 'Retorna os dados de uma alimentação definida específica pelo ID.',
+  })
+  @ApiParam({ name: 'id', description: 'ID da alimentação definida', type: 'number' })
+  @ApiResponse({ status: 200, description: 'Alimentação definida encontrada com sucesso.' })
+  @ApiResponse({ status: 401, description: 'Não autorizado.' })
+  @ApiResponse({ status: 404, description: 'Alimentação definida não encontrada.' })
+  findOne(@Param('id', ParseIntPipe) id: number) {
+    return this.alimentacaoDefService.findOne(id);
+  }
+
+  @Post()
+  @ApiOperation({
+    summary: 'Cria uma nova alimentação definida',
+    description: 'Cria um novo registro de alimentação definida no banco de dados. Retorna a alimentação completa com o ID gerado.',
+  })
+  @ApiResponse({ status: 201, description: 'Alimentação definida criada com sucesso.' })
+  @ApiResponse({ status: 400, description: 'Dados inválidos.' })
+  @ApiResponse({ status: 401, description: 'Não autorizado.' })
+  create(@Body() createAlimentacaoDefDto: CreateAlimentacaoDefDto) {
+    return this.alimentacaoDefService.create(createAlimentacaoDefDto);
+  }
+
+  @Patch(':id')
+  @ApiOperation({
+    summary: 'Atualiza uma alimentação definida',
+    description: 'Atualiza os dados de uma alimentação definida específica pelo ID.',
+  })
+  @ApiParam({ name: 'id', description: 'ID da alimentação definida', type: 'number' })
+  @ApiResponse({ status: 200, description: 'Alimentação definida atualizada com sucesso.' })
+  @ApiResponse({ status: 400, description: 'Dados inválidos.' })
+  @ApiResponse({ status: 401, description: 'Não autorizado.' })
+  @ApiResponse({ status: 404, description: 'Alimentação definida não encontrada.' })
+  update(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() updateAlimentacaoDefDto: UpdateAlimentacaoDefDto,
+  ) {
+    return this.alimentacaoDefService.update(id, updateAlimentacaoDefDto);
+  }
+
+  @Delete(':id')
+  @ApiOperation({
+    summary: 'Remove uma alimentação definida',
+    description: 'Remove uma alimentação definida específica do sistema pelo ID.',
+  })
+  @ApiParam({ name: 'id', description: 'ID da alimentação definida', type: 'number' })
+  @ApiResponse({ status: 200, description: 'Alimentação definida removida com sucesso.' })
+  @ApiResponse({ status: 401, description: 'Não autorizado.' })
+  @ApiResponse({ status: 404, description: 'Alimentação definida não encontrada.' })
+  remove(@Param('id', ParseIntPipe) id: number) {
+    return this.alimentacaoDefService.remove(id);
+  }
+}

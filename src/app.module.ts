@@ -7,6 +7,7 @@ import { AuthModule } from './modules/auth/auth.module';
 import { UsuarioModule } from './modules/usuario/usuario.module';
 import { RebanhoModule } from './modules/rebanho/bufalo.module';
 import { GestaoPropriedadeModule } from './modules/gestao-propriedade/gestao-propriedade.module';
+import { AlimentacaoModule } from './modules/alimentacao/alimentacao.module';
 
 @Module({
   imports: [
@@ -16,6 +17,7 @@ import { GestaoPropriedadeModule } from './modules/gestao-propriedade/gestao-pro
     UsuarioModule,
     RebanhoModule,
     GestaoPropriedadeModule,
+    AlimentacaoModule,
   ],
   controllers: [AppController],
   providers: [AppService],
