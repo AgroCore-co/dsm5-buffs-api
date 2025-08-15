@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, InternalServerErrorException } from '@nestjs/common';
 import { CreateBufaloDto } from './dto/create-bufalo.dto';
 import { UpdateBufaloDto } from './dto/update-bufalo.dto';
 import { SupabaseService } from '../../core/supabase/supabase.service';
@@ -17,8 +17,8 @@ export class BufaloService {
       .single();
 
     if (error) {
-      // Tratar erros específicos do Supabase se necessário
-      throw new Error(error.message);
+      console.error('Erro ao criar búfalo:', error);
+      throw new InternalServerErrorException('Falha ao criar o búfalo.');
     }
     return data;
   }
@@ -26,10 +26,12 @@ export class BufaloService {
   async findAll() {
     const { data, error } = await this.supabase.getClient()
       .from(this.tableName)
-      .select('*');
+      .select('*')
+      .order('created_at', { ascending: false });
 
     if (error) {
-      throw new Error(error.message);
+      console.error('Erro ao buscar búfalos:', error);
+      throw new InternalServerErrorException('Falha ao buscar os búfalos.');
     }
     return data;
   }
@@ -41,8 +43,12 @@ export class BufaloService {
       .eq('id_bufalo', id)
       .single();
 
-    if (error || !data) {
-      throw new NotFoundException(`Búfalo com ID ${id} não encontrado.`);
+    if (error) {
+      if (error.code === 'PGRST116') {
+        throw new NotFoundException(`Búfalo com ID ${id} não encontrado.`);
+      }
+      console.error('Erro ao buscar búfalo:', error);
+      throw new InternalServerErrorException('Falha ao buscar o búfalo.');
     }
     return data;
   }
@@ -59,7 +65,8 @@ export class BufaloService {
       .single();
 
     if (error) {
-      throw new Error(error.message);
+      console.error('Erro ao atualizar búfalo:', error);
+      throw new InternalServerErrorException('Falha ao atualizar o búfalo.');
     }
     return data;
   }
@@ -74,7 +81,8 @@ export class BufaloService {
       .eq('id_bufalo', id);
 
     if (error) {
-      throw new Error(error.message);
+      console.error('Erro ao deletar búfalo:', error);
+      throw new InternalServerErrorException('Falha ao deletar o búfalo.');
     }
     return { message: `Búfalo com ID ${id} deletado com sucesso.` };
   }

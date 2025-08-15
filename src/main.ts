@@ -68,12 +68,30 @@ async function bootstrap() {
     whitelist: true,
     forbidNonWhitelisted: true,
     transform: true,
+    transformOptions: {
+      enableImplicitConversion: true,
+    },
   }));
 
-    app.enableCors({
-    origin: ['http://localhost:3000', 'http://localhost:3001'],
+  // Configuração de CORS mais segura
+  const allowedOrigins = process.env.CORS_ORIGIN 
+    ? process.env.CORS_ORIGIN.split(',') 
+    : ['http://localhost:3000', 'http://localhost:3001'];
+
+  app.enableCors({
+    origin: (origin, callback) => {
+      // Permitir requisições sem origin (como mobile apps)
+      if (!origin) return callback(null, true);
+      
+      if (allowedOrigins.indexOf(origin) !== -1) {
+        callback(null, true);
+      } else {
+        callback(new Error('Not allowed by CORS'));
+      }
+    },
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
     credentials: true,
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
   });
 
   const port = process.env.PORT || 3000;
@@ -81,5 +99,6 @@ async function bootstrap() {
 
   console.log(`🚀 API rodando em: http://localhost:${port}`);
   console.log(`📚 Documentação Swagger: http://localhost:${port}/api`);
+  console.log(`🌍 Ambiente: ${process.env.NODE_ENV || 'development'}`);
 }
 bootstrap();

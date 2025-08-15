@@ -1,98 +1,148 @@
-<p align="center">
-  <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
-</p>
+# 🐃 BUFFS API - Sistema de Gerenciamento de Búfalos
 
-[circleci-image]: https://img.shields.io/circleci/build/github/nestjs/nest/master?token=abc123def456
-[circleci-url]: https://circleci.com/gh/nestjs/nest
+API REST para gerenciamento completo de rebanhos de búfalos, desenvolvida com NestJS e Supabase.
 
-  <p align="center">A progressive <a href="http://nodejs.org" target="_blank">Node.js</a> framework for building efficient and scalable server-side applications.</p>
-    <p align="center">
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/v/@nestjs/core.svg" alt="NPM Version" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/l/@nestjs/core.svg" alt="Package License" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/dm/@nestjs/common.svg" alt="NPM Downloads" /></a>
-<a href="https://circleci.com/gh/nestjs/nest" target="_blank"><img src="https://img.shields.io/circleci/build/github/nestjs/nest/master" alt="CircleCI" /></a>
-<a href="https://discord.gg/G7Qnnhy" target="_blank"><img src="https://img.shields.io/badge/discord-online-brightgreen.svg" alt="Discord"/></a>
-<a href="https://opencollective.com/nest#backer" target="_blank"><img src="https://opencollective.com/nest/backers/badge.svg" alt="Backers on Open Collective" /></a>
-<a href="https://opencollective.com/nest#sponsor" target="_blank"><img src="https://opencollective.com/nest/sponsors/badge.svg" alt="Sponsors on Open Collective" /></a>
-  <a href="https://paypal.me/kamilmysliwiec" target="_blank"><img src="https://img.shields.io/badge/Donate-PayPal-ff3f59.svg" alt="Donate us"/></a>
-    <a href="https://opencollective.com/nest#sponsor"  target="_blank"><img src="https://img.shields.io/badge/Support%20us-Open%20Collective-41B883.svg" alt="Support us"></a>
-  <a href="https://twitter.com/nestframework" target="_blank"><img src="https://img.shields.io/twitter/follow/nestframework.svg?style=social&label=Follow" alt="Follow us on Twitter"></a>
-</p>
-  <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
-  [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
+## 🚀 Tecnologias
 
-## Description
+- **Framework:** NestJS 11
+- **Banco de Dados:** Supabase (PostgreSQL)
+- **Autenticação:** Supabase Auth (JWT)
+- **Documentação:** Swagger/OpenAPI
+- **Validação:** class-validator
+- **Linguagem:** TypeScript
 
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
+## 📋 Pré-requisitos
 
-## Project setup
+- Node.js 18+
+- npm ou yarn
+- Conta no Supabase
 
+## ⚙️ Configuração
+
+### 1. Clone o repositório
 ```bash
-$ npm install
+git clone <repository-url>
+cd dsm5-buffs-api
 ```
 
-## Compile and run the project
-
+### 2. Instale as dependências
 ```bash
-# development
-$ npm run start
-
-# watch mode
-$ npm run start:dev
-
-# production mode
-$ npm run start:prod
+npm install
 ```
 
-## Run tests
+### 3. Configure as variáveis de ambiente
+Crie um arquivo `.env` na raiz do projeto:
 
-```bash
-# unit tests
-$ npm run test
+```env
+# Supabase Configuration
+SUPABASE_URL=sua_url_do_supabase
+SUPABASE_KEY=sua_chave_anon_do_supabase
+SUPABASE_JWT_SECRET=sua_chave_jwt_secret_do_supabase
 
-# e2e tests
-$ npm run test:e2e
-
-# test coverage
-$ npm run test:cov
+# Application Configuration
+PORT=3000
+NODE_ENV=development
 ```
 
-## Deployment
+### 4. Configure o banco de dados
+- Crie as tabelas necessárias no Supabase
+- Configure as políticas de segurança (RLS)
+- Configure as funções e triggers necessárias
 
-When you're ready to deploy your NestJS application to production, there are some key steps you can take to ensure it runs as efficiently as possible. Check out the [deployment documentation](https://docs.nestjs.com/deployment) for more information.
+## 🏃‍♂️ Executando o Projeto
 
-If you are looking for a cloud-based platform to deploy your NestJS application, check out [Mau](https://mau.nestjs.com), our official platform for deploying NestJS applications on AWS. Mau makes deployment straightforward and fast, requiring just a few simple steps:
-
+### Desenvolvimento
 ```bash
-$ npm install -g mau
-$ mau deploy
+npm run start:dev
 ```
 
-With Mau, you can deploy your application in just a few clicks, allowing you to focus on building features rather than managing infrastructure.
+### Produção
+```bash
+npm run build
+npm run start:prod
+```
 
-## Resources
+## 📚 Documentação da API
 
-Check out a few resources that may come in handy when working with NestJS:
+Após iniciar o servidor, acesse:
+- **Swagger UI:** http://localhost:3000/api
+- **Health Check:** http://localhost:3000
 
-- Visit the [NestJS Documentation](https://docs.nestjs.com) to learn more about the framework.
-- For questions and support, please visit our [Discord channel](https://discord.gg/G7Qnnhy).
-- To dive deeper and get more hands-on experience, check out our official video [courses](https://courses.nestjs.com/).
-- Deploy your application to AWS with the help of [NestJS Mau](https://mau.nestjs.com) in just a few clicks.
-- Visualize your application graph and interact with the NestJS application in real-time using [NestJS Devtools](https://devtools.nestjs.com).
-- Need help with your project (part-time to full-time)? Check out our official [enterprise support](https://enterprise.nestjs.com).
-- To stay in the loop and get updates, follow us on [X](https://x.com/nestframework) and [LinkedIn](https://linkedin.com/company/nestjs).
-- Looking for a job, or have a job to offer? Check out our official [Jobs board](https://jobs.nestjs.com).
+## 🏗️ Estrutura do Projeto
 
-## Support
+```
+src/
+├── core/
+│   └── supabase/          # Configuração do Supabase
+├── modules/
+│   ├── auth/              # Autenticação JWT
+│   ├── usuario/           # Gerenciamento de usuários
+│   ├── rebanho/           # Gerenciamento de búfalos
+│   └── gestao-propriedade/ # Gestão de propriedades
+│       ├── endereco/      # Endereços
+│       ├── lote/          # Lotes/Piquetes
+│       └── propriedade/   # Propriedades
+└── main.ts               # Configuração da aplicação
+```
 
-Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
+## 🔐 Autenticação
 
-## Stay in touch
+A API utiliza autenticação JWT através do Supabase:
 
-- Author - [Kamil Myśliwiec](https://twitter.com/kammysliwiec)
-- Website - [https://nestjs.com](https://nestjs.com/)
-- Twitter - [@nestframework](https://twitter.com/nestframework)
+1. **Cadastro:** Realizado no frontend via Supabase Auth
+2. **Login:** Gera token JWT válido
+3. **Requisições:** Incluir header `Authorization: Bearer <token>`
 
-## License
+## 📊 Módulos Principais
 
-Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
+### 👥 Usuários
+- CRUD completo de perfis de usuários
+- Vinculação com autenticação Supabase
+- Validação de dados
+
+### 🐃 Rebanho
+- Gerenciamento de búfalos individuais
+- Controle de genealogia (pai/mãe)
+- Status ativo/inativo
+
+### 🏡 Gestão de Propriedade
+- **Endereços:** Localização geográfica
+- **Propriedades:** Fazendas/estabelecimentos
+- **Lotes:** Piquetes com geometria GeoJSON
+
+## 🧪 Testes
+
+```bash
+# Testes unitários
+npm run test
+
+# Testes e2e
+npm run test:e2e
+
+# Cobertura de testes
+npm run test:cov
+```
+
+## 📝 Scripts Disponíveis
+
+- `npm run start:dev` - Desenvolvimento com hot reload
+- `npm run build` - Build para produção
+- `npm run start:prod` - Executar build de produção
+- `npm run lint` - Linting do código
+- `npm run format` - Formatação com Prettier
+
+## 🤝 Contribuição
+
+1. Fork o projeto
+2. Crie uma branch para sua feature (`git checkout -b feature/AmazingFeature`)
+3. Commit suas mudanças (`git commit -m 'Add some AmazingFeature'`)
+4. Push para a branch (`git push origin feature/AmazingFeature`)
+5. Abra um Pull Request
+
+## 📄 Licença
+
+Este projeto está sob a licença MIT. Veja o arquivo [LICENSE](LICENSE) para mais detalhes.
+
+## 🆘 Suporte
+
+Para suporte, entre em contato através dos canais oficiais do projeto.
