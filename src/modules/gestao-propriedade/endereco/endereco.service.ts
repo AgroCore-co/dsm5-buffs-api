@@ -1,7 +1,8 @@
-import { Injectable, InternalServerErrorException } from '@nestjs/common';
+import { Injectable, InternalServerErrorException, NotFoundException } from '@nestjs/common';
 import { SupabaseClient } from '@supabase/supabase-js';
 import { SupabaseService } from '../../../core/supabase/supabase.service';
 import { CreateEnderecoDto } from './dto/create-endereco.dto';
+import { UpdateEnderecoDto } from './dto/update-endereco.dto';
 
 @Injectable()
 export class EnderecoService {
@@ -26,5 +27,71 @@ export class EnderecoService {
     return data;
   }
 
-  // Futuramente, você pode adicionar aqui os métodos findAll, findOne, update, remove
+  async findAll() {
+    const { data, error } = await this.supabase
+      .from('Endereco')
+      .select('*')
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      console.error('Erro ao buscar endereços:', error);
+      throw new InternalServerErrorException('Falha ao buscar os endereços.');
+    }
+
+    return data;
+  }
+
+  async findOne(id: number) {
+    const { data, error } = await this.supabase
+      .from('Endereco')
+      .select('*')
+      .eq('id', id)
+      .single();
+
+    if (error) {
+      if (error.code === 'PGRST116') {
+        throw new NotFoundException('Endereço não encontrado.');
+      }
+      console.error('Erro ao buscar endereço:', error);
+      throw new InternalServerErrorException('Falha ao buscar o endereço.');
+    }
+
+    return data;
+  }
+
+  async update(id: number, updateEnderecoDto: UpdateEnderecoDto) {
+    // Primeiro verifica se o endereço existe
+    await this.findOne(id);
+
+    const { data, error } = await this.supabase
+      .from('Endereco')
+      .update(updateEnderecoDto)
+      .eq('id', id)
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Erro ao atualizar endereço:', error);
+      throw new InternalServerErrorException('Falha ao atualizar o endereço.');
+    }
+
+    return data;
+  }
+
+  async remove(id: number) {
+    // Primeiro verifica se o endereço existe
+    await this.findOne(id);
+
+    const { error } = await this.supabase
+      .from('Endereco')
+      .delete()
+      .eq('id', id);
+
+    if (error) {
+      console.error('Erro ao deletar endereço:', error);
+      throw new InternalServerErrorException('Falha ao deletar o endereço.');
+    }
+
+    return { message: 'Endereço deletado com sucesso.' };
+  }
 }

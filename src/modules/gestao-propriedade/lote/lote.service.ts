@@ -1,7 +1,8 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, InternalServerErrorException, NotFoundException } from '@nestjs/common';
 import { SupabaseClient } from '@supabase/supabase-js';
 import { SupabaseService } from '../../../core/supabase/supabase.service';
-import { CreateLoteDto } from './dto/create-lote.dto'; 
+import { CreateLoteDto } from './dto/create-lote.dto';
+import { UpdateLoteDto } from './dto/update-lote.dto';
 
 @Injectable()
 export class LoteService {
@@ -16,11 +17,36 @@ export class LoteService {
    * O campo 'geo_mapa' será retornado no formato GeoJSON, pronto para o Leaflet.
    */
   async findAll() {
-    const { data, error } = await this.supabase.from('Lote').select('*');
+    const { data, error } = await this.supabase
+      .from('Lote')
+      .select('*')
+      .order('created_at', { ascending: false });
 
     if (error) {
-      throw new Error(error.message);
+      console.error('Erro ao buscar lotes:', error);
+      throw new InternalServerErrorException('Falha ao buscar os lotes.');
     }
+    return data;
+  }
+
+  /**
+   * Busca um lote específico pelo ID.
+   */
+  async findOne(id: number) {
+    const { data, error } = await this.supabase
+      .from('Lote')
+      .select('*')
+      .eq('id', id)
+      .single();
+
+    if (error) {
+      if (error.code === 'PGRST116') {
+        throw new NotFoundException('Lote não encontrado.');
+      }
+      console.error('Erro ao buscar lote:', error);
+      throw new InternalServerErrorException('Falha ao buscar o lote.');
+    }
+
     return data;
   }
 
@@ -44,8 +70,51 @@ export class LoteService {
       .single();
 
     if (error) {
-      throw new Error(error.message);
+      console.error('Erro ao criar lote:', error);
+      throw new InternalServerErrorException('Falha ao criar o lote.');
     }
     return data;
+  }
+
+  /**
+   * Atualiza um lote existente.
+   */
+  async update(id: number, updateLoteDto: UpdateLoteDto) {
+    // Primeiro verifica se o lote existe
+    await this.findOne(id);
+
+    const { data, error } = await this.supabase
+      .from('Lote')
+      .update(updateLoteDto)
+      .eq('id', id)
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Erro ao atualizar lote:', error);
+      throw new InternalServerErrorException('Falha ao atualizar o lote.');
+    }
+
+    return data;
+  }
+
+  /**
+   * Remove um lote do sistema.
+   */
+  async remove(id: number) {
+    // Primeiro verifica se o lote existe
+    await this.findOne(id);
+
+    const { error } = await this.supabase
+      .from('Lote')
+      .delete()
+      .eq('id', id);
+
+    if (error) {
+      console.error('Erro ao deletar lote:', error);
+      throw new InternalServerErrorException('Falha ao deletar o lote.');
+    }
+
+    return { message: 'Lote deletado com sucesso.' };
   }
 }
