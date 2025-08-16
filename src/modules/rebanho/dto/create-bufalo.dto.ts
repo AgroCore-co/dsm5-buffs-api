@@ -1,5 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsString, IsNotEmpty, IsOptional, IsDateString, IsBoolean, IsInt, MaxLength } from 'class-validator';
+import { IsString, IsNotEmpty, IsOptional, IsBoolean, IsInt, MaxLength, IsDate } from 'class-validator';
+import { Type } from 'class-transformer';
 
 // Este DTO define a estrutura de dados para criar um novo búfalo.
 // Usamos 'class-validator' para as regras de validação e '@ApiProperty'
@@ -18,8 +19,9 @@ export class CreateBufaloDto {
   @MaxLength(10)
   brinco?: string;
 
-  @ApiProperty({ description: 'Data de nascimento do búfalo.', example: '2023-05-20', required: false })
-  @IsDateString()
+  @ApiProperty({ description: 'Data de nascimento do búfalo.', example: '2023-05-20T00:00:00.000Z', required: false })
+  @Type(() => Date) // 1. Garante que o valor de entrada será transformado em um objeto Date
+  @IsDate() // 2. Valida se o resultado da transformação é um objeto Date válido
   @IsOptional()
   dt_nascimento?: Date;
 
