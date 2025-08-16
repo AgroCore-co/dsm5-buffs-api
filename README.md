@@ -198,30 +198,6 @@ npm run test:cov
 
 ---
 
-## 🤝 Contribuição
-
-Contribuições são bem-vindas!
-
-1. Faça um Fork do projeto.
-2. Crie uma branch para sua feature:
-
-   ```bash
-   git checkout -b feature/AmazingFeature
-   ```
-3. Commit suas mudanças:
-
-   ```bash
-   git commit -m 'feat: Add some AmazingFeature'
-   ```
-4. Push para sua branch:
-
-   ```bash
-   git push origin feature/AmazingFeature
-   ```
-5. Abra um Pull Request.
-
----
-
 ## 📄 Licença
 
 Este projeto está sob a licença **MIT**.
