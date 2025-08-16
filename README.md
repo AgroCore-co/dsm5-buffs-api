@@ -1,21 +1,28 @@
 # 🐃 BUFFS API - Sistema de Gerenciamento de Búfalos
 
-API REST para gerenciamento completo de rebanhos de búfalos, desenvolvida com NestJS e Supabase.
+API REST para gerenciamento completo de rebanhos de búfalos, desenvolvida com **NestJS** e **Supabase**.  
+Este sistema cobre todos os ciclos de vida do animal, desde o cadastro e genealogia até o controle de saúde, reprodução e produção.
+
+---
 
 ## 🚀 Tecnologias
 
-- **Framework:** NestJS 11
-- **Banco de Dados:** Supabase (PostgreSQL)
-- **Autenticação:** Supabase Auth (JWT)
-- **Documentação:** Swagger/OpenAPI
-- **Validação:** class-validator
-- **Linguagem:** TypeScript
+- **Framework:** NestJS 11  
+- **Linguagem:** TypeScript  
+- **Banco de Dados:** Supabase (PostgreSQL)  
+- **Autenticação:** Supabase Auth (JWT)  
+- **Documentação:** Swagger/OpenAPI  
+- **Validação:** class-validator & class-transformer  
+
+---
 
 ## 📋 Pré-requisitos
 
-- Node.js 18+
-- npm ou yarn
-- Conta no Supabase
+- Node.js 18+  
+- npm ou yarn  
+- Conta no Supabase  
+
+---
 
 ## ⚙️ Configuração
 
@@ -23,15 +30,17 @@ API REST para gerenciamento completo de rebanhos de búfalos, desenvolvida com N
 ```bash
 git clone <repository-url>
 cd dsm5-buffs-api
-```
+````
 
 ### 2. Instale as dependências
+
 ```bash
 npm install
 ```
 
 ### 3. Configure as variáveis de ambiente
-Crie um arquivo `.env` na raiz do projeto:
+
+Crie um arquivo `.env` na raiz do projeto, utilizando o `env.example` como base:
 
 ```env
 # Supabase Configuration
@@ -45,104 +54,175 @@ NODE_ENV=development
 ```
 
 ### 4. Configure o banco de dados
-- Crie as tabelas necessárias no Supabase
-- Configure as políticas de segurança (RLS)
-- Configure as funções e triggers necessárias
+
+* Acesse seu projeto no Supabase e utilize o editor de tabelas ou scripts SQL para criar o esquema do banco de dados conforme a estrutura dos módulos da API.
+* Configure as **Políticas de Segurança (RLS - Row Level Security)** para proteger o acesso aos dados.
+
+---
 
 ## 🏃‍♂️ Executando o Projeto
 
-### Desenvolvimento
+### Modo de Desenvolvimento
+
 ```bash
 npm run start:dev
 ```
 
-### Produção
+### Modo de Produção
+
 ```bash
 npm run build
 npm run start:prod
 ```
 
+---
+
 ## 📚 Documentação da API
 
-Após iniciar o servidor, acesse:
-- **Swagger UI:** http://localhost:3000/api
-- **Health Check:** http://localhost:3000
+Após iniciar o servidor, a documentação completa e interativa da API estará disponível através do Swagger:
+
+* **Swagger UI:** [http://localhost:3000/api](http://localhost:3000/api)
+* **Health Check:** [http://localhost:3000](http://localhost:3000)
+
+---
 
 ## 🏗️ Estrutura do Projeto
+
+A API é organizada em uma arquitetura modular, onde cada módulo representa um domínio de negócio específico.
 
 ```
 src/
 ├── core/
-│   └── supabase/          # Configuração do Supabase
+│   ├── logger/              # Serviço de logs
+│   └── supabase/            # Cliente e configuração do Supabase
 ├── modules/
-│   ├── auth/              # Autenticação JWT
-│   ├── usuario/           # Gerenciamento de usuários
-│   ├── rebanho/           # Gerenciamento de búfalos
-│   └── gestao-propriedade/ # Gestão de propriedades
-│       ├── endereco/      # Endereços
-│       ├── lote/          # Lotes/Piquetes
-│       └── propriedade/   # Propriedades
-└── main.ts               # Configuração da aplicação
+│   ├── auth/                # Autenticação e estratégias JWT
+│   ├── usuario/             # Gerenciamento de usuários
+│   ├── gestao-propriedade/  # Módulo agregador
+│   │   ├── propriedade/     # Cadastro de fazendas
+│   │   ├── endereco/        # Endereços das propriedades
+│   │   └── lote/            # Lotes e piquetes
+│   ├── rebanho/             # Módulo agregador
+│   │   ├── bufalo/          # Cadastro e controle de animais
+│   │   ├── raca/            # Cadastro de raças
+│   │   └── grupo/           # Agrupamento de animais
+│   ├── saude-zootecnia/     # Módulo agregador
+│   │   ├── medicamentos/    # Cadastro de medicamentos
+│   │   ├── vacinacao/       # Registro de vacinações
+│   │   └── dados-zootecnicos/ # Pesagem, medições, etc.
+│   ├── reproducao/          # Módulo agregador
+│   │   └── cobertura/       # Registro de coberturas e inseminações
+│   ├── producao/            # Módulo agregador
+│   │   └── controle-leiteiro/ # Registro da produção de leite
+│   └── alimentacao/         # Módulo agregador
+│       └── alimentacao-def/ # Definição de tipos de alimentos
+└── main.ts                  # Ponto de entrada da aplicação
 ```
+
+---
 
 ## 🔐 Autenticação
 
-A API utiliza autenticação JWT através do Supabase:
+A API utiliza autenticação **JWT** gerenciada pelo Supabase. Todas as rotas, exceto as de autenticação, são protegidas.
 
-1. **Cadastro:** Realizado no frontend via Supabase Auth
-2. **Login:** Gera token JWT válido
-3. **Requisições:** Incluir header `Authorization: Bearer <token>`
+* **Cadastro & Login:** realizados através do cliente Supabase no frontend, que retorna um token JWT.
+* **Requisições Protegidas:** inclua o token no header da requisição:
+
+```http
+Authorization: Bearer <seu-token-jwt>
+```
+
+---
 
 ## 📊 Módulos Principais
 
 ### 👥 Usuários
-- CRUD completo de perfis de usuários
-- Vinculação com autenticação Supabase
-- Validação de dados
 
-### 🐃 Rebanho
-- Gerenciamento de búfalos individuais
-- Controle de genealogia (pai/mãe)
-- Status ativo/inativo
+* Gerenciamento de perfis de usuários, vinculados à autenticação do Supabase.
 
 ### 🏡 Gestão de Propriedade
-- **Endereços:** Localização geográfica
-- **Propriedades:** Fazendas/estabelecimentos
-- **Lotes:** Piquetes com geometria GeoJSON
+
+* **Propriedades:** cadastro e gerenciamento de fazendas.
+* **Endereços:** controle de localização das propriedades.
+* **Lotes:** divisão das propriedades em lotes/piquetes para melhor organização do rebanho.
+
+### 🐃 Rebanho
+
+* **Búfalos:** CRUD completo para animais (nome, brinco, nascimento, sexo, genealogia).
+* **Raças e Grupos:** classificação e organização dos animais.
+
+### ❤️ Saúde e Zootecnia
+
+* **Medicamentos:** catálogo de medicamentos e insumos.
+* **Vacinação:** registro detalhado de vacinas e medicamentos aplicados.
+* **Dados Zootécnicos:** acompanhamento de métricas (peso, altura, ECC).
+
+### 🧬 Reprodução
+
+* **Cobertura:** controle do ciclo reprodutivo (monta natural ou inseminação) e diagnóstico de gestação.
+
+### 🥛 Produção
+
+* **Controle Leiteiro:** registro diário da produção de leite por animal.
+
+### 🌾 Alimentação
+
+* **Definição de Alimentos:** cadastro de rações, pastagens e outros alimentos.
+
+---
 
 ## 🧪 Testes
+
+Execute os testes para garantir a integridade e funcionamento da aplicação:
 
 ```bash
 # Testes unitários
 npm run test
 
-# Testes e2e
+# Testes end-to-end (E2E)
 npm run test:e2e
 
-# Cobertura de testes
+# Relatório de cobertura de testes
 npm run test:cov
 ```
 
+---
+
 ## 📝 Scripts Disponíveis
 
-- `npm run start:dev` - Desenvolvimento com hot reload
-- `npm run build` - Build para produção
-- `npm run start:prod` - Executar build de produção
-- `npm run lint` - Linting do código
-- `npm run format` - Formatação com Prettier
+* `npm run start:dev` → inicia o servidor em desenvolvimento com hot-reload.
+* `npm run build` → compila TypeScript para JavaScript.
+* `npm run start:prod` → inicia em produção.
+* `npm run lint` → análise estática do código.
+* `npm run format` → formata o código com Prettier.
+
+---
 
 ## 🤝 Contribuição
 
-1. Fork o projeto
-2. Crie uma branch para sua feature (`git checkout -b feature/AmazingFeature`)
-3. Commit suas mudanças (`git commit -m 'Add some AmazingFeature'`)
-4. Push para a branch (`git push origin feature/AmazingFeature`)
-5. Abra um Pull Request
+Contribuições são bem-vindas!
+
+1. Faça um Fork do projeto.
+2. Crie uma branch para sua feature:
+
+   ```bash
+   git checkout -b feature/AmazingFeature
+   ```
+3. Commit suas mudanças:
+
+   ```bash
+   git commit -m 'feat: Add some AmazingFeature'
+   ```
+4. Push para sua branch:
+
+   ```bash
+   git push origin feature/AmazingFeature
+   ```
+5. Abra um Pull Request.
+
+---
 
 ## 📄 Licença
 
-Este projeto está sob a licença MIT. Veja o arquivo [LICENSE](LICENSE) para mais detalhes.
-
-## 🆘 Suporte
-
-Para suporte, entre em contato através dos canais oficiais do projeto.
+Este projeto está sob a licença **MIT**.
+Veja o arquivo [LICENSE](LICENSE) para mais detalhes.
