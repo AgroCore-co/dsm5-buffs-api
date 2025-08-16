@@ -1,4 +1,5 @@
-import { IsNotEmpty, IsNumber, IsString, IsOptional, IsDateString } from 'class-validator';
+import { IsNotEmpty, IsNumber, IsString, IsOptional, IsDate } from 'class-validator';
+import { Type } from 'class-transformer';
 
 export class CreateDadoZootecnicoDto {
   @IsNumber()
@@ -20,8 +21,9 @@ export class CreateDadoZootecnicoDto {
   @IsString()
   @IsOptional()
   porte_corporal?: string;
-  
-  @IsDateString()
+
+  @Type(() => Date) // Garante a transformação de string para objeto Date
+  @IsDate() // Valida se o resultado é um objeto Date válido
   @IsOptional()
   dt_registro?: Date;
 
