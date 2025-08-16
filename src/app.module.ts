@@ -7,6 +7,7 @@ import { RebanhoModule } from './modules/rebanho/bufalo.module';
 import { GestaoPropriedadeModule } from './modules/gestao-propriedade/gestao-propriedade.module';
 import { AlimentacaoModule } from './modules/alimentacao/alimentacao.module';
 import { SaudeZootecniaModule } from './modules/saude-zootecnia/saude-zootecnia.module';
+import { ReproducaoModule } from './modules/reproducao/reproducao.module';
 
 @Module({
   imports: [
@@ -18,6 +19,7 @@ import { SaudeZootecniaModule } from './modules/saude-zootecnia/saude-zootecnia.
     GestaoPropriedadeModule,
     AlimentacaoModule,
     SaudeZootecniaModule,
+    ReproducaoModule,
   ],
   controllers: [],
   providers: [],
