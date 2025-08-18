@@ -9,9 +9,7 @@ export class SupabaseStrategy extends PassportStrategy(Strategy, 'jwt') {
     const supabaseJwtSecret = configService.get<string>('SUPABASE_JWT_SECRET');
 
     if (!supabaseJwtSecret) {
-      throw new Error(
-        'A variável de ambiente SUPABASE_JWT_SECRET não foi definida.',
-      );
+      throw new Error('A variável de ambiente SUPABASE_JWT_SECRET não foi definida.');
     }
 
     super({

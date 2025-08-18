@@ -39,5 +39,3 @@ export class MaterialGeneticoService {
     return { message: 'Registro removido com sucesso' };
   }
 }
-
-

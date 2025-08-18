@@ -13,11 +13,7 @@ export class GrupoService {
   }
 
   async create(createGrupoDto: CreateGrupoDto) {
-    const { data, error } = await this.supabase
-      .from('Grupo')
-      .insert(createGrupoDto)
-      .select()
-      .single();
+    const { data, error } = await this.supabase.from('Grupo').insert(createGrupoDto).select().single();
 
     if (error) {
       console.error('Erro ao criar grupo:', error);
@@ -28,10 +24,7 @@ export class GrupoService {
   }
 
   async findAll() {
-    const { data, error } = await this.supabase
-      .from('Grupo')
-      .select('*')
-      .order('nome_grupo', { ascending: true });
+    const { data, error } = await this.supabase.from('Grupo').select('*').order('nome_grupo', { ascending: true });
 
     if (error) {
       console.error('Erro ao buscar grupos:', error);
@@ -42,11 +35,7 @@ export class GrupoService {
   }
 
   async findOne(id: number) {
-    const { data, error } = await this.supabase
-      .from('Grupo')
-      .select('*')
-      .eq('id_grupo', id)
-      .single();
+    const { data, error } = await this.supabase.from('Grupo').select('*').eq('id_grupo', id).single();
 
     if (error) {
       if (error.code === 'PGRST116') {
@@ -63,12 +52,7 @@ export class GrupoService {
     // Primeiro verifica se o grupo existe
     await this.findOne(id);
 
-    const { data, error } = await this.supabase
-      .from('Grupo')
-      .update(updateGrupoDto)
-      .eq('id_grupo', id)
-      .select()
-      .single();
+    const { data, error } = await this.supabase.from('Grupo').update(updateGrupoDto).eq('id_grupo', id).select().single();
 
     if (error) {
       console.error('Erro ao atualizar grupo:', error);
@@ -82,10 +66,7 @@ export class GrupoService {
     // Primeiro verifica se o grupo existe
     await this.findOne(id);
 
-    const { error } = await this.supabase
-      .from('Grupo')
-      .delete()
-      .eq('id_grupo', id);
+    const { error } = await this.supabase.from('Grupo').delete().eq('id_grupo', id);
 
     if (error) {
       console.error('Erro ao deletar grupo:', error);

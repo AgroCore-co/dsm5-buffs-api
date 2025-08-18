@@ -58,10 +58,7 @@ export class AlimentacaoDefController {
   @ApiResponse({ status: 400, description: 'Dados inválidos.' })
   @ApiResponse({ status: 401, description: 'Não autorizado.' })
   @ApiResponse({ status: 404, description: 'Alimentação definida não encontrada.' })
-  update(
-    @Param('id', ParseIntPipe) id: number,
-    @Body() updateAlimentacaoDefDto: UpdateAlimentacaoDefDto,
-  ) {
+  update(@Param('id', ParseIntPipe) id: number, @Body() updateAlimentacaoDefDto: UpdateAlimentacaoDefDto) {
     return this.alimentacaoDefService.update(id, updateAlimentacaoDefDto);
   }
 

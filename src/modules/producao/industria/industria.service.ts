@@ -41,5 +41,3 @@ export class IndustriaService {
     return { message: 'Indústria removida com sucesso' };
   }
 }
-
-

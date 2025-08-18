@@ -10,11 +10,7 @@ export class BufaloService {
   private readonly tableName = 'Bufalo';
 
   async create(createBufaloDto: CreateBufaloDto) {
-    const { data, error } = await this.supabase.getClient()
-      .from(this.tableName)
-      .insert(createBufaloDto)
-      .select()
-      .single();
+    const { data, error } = await this.supabase.getClient().from(this.tableName).insert(createBufaloDto).select().single();
 
     if (error) {
       console.error('Erro ao criar búfalo:', error);
@@ -24,10 +20,7 @@ export class BufaloService {
   }
 
   async findAll() {
-    const { data, error } = await this.supabase.getClient()
-      .from(this.tableName)
-      .select('*')
-      .order('created_at', { ascending: false });
+    const { data, error } = await this.supabase.getClient().from(this.tableName).select('*').order('created_at', { ascending: false });
 
     if (error) {
       console.error('Erro ao buscar búfalos:', error);
@@ -37,11 +30,7 @@ export class BufaloService {
   }
 
   async findOne(id: number) {
-    const { data, error } = await this.supabase.getClient()
-      .from(this.tableName)
-      .select('*')
-      .eq('id_bufalo', id)
-      .single();
+    const { data, error } = await this.supabase.getClient().from(this.tableName).select('*').eq('id_bufalo', id).single();
 
     if (error) {
       if (error.code === 'PGRST116') {
@@ -57,12 +46,7 @@ export class BufaloService {
     // Primeiro, verifica se o búfalo existe
     await this.findOne(id);
 
-    const { data, error } = await this.supabase.getClient()
-      .from(this.tableName)
-      .update(updateBufaloDto)
-      .eq('id_bufalo', id)
-      .select()
-      .single();
+    const { data, error } = await this.supabase.getClient().from(this.tableName).update(updateBufaloDto).eq('id_bufalo', id).select().single();
 
     if (error) {
       console.error('Erro ao atualizar búfalo:', error);
@@ -75,10 +59,7 @@ export class BufaloService {
     // Primeiro, verifica se o búfalo existe
     await this.findOne(id);
 
-    const { error } = await this.supabase.getClient()
-      .from(this.tableName)
-      .delete()
-      .eq('id_bufalo', id);
+    const { error } = await this.supabase.getClient().from(this.tableName).delete().eq('id_bufalo', id);
 
     if (error) {
       console.error('Erro ao deletar búfalo:', error);

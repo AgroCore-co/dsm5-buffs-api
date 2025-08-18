@@ -61,10 +61,7 @@ export class LoteController {
   @ApiResponse({ status: 400, description: 'Dados inválidos.' })
   @ApiResponse({ status: 401, description: 'Não autorizado.' })
   @ApiResponse({ status: 404, description: 'Lote não encontrado.' })
-  update(
-    @Param('id', ParseIntPipe) id: number,
-    @Body() updateLoteDto: UpdateLoteDto,
-  ) {
+  update(@Param('id', ParseIntPipe) id: number, @Body() updateLoteDto: UpdateLoteDto) {
     return this.loteService.update(id, updateLoteDto);
   }
 

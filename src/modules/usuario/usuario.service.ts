@@ -20,11 +20,7 @@ export class UsuarioService {
    */
   async create(createUsuarioDto: CreateUsuarioDto, email: string) {
     // Sem coluna auth_id no schema: utilizamos e-mail para unicidade
-    const { data: existingProfile } = await this.supabase
-      .from('Usuario')
-      .select('id_usuario')
-      .eq('email', email)
-      .single();
+    const { data: existingProfile } = await this.supabase.from('Usuario').select('id_usuario').eq('email', email).single();
 
     if (existingProfile) {
       throw new ConflictException('Este usuário já possui um perfil cadastrado.');
@@ -61,11 +57,7 @@ export class UsuarioService {
    */
   async findOneById(id: string) {
     // Sem auth_id: buscamos por e-mail fornecido pelo token
-    const { data, error } = await this.supabase
-      .from('Usuario')
-      .select('*')
-      .eq('email', id)
-      .single();
+    const { data, error } = await this.supabase.from('Usuario').select('*').eq('email', id).single();
 
     if (error) {
       if (error.code === 'PGRST116') {
@@ -82,11 +74,7 @@ export class UsuarioService {
    * @returns O perfil do usuário correspondente.
    */
   async findOne(id: number) {
-    const { data, error } = await this.supabase
-      .from('Usuario')
-      .select('*')
-      .eq('id_usuario', id)
-      .single();
+    const { data, error } = await this.supabase.from('Usuario').select('*').eq('id_usuario', id).single();
 
     if (error) {
       if (error.code === 'PGRST116') {
@@ -104,12 +92,7 @@ export class UsuarioService {
    * @returns O perfil do usuário atualizado.
    */
   async update(id: number, updateUsuarioDto: UpdateUsuarioDto) {
-    const { data, error } = await this.supabase
-      .from('Usuario')
-      .update(updateUsuarioDto)
-      .eq('id_usuario', id)
-      .select()
-      .single();
+    const { data, error } = await this.supabase.from('Usuario').update(updateUsuarioDto).eq('id_usuario', id).select().single();
 
     if (error) {
       if (error.code === 'PGRST116') {
@@ -126,10 +109,7 @@ export class UsuarioService {
    * @returns Uma mensagem de sucesso.
    */
   async remove(id: number) {
-    const { error } = await this.supabase
-      .from('Usuario')
-      .delete()
-      .eq('id_usuario', id);
+    const { error } = await this.supabase.from('Usuario').delete().eq('id_usuario', id);
 
     if (error) {
       // O Supabase pode não retornar um erro específico se o ID não existir,

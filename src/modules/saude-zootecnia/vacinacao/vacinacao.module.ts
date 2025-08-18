@@ -4,6 +4,6 @@ import { VacinacaoService } from './vacinacao.service';
 
 @Module({
   controllers: [VacinacaoController],
-  providers: [VacinacaoService]
+  providers: [VacinacaoService],
 })
 export class VacinacaoModule {}

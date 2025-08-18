@@ -58,10 +58,7 @@ export class RacaController {
   @ApiResponse({ status: 400, description: 'Dados inválidos.' })
   @ApiResponse({ status: 401, description: 'Não autorizado.' })
   @ApiResponse({ status: 404, description: 'Raça não encontrada.' })
-  update(
-    @Param('id', ParseIntPipe) id: number,
-    @Body() updateRacaDto: UpdateRacaDto,
-  ) {
+  update(@Param('id', ParseIntPipe) id: number, @Body() updateRacaDto: UpdateRacaDto) {
     return this.racaService.update(id, updateRacaDto);
   }
 

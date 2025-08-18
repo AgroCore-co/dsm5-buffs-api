@@ -58,10 +58,7 @@ export class GrupoController {
   @ApiResponse({ status: 400, description: 'Dados inválidos.' })
   @ApiResponse({ status: 401, description: 'Não autorizado.' })
   @ApiResponse({ status: 404, description: 'Grupo não encontrado.' })
-  update(
-    @Param('id', ParseIntPipe) id: number,
-    @Body() updateGrupoDto: UpdateGrupoDto,
-  ) {
+  update(@Param('id', ParseIntPipe) id: number, @Body() updateGrupoDto: UpdateGrupoDto) {
     return this.grupoService.update(id, updateGrupoDto);
   }
 

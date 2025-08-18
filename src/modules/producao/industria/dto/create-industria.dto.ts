@@ -26,5 +26,3 @@ export class CreateIndustriaDto {
   @MaxLength(50)
   observacao?: string;
 }
-
-

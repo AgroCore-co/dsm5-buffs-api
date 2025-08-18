@@ -39,5 +39,3 @@ export class MovLoteService {
     return { message: 'Registro removido com sucesso' };
   }
 }
-
-

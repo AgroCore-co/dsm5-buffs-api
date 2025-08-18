@@ -46,5 +46,3 @@ export class MaterialGeneticoController {
     return this.service.remove(id);
   }
 }
-
-

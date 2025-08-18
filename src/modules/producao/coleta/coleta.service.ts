@@ -39,5 +39,3 @@ export class ColetaService {
     return { message: 'Coleta removida com sucesso' };
   }
 }
-
-

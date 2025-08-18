@@ -13,11 +13,7 @@ export class EnderecoService {
   }
 
   async create(createEnderecoDto: CreateEnderecoDto) {
-    const { data, error } = await this.supabase
-      .from('Endereco')
-      .insert(createEnderecoDto)
-      .select()
-      .single();
+    const { data, error } = await this.supabase.from('Endereco').insert(createEnderecoDto).select().single();
 
     if (error) {
       console.error('Erro ao criar endereço:', error);
@@ -28,10 +24,7 @@ export class EnderecoService {
   }
 
   async findAll() {
-    const { data, error } = await this.supabase
-      .from('Endereco')
-      .select('*')
-      .order('created_at', { ascending: false });
+    const { data, error } = await this.supabase.from('Endereco').select('*').order('created_at', { ascending: false });
 
     if (error) {
       console.error('Erro ao buscar endereços:', error);
@@ -42,11 +35,7 @@ export class EnderecoService {
   }
 
   async findOne(id: number) {
-    const { data, error } = await this.supabase
-      .from('Endereco')
-      .select('*')
-      .eq('id_endereco', id)
-      .single();
+    const { data, error } = await this.supabase.from('Endereco').select('*').eq('id_endereco', id).single();
 
     if (error) {
       if (error.code === 'PGRST116') {
@@ -63,12 +52,7 @@ export class EnderecoService {
     // Primeiro verifica se o endereço existe
     await this.findOne(id);
 
-    const { data, error } = await this.supabase
-      .from('Endereco')
-      .update(updateEnderecoDto)
-      .eq('id_endereco', id)
-      .select()
-      .single();
+    const { data, error } = await this.supabase.from('Endereco').update(updateEnderecoDto).eq('id_endereco', id).select().single();
 
     if (error) {
       console.error('Erro ao atualizar endereço:', error);
@@ -82,10 +66,7 @@ export class EnderecoService {
     // Primeiro verifica se o endereço existe
     await this.findOne(id);
 
-    const { error } = await this.supabase
-      .from('Endereco')
-      .delete()
-      .eq('id_endereco', id);
+    const { error } = await this.supabase.from('Endereco').delete().eq('id_endereco', id);
 
     if (error) {
       console.error('Erro ao deletar endereço:', error);

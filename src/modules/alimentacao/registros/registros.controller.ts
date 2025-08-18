@@ -48,5 +48,3 @@ export class RegistrosController {
     return this.service.remove(id);
   }
 }
-
-

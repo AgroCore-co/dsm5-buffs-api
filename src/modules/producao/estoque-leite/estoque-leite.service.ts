@@ -39,5 +39,3 @@ export class EstoqueLeiteService {
     return { message: 'Registro removido com sucesso' };
   }
 }
-
-

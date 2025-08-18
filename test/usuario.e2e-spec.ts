@@ -33,17 +33,11 @@ describe('Usuário e Autenticação (e2e)', () => {
 
     describe('POST /usuarios', () => {
       it('should create a new usuário', () => {
-        return request(app.getHttpServer())
-          .post('/usuarios')
-          .send(createUsuarioDto)
-          .expect(401); // Sem autenticação
+        return request(app.getHttpServer()).post('/usuarios').send(createUsuarioDto).expect(401); // Sem autenticação
       });
 
       it('should validate required fields', () => {
-        return request(app.getHttpServer())
-          .post('/usuarios')
-          .send({})
-          .expect(401); // Sem autenticação
+        return request(app.getHttpServer()).post('/usuarios').send({}).expect(401); // Sem autenticação
       });
 
       it('should validate nome max length', () => {
@@ -59,48 +53,35 @@ describe('Usuário e Autenticação (e2e)', () => {
 
     describe('GET /usuarios', () => {
       it('should return all usuários', () => {
-        return request(app.getHttpServer())
-          .get('/usuarios')
-          .expect(401); // Sem autenticação
+        return request(app.getHttpServer()).get('/usuarios').expect(401); // Sem autenticação
       });
     });
 
     describe('GET /usuarios/:id', () => {
       it('should return a specific usuário', () => {
-        return request(app.getHttpServer())
-          .get('/usuarios/1')
-          .expect(401); // Sem autenticação
+        return request(app.getHttpServer()).get('/usuarios/1').expect(401); // Sem autenticação
       });
 
       it('should return 404 for non-existent usuário', () => {
-        return request(app.getHttpServer())
-          .get('/usuarios/999')
-          .expect(401); // Sem autenticação
+        return request(app.getHttpServer()).get('/usuarios/999').expect(401); // Sem autenticação
       });
     });
 
     describe('GET /usuarios/me', () => {
       it('should return current user profile', () => {
-        return request(app.getHttpServer())
-          .get('/usuarios/me')
-          .expect(401); // Sem autenticação
+        return request(app.getHttpServer()).get('/usuarios/me').expect(401); // Sem autenticação
       });
     });
 
     describe('PATCH /usuarios/:id', () => {
       it('should update a usuário', () => {
-        return request(app.getHttpServer())
-          .patch('/usuarios/1')
-          .send(updateUsuarioDto)
-          .expect(401); // Sem autenticação
+        return request(app.getHttpServer()).patch('/usuarios/1').send(updateUsuarioDto).expect(401); // Sem autenticação
       });
     });
 
     describe('DELETE /usuarios/:id', () => {
       it('should delete a usuário', () => {
-        return request(app.getHttpServer())
-          .delete('/usuarios/1')
-          .expect(401); // Sem autenticação
+        return request(app.getHttpServer()).delete('/usuarios/1').expect(401); // Sem autenticação
       });
     });
   });
@@ -108,10 +89,7 @@ describe('Usuário e Autenticação (e2e)', () => {
   describe('Health Check', () => {
     describe('GET /', () => {
       it('should return health check', () => {
-        return request(app.getHttpServer())
-          .get('/')
-          .expect(200)
-          .expect('Hello World!');
+        return request(app.getHttpServer()).get('/').expect(200).expect('Hello World!');
       });
     });
   });
@@ -119,9 +97,7 @@ describe('Usuário e Autenticação (e2e)', () => {
   describe('Swagger Documentation', () => {
     describe('GET /api', () => {
       it('should return swagger documentation', () => {
-        return request(app.getHttpServer())
-          .get('/api')
-          .expect(200);
+        return request(app.getHttpServer()).get('/api').expect(200);
       });
     });
   });
@@ -137,10 +113,7 @@ describe('Usuário e Autenticação (e2e)', () => {
     });
 
     it('should reject requests from unauthorized origins', () => {
-      return request(app.getHttpServer())
-        .get('/usuarios')
-        .set('Origin', 'http://malicious-site.com')
-        .expect(401); // Sem autenticação, mas CORS deve rejeitar
+      return request(app.getHttpServer()).get('/usuarios').set('Origin', 'http://malicious-site.com').expect(401); // Sem autenticação, mas CORS deve rejeitar
     });
   });
 

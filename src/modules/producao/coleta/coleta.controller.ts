@@ -46,5 +46,3 @@ export class ColetaController {
     return this.service.remove(id);
   }
 }
-
-

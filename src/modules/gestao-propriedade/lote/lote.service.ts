@@ -17,10 +17,7 @@ export class LoteService {
    * O campo 'geo_mapa' será retornado no formato GeoJSON, pronto para o Leaflet.
    */
   async findAll() {
-    const { data, error } = await this.supabase
-      .from('Lote')
-      .select('*')
-      .order('created_at', { ascending: false });
+    const { data, error } = await this.supabase.from('Lote').select('*').order('created_at', { ascending: false });
 
     if (error) {
       console.error('Erro ao buscar lotes:', error);
@@ -33,11 +30,7 @@ export class LoteService {
    * Busca um lote específico pelo ID.
    */
   async findOne(id: number) {
-    const { data, error } = await this.supabase
-      .from('Lote')
-      .select('*')
-      .eq('id_lote', id)
-      .single();
+    const { data, error } = await this.supabase.from('Lote').select('*').eq('id_lote', id).single();
 
     if (error) {
       if (error.code === 'PGRST116') {
@@ -83,12 +76,7 @@ export class LoteService {
     // Primeiro verifica se o lote existe
     await this.findOne(id);
 
-    const { data, error } = await this.supabase
-      .from('Lote')
-      .update(updateLoteDto)
-      .eq('id_lote', id)
-      .select()
-      .single();
+    const { data, error } = await this.supabase.from('Lote').update(updateLoteDto).eq('id_lote', id).select().single();
 
     if (error) {
       console.error('Erro ao atualizar lote:', error);
@@ -105,10 +93,7 @@ export class LoteService {
     // Primeiro verifica se o lote existe
     await this.findOne(id);
 
-    const { error } = await this.supabase
-      .from('Lote')
-      .delete()
-      .eq('id_lote', id);
+    const { error } = await this.supabase.from('Lote').delete().eq('id_lote', id);
 
     if (error) {
       console.error('Erro ao deletar lote:', error);

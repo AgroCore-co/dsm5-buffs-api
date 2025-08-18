@@ -32,17 +32,11 @@ describe('Alimentação (e2e)', () => {
 
     describe('POST /alimentacoes-def', () => {
       it('should create a new alimentação definida', () => {
-        return request(app.getHttpServer())
-          .post('/alimentacoes-def')
-          .send(createAlimentacaoDefDto)
-          .expect(401); // Sem autenticação
+        return request(app.getHttpServer()).post('/alimentacoes-def').send(createAlimentacaoDefDto).expect(401); // Sem autenticação
       });
 
       it('should validate required fields', () => {
-        return request(app.getHttpServer())
-          .post('/alimentacoes-def')
-          .send({})
-          .expect(401); // Sem autenticação
+        return request(app.getHttpServer()).post('/alimentacoes-def').send({}).expect(401); // Sem autenticação
       });
 
       it('should validate tipo_alimentacao enum', () => {
@@ -68,40 +62,29 @@ describe('Alimentação (e2e)', () => {
 
     describe('GET /alimentacoes-def', () => {
       it('should return all alimentações definidas', () => {
-        return request(app.getHttpServer())
-          .get('/alimentacoes-def')
-          .expect(401); // Sem autenticação
+        return request(app.getHttpServer()).get('/alimentacoes-def').expect(401); // Sem autenticação
       });
     });
 
     describe('GET /alimentacoes-def/:id', () => {
       it('should return a specific alimentação definida', () => {
-        return request(app.getHttpServer())
-          .get('/alimentacoes-def/1')
-          .expect(401); // Sem autenticação
+        return request(app.getHttpServer()).get('/alimentacoes-def/1').expect(401); // Sem autenticação
       });
 
       it('should return 404 for non-existent alimentação definida', () => {
-        return request(app.getHttpServer())
-          .get('/alimentacoes-def/999')
-          .expect(401); // Sem autenticação
+        return request(app.getHttpServer()).get('/alimentacoes-def/999').expect(401); // Sem autenticação
       });
     });
 
     describe('PATCH /alimentacoes-def/:id', () => {
       it('should update an alimentação definida', () => {
-        return request(app.getHttpServer())
-          .patch('/alimentacoes-def/1')
-          .send(updateAlimentacaoDefDto)
-          .expect(401); // Sem autenticação
+        return request(app.getHttpServer()).patch('/alimentacoes-def/1').send(updateAlimentacaoDefDto).expect(401); // Sem autenticação
       });
     });
 
     describe('DELETE /alimentacoes-def/:id', () => {
       it('should delete an alimentação definida', () => {
-        return request(app.getHttpServer())
-          .delete('/alimentacoes-def/1')
-          .expect(401); // Sem autenticação
+        return request(app.getHttpServer()).delete('/alimentacoes-def/1').expect(401); // Sem autenticação
       });
     });
   });
@@ -120,8 +103,8 @@ describe('Alimentação (e2e)', () => {
 
       it('should reject invalid tipo_alimentacao values', () => {
         const invalidTypes = ['A', 'B', 'D', 'E', 'F'];
-        
-        invalidTypes.forEach(invalidType => {
+
+        invalidTypes.forEach((invalidType) => {
           return request(app.getHttpServer())
             .post('/alimentacoes-def')
             .send({
@@ -134,8 +117,8 @@ describe('Alimentação (e2e)', () => {
 
       it('should accept valid tipo_alimentacao values', () => {
         const validTypes = ['P', 'C', 'S'];
-        
-        validTypes.forEach(validType => {
+
+        validTypes.forEach((validType) => {
           return request(app.getHttpServer())
             .post('/alimentacoes-def')
             .send({

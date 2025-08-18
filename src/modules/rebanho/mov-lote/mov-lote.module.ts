@@ -11,5 +11,3 @@ import { AuthModule } from '../../auth/auth.module';
   exports: [MovLoteService],
 })
 export class MovLoteModule {}
-
-

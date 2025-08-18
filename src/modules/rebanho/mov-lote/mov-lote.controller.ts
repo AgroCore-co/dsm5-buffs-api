@@ -35,5 +35,3 @@ export class MovLoteController {
     return this.service.remove(id);
   }
 }
-
-

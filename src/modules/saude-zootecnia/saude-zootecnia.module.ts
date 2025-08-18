@@ -4,6 +4,6 @@ import { MedicamentosModule } from './medicamentos/medicamentos.module';
 import { VacinacaoModule } from './vacinacao/vacinacao.module';
 
 @Module({
-  imports: [DadosZootecnicosModule, MedicamentosModule, VacinacaoModule]
+  imports: [DadosZootecnicosModule, MedicamentosModule, VacinacaoModule],
 })
 export class SaudeZootecniaModule {}

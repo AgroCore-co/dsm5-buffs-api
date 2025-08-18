@@ -13,11 +13,7 @@ export class RacaService {
   }
 
   async create(createRacaDto: CreateRacaDto) {
-    const { data, error } = await this.supabase
-      .from('Raca')
-      .insert(createRacaDto)
-      .select()
-      .single();
+    const { data, error } = await this.supabase.from('Raca').insert(createRacaDto).select().single();
 
     if (error) {
       console.error('Erro ao criar raça:', error);
@@ -28,10 +24,7 @@ export class RacaService {
   }
 
   async findAll() {
-    const { data, error } = await this.supabase
-      .from('Raca')
-      .select('*')
-      .order('nome', { ascending: true });
+    const { data, error } = await this.supabase.from('Raca').select('*').order('nome', { ascending: true });
 
     if (error) {
       console.error('Erro ao buscar raças:', error);
@@ -42,11 +35,7 @@ export class RacaService {
   }
 
   async findOne(id: number) {
-    const { data, error } = await this.supabase
-      .from('Raca')
-      .select('*')
-      .eq('id_raca', id)
-      .single();
+    const { data, error } = await this.supabase.from('Raca').select('*').eq('id_raca', id).single();
 
     if (error) {
       if (error.code === 'PGRST116') {
@@ -63,12 +52,7 @@ export class RacaService {
     // Primeiro verifica se a raça existe
     await this.findOne(id);
 
-    const { data, error } = await this.supabase
-      .from('Raca')
-      .update(updateRacaDto)
-      .eq('id_raca', id)
-      .select()
-      .single();
+    const { data, error } = await this.supabase.from('Raca').update(updateRacaDto).eq('id_raca', id).select().single();
 
     if (error) {
       console.error('Erro ao atualizar raça:', error);
@@ -82,10 +66,7 @@ export class RacaService {
     // Primeiro verifica se a raça existe
     await this.findOne(id);
 
-    const { error } = await this.supabase
-      .from('Raca')
-      .delete()
-      .eq('id_raca', id);
+    const { error } = await this.supabase.from('Raca').delete().eq('id_raca', id);
 
     if (error) {
       console.error('Erro ao deletar raça:', error);

@@ -13,11 +13,7 @@ export class AlimentacaoDefService {
   }
 
   async create(createAlimentacaoDefDto: CreateAlimentacaoDefDto) {
-    const { data, error } = await this.supabase
-      .from('AlimentacaoDef')
-      .insert(createAlimentacaoDefDto)
-      .select()
-      .single();
+    const { data, error } = await this.supabase.from('AlimentacaoDef').insert(createAlimentacaoDefDto).select().single();
 
     if (error) {
       console.error('Erro ao criar alimentação definida:', error);
@@ -28,10 +24,7 @@ export class AlimentacaoDefService {
   }
 
   async findAll() {
-    const { data, error } = await this.supabase
-      .from('AlimentacaoDef')
-      .select('*')
-      .order('id_aliment_def', { ascending: true });
+    const { data, error } = await this.supabase.from('AlimentacaoDef').select('*').order('id_aliment_def', { ascending: true });
 
     if (error) {
       console.error('Erro ao buscar alimentações definidas:', error);
@@ -42,11 +35,7 @@ export class AlimentacaoDefService {
   }
 
   async findOne(id: number) {
-    const { data, error } = await this.supabase
-      .from('AlimentacaoDef')
-      .select('*')
-      .eq('id_aliment_def', id)
-      .single();
+    const { data, error } = await this.supabase.from('AlimentacaoDef').select('*').eq('id_aliment_def', id).single();
 
     if (error) {
       if (error.code === 'PGRST116') {
@@ -63,12 +52,7 @@ export class AlimentacaoDefService {
     // Primeiro verifica se a alimentação definida existe
     await this.findOne(id);
 
-    const { data, error } = await this.supabase
-      .from('AlimentacaoDef')
-      .update(updateAlimentacaoDefDto)
-      .eq('id_aliment_def', id)
-      .select()
-      .single();
+    const { data, error } = await this.supabase.from('AlimentacaoDef').update(updateAlimentacaoDefDto).eq('id_aliment_def', id).select().single();
 
     if (error) {
       console.error('Erro ao atualizar alimentação definida:', error);
@@ -82,10 +66,7 @@ export class AlimentacaoDefService {
     // Primeiro verifica se a alimentação definida existe
     await this.findOne(id);
 
-    const { error } = await this.supabase
-      .from('AlimentacaoDef')
-      .delete()
-      .eq('id_aliment_def', id);
+    const { error } = await this.supabase.from('AlimentacaoDef').delete().eq('id_aliment_def', id);
 
     if (error) {
       console.error('Erro ao deletar alimentação definida:', error);

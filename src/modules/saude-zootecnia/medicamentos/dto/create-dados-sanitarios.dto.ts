@@ -49,5 +49,3 @@ export class CreateDadosSanitariosDto {
   @IsOptional()
   dt_retorno?: string;
 }
-
-

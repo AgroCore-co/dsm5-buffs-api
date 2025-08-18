@@ -3,6 +3,6 @@ import { CoberturaModule } from './cobertura/cobertura.module';
 import { MaterialGeneticoModule } from './material-genetico/material-genetico.module';
 
 @Module({
-  imports: [CoberturaModule, MaterialGeneticoModule]
+  imports: [CoberturaModule, MaterialGeneticoModule],
 })
 export class ReproducaoModule {}

@@ -11,5 +11,3 @@ import { AuthModule } from '../../auth/auth.module';
   exports: [IndustriaService],
 })
 export class IndustriaModule {}
-
-

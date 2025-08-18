@@ -32,10 +32,7 @@ export class DadosZootecnicosController {
   }
 
   @Patch(':id_zootec')
-  update(
-    @Param('id_zootec', ParseIntPipe) id_zootec: number,
-    @Body() updateDto: UpdateDadoZootecnicoDto,
-  ) {
+  update(@Param('id_zootec', ParseIntPipe) id_zootec: number, @Body() updateDto: UpdateDadoZootecnicoDto) {
     return this.service.update(id_zootec, updateDto);
   }
 

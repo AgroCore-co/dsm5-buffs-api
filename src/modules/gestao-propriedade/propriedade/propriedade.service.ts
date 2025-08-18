@@ -1,9 +1,4 @@
-import {
-  Injectable,
-  NotFoundException,
-  InternalServerErrorException,
-  BadRequestException,
-} from '@nestjs/common';
+import { Injectable, NotFoundException, InternalServerErrorException, BadRequestException } from '@nestjs/common';
 import { SupabaseClient } from '@supabase/supabase-js';
 import { SupabaseService } from '../../../core/supabase/supabase.service';
 import { CreatePropriedadeDto } from './dto/create-propiedade.dto';
@@ -23,11 +18,7 @@ export class PropriedadeService {
    */
   private async getUserId(user: any): Promise<number> {
     // Sem coluna auth_id no schema: buscamos pelo e-mail do token
-    const { data: perfilUsuario, error } = await this.supabase
-      .from('Usuario')
-      .select('id_usuario')
-      .eq('email', user.email)
-      .single();
+    const { data: perfilUsuario, error } = await this.supabase.from('Usuario').select('id_usuario').eq('email', user.email).single();
 
     if (error || !perfilUsuario) {
       throw new NotFoundException('Perfil de usuário não encontrado.');
@@ -38,18 +29,15 @@ export class PropriedadeService {
   async create(createPropriedadeDto: CreatePropriedadeDto, user: any) {
     const idDono = await this.getUserId(user);
 
-    const { data: novaPropriedade, error: propriedadeError } =
-      await this.supabase
-        .from('Propriedade')
-        .insert([{ ...createPropriedadeDto, id_dono: idDono }])
-        .select()
-        .single();
+    const { data: novaPropriedade, error: propriedadeError } = await this.supabase
+      .from('Propriedade')
+      .insert([{ ...createPropriedadeDto, id_dono: idDono }])
+      .select()
+      .single();
 
     if (propriedadeError) {
       if (propriedadeError.code === '23503') {
-        throw new BadRequestException(
-          `O endereço com id ${createPropriedadeDto.id_endereco} não foi encontrado.`,
-        );
+        throw new BadRequestException(`O endereço com id ${createPropriedadeDto.id_endereco} não foi encontrado.`);
       }
       console.error('Erro ao criar propriedade:', propriedadeError);
       throw new InternalServerErrorException('Falha ao criar a propriedade.');
@@ -64,10 +52,7 @@ export class PropriedadeService {
   async findAll(user: any) {
     const idDono = await this.getUserId(user);
 
-    const { data, error } = await this.supabase
-      .from('Propriedade')
-      .select('*')
-      .eq('id_dono', idDono);
+    const { data, error } = await this.supabase.from('Propriedade').select('*').eq('id_dono', idDono);
 
     if (error) {
       throw new InternalServerErrorException('Falha ao buscar as propriedades.');
@@ -90,9 +75,7 @@ export class PropriedadeService {
       .single();
 
     if (error || !data) {
-      throw new NotFoundException(
-        `Propriedade com ID ${id} não encontrada ou não pertence a este usuário.`,
-      );
+      throw new NotFoundException(`Propriedade com ID ${id} não encontrada ou não pertence a este usuário.`);
     }
 
     return data;
@@ -101,20 +84,11 @@ export class PropriedadeService {
   /**
    * Atualiza uma propriedade, verificando a posse antes de realizar a operação.
    */
-  async update(
-    id: number,
-    updatePropriedadeDto: UpdatePropriedadeDto,
-    user: any,
-  ) {
+  async update(id: number, updatePropriedadeDto: UpdatePropriedadeDto, user: any) {
     // Garante que o usuário é o dono da propriedade antes de tentar atualizar.
     await this.findOne(id, user);
 
-    const { data, error } = await this.supabase
-      .from('Propriedade')
-      .update(updatePropriedadeDto)
-      .eq('id_propriedade', id)
-      .select()
-      .single();
+    const { data, error } = await this.supabase.from('Propriedade').update(updatePropriedadeDto).eq('id_propriedade', id).select().single();
 
     if (error) {
       throw new InternalServerErrorException('Falha ao atualizar a propriedade.');
@@ -130,10 +104,7 @@ export class PropriedadeService {
     // Garante que o usuário é o dono da propriedade antes de tentar remover.
     await this.findOne(id, user);
 
-    const { error } = await this.supabase
-      .from('Propriedade')
-      .delete()
-      .eq('id_propriedade', id);
+    const { error } = await this.supabase.from('Propriedade').delete().eq('id_propriedade', id);
 
     if (error) {
       throw new InternalServerErrorException('Falha ao remover a propriedade.');

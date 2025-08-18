@@ -8,7 +8,7 @@ import { User } from '../../auth/user.decorator';
 
 @ApiBearerAuth('JWT-auth')
 @UseGuards(SupabaseAuthGuard)
-@ApiTags('Gestão de Propriedade / Propriedades') 
+@ApiTags('Gestão de Propriedade / Propriedades')
 @Controller('propriedades')
 export class PropriedadeController {
   constructor(private readonly propriedadeService: PropriedadeService) {}

@@ -32,5 +32,3 @@ export class CreateRegistroAlimentacaoDto {
   @IsOptional()
   dt_registro?: string; // ISO date string
 }
-
-

@@ -6,6 +6,6 @@ import { SupabaseModule } from 'src/core/supabase/supabase.module';
 @Module({
   imports: [SupabaseModule],
   controllers: [DadosZootecnicosController],
-  providers: [DadosZootecnicosService]
+  providers: [DadosZootecnicosService],
 })
 export class DadosZootecnicosModule {}

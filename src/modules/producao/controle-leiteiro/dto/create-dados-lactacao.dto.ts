@@ -30,5 +30,3 @@ export class CreateDadosLactacaoDto {
   @IsDateString()
   dt_ordenha: string;
 }
-
-

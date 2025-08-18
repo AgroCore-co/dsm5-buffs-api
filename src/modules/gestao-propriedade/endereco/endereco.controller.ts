@@ -58,10 +58,7 @@ export class EnderecoController {
   @ApiResponse({ status: 400, description: 'Dados inválidos.' })
   @ApiResponse({ status: 401, description: 'Não autorizado.' })
   @ApiResponse({ status: 404, description: 'Endereço não encontrado.' })
-  update(
-    @Param('id', ParseIntPipe) id: number,
-    @Body() updateEnderecoDto: UpdateEnderecoDto,
-  ) {
+  update(@Param('id', ParseIntPipe) id: number, @Body() updateEnderecoDto: UpdateEnderecoDto) {
     return this.enderecoService.update(id, updateEnderecoDto);
   }
 
