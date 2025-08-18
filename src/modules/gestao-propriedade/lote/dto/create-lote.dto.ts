@@ -27,8 +27,9 @@ export class CreateLoteDto {
   descricao?: string;
 
 
-  @ApiProperty({
+    @ApiProperty({
     description: 'Objeto GeoJSON contendo a geometria do polígono.',
+    // Este exemplo agora corresponde ao que o Swagger mostrava
     example: {
       type: 'Polygon',
       coordinates: [
@@ -37,10 +38,10 @@ export class CreateLoteDto {
         ]
       ]
     },
-    required: false,
+    required: true, // Ou false, dependendo da sua regra
   })
-  @IsObject()
-  @IsOptional()
-  geo_mapa?: object;
+  @IsObject() // Validação para OBJETO
+  @IsNotEmpty()
+  geo_mapa: object; // O tipo agora é OBJETO
 }
 
