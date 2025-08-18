@@ -55,8 +55,7 @@ export class LoteService {
           nome_lote: createLoteDto.nome_lote,
           id_propriedade: createLoteDto.id_propriedade,
           descricao: createLoteDto.descricao,
-          // O banco utiliza POLYGON; o DTO espera WKT como string
-          geo_mapa: createLoteDto.geo_mapa,
+          geo_mapa: JSON.stringify(createLoteDto.geo_mapa),
         },
       ])
       .select()

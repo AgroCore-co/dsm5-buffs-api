@@ -1,5 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsString, IsNotEmpty, IsOptional, IsInt } from 'class-validator';
+import { IsObject, IsString, IsNotEmpty, IsOptional, IsInt } from 'class-validator';
 
 export class CreateLoteDto {
   @ApiProperty({
@@ -26,12 +26,21 @@ export class CreateLoteDto {
   @IsOptional()
   descricao?: string;
 
+
   @ApiProperty({
-    description: 'Polígono no formato WKT aceito pelo PostgreSQL (ex.: POLYGON((x y, ...))).',
-    example: 'POLYGON((-47.5 -24.5, -47.4 -24.5, -47.4 -24.4, -47.5 -24.4, -47.5 -24.5))',
+    description: 'Objeto GeoJSON contendo a geometria do polígono.',
+    example: {
+      type: 'Polygon',
+      coordinates: [
+        [
+          [-47.5, -24.5], [-47.4, -24.5], [-47.4, -24.4], [-47.5, -24.4], [-47.5, -24.5]
+        ]
+      ]
+    },
     required: false,
   })
-  @IsString()
+  @IsObject()
   @IsOptional()
-  geo_mapa?: string;
+  geo_mapa?: object;
 }
+
