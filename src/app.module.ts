@@ -8,6 +8,7 @@ import { GestaoPropriedadeModule } from './modules/gestao-propriedade/gestao-pro
 import { AlimentacaoModule } from './modules/alimentacao/alimentacao.module';
 import { SaudeZootecniaModule } from './modules/saude-zootecnia/saude-zootecnia.module';
 import { ReproducaoModule } from './modules/reproducao/reproducao.module';
+import { ProducaoModule } from './modules/producao/producao.module';
 
 @Module({
   imports: [
@@ -20,6 +21,7 @@ import { ReproducaoModule } from './modules/reproducao/reproducao.module';
     AlimentacaoModule,
     SaudeZootecniaModule,
     ReproducaoModule,
+    ProducaoModule,
   ],
   controllers: [],
   providers: [],
