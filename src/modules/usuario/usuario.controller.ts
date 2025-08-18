@@ -13,7 +13,7 @@ export class UsuarioController {
 
   @Post()
   @UseGuards(SupabaseAuthGuard)
-  @ApiBearerAuth('JWT-auth') // O nome 'JWT-auth' corresponde ao definido no main.ts
+  @ApiBearerAuth('JWT-auth')
   @ApiOperation({
     summary: 'Cria o perfil de dados de um novo usuário',
     description: `Cria o perfil de dados (nome, cargo, etc.) para um usuário **previamente autenticado**. 
@@ -25,11 +25,7 @@ export class UsuarioController {
   @ApiResponse({ status: 401, description: 'Não autorizado. Token JWT inválido ou ausente.' })
   @ApiResponse({ status: 409, description: 'Este usuário já possui um perfil cadastrado.' })
   create(@Body() createUsuarioDto: CreateUsuarioDto, @User() user: any) {
-    const dadosCompletosParaCriacao = {
-      ...createUsuarioDto,
-      email: user.email,
-    };
-    return this.usuarioService.create(dadosCompletosParaCriacao, user.sub);
+    return this.usuarioService.create(createUsuarioDto, user.email);
   }
 
   @Get()
@@ -53,7 +49,7 @@ export class UsuarioController {
   @ApiResponse({ status: 401, description: 'Não autorizado.' })
   @ApiResponse({ status: 404, description: 'Perfil não encontrado para o usuário autenticado.' })
   findMyProfile(@User() user: any) {
-    return this.usuarioService.findOneById(user.sub);
+    return this.usuarioService.findOneById(user.email);
   }
 
   @Get(':id')

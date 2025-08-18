@@ -5,6 +5,7 @@ import { RacaModule } from './raca/raca.module';
 import { GrupoModule } from './grupo/grupo.module';
 import { SupabaseModule } from '../../core/supabase/supabase.module';
 import { AuthModule } from '../auth/auth.module';
+import { MovLoteModule } from './mov-lote/mov-lote.module';
 
 @Module({
   imports: [
@@ -12,6 +13,7 @@ import { AuthModule } from '../auth/auth.module';
     AuthModule, // Importamos para ter acesso aos provedores de autenticação, como o Guard
     RacaModule, // Módulo de raças
     GrupoModule, // Módulo de grupos
+    MovLoteModule,
   ],
   controllers: [BufaloController],
   providers: [BufaloService],

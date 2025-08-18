@@ -18,12 +18,12 @@ export class UsuarioService {
    * @param authId - O ID de autenticação (sub) do usuário logado.
    * @returns O perfil do usuário recém-criado.
    */
-  async create(createUsuarioDto: CreateUsuarioDto, authId: string) {
-    // Verifica se já existe um perfil para este usuário autenticado
+  async create(createUsuarioDto: CreateUsuarioDto, email: string) {
+    // Sem coluna auth_id no schema: utilizamos e-mail para unicidade
     const { data: existingProfile } = await this.supabase
       .from('Usuario')
       .select('id_usuario')
-      .eq('auth_id', authId)
+      .eq('email', email)
       .single();
 
     if (existingProfile) {
@@ -32,7 +32,7 @@ export class UsuarioService {
 
     const { data, error } = await this.supabase
       .from('Usuario')
-      .insert([{ ...createUsuarioDto, auth_id: authId }])
+      .insert([{ ...createUsuarioDto, email }])
       .select()
       .single();
 
@@ -60,10 +60,11 @@ export class UsuarioService {
    * @returns O perfil do usuário correspondente.
    */
   async findOneById(id: string) {
+    // Sem auth_id: buscamos por e-mail fornecido pelo token
     const { data, error } = await this.supabase
       .from('Usuario')
       .select('*')
-      .eq('auth_id', id)
+      .eq('email', id)
       .single();
 
     if (error) {
