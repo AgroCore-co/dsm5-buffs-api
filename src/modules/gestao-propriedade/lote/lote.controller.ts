@@ -39,6 +39,21 @@ export class LoteController {
     return this.loteService.findOne(id);
   }
 
+  @Get('propriedade/:id_propriedade')
+  @ApiOperation({
+    summary: 'Lista todos os lotes de uma propriedade específica',
+    description: 'Retorna uma lista de todos os lotes cadastrados para uma propriedade, ordenados por data de criação.',
+  })
+  @ApiParam({ name: 'id_propriedade', description: 'ID da propriedade à qual os lotes pertencem', type: 'number' })
+  @ApiResponse({
+    status: 200,
+    description: 'Lista de lotes da propriedade retornada com sucesso.',
+  })
+  @ApiResponse({ status: 401, description: 'Não autorizado.' })
+  findAllByPropriedade(@Param('id_propriedade', ParseIntPipe) id_propriedade: number) {
+    return this.loteService.findAllByPropriedade(id_propriedade);
+  }
+
   @Post()
   @ApiOperation({
     summary: 'Cria um novo lote (piquete) com dados geográficos',

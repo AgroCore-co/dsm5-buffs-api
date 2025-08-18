@@ -42,6 +42,26 @@ export class LoteService {
 
     return data;
   }
+  
+  /**
+   * Busca todos os lotes (piquetes) de uma propriedade específica.
+   * @param id_propriedade - O ID da propriedade para filtrar os lotes.
+   */
+  async findAllByPropriedade(id_propriedade: number) {
+    const { data, error } = await this.supabase
+      .from('Lote')
+      .select('*')
+      .eq('id_propriedade', id_propriedade) // AQUI ESTÁ A OTIMIZAÇÃO
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      console.error(`Erro ao buscar lotes para a propriedade ${id_propriedade}:`, error);
+      throw new InternalServerErrorException('Falha ao buscar os lotes da propriedade.');
+    }
+
+    // Se não encontrar lotes, retorna um array vazio, o que é um comportamento esperado.
+    return data;
+  }
 
   /**
    * Cria um novo lote no banco de dados.
