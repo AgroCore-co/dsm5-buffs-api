@@ -1,26 +1,26 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsOptional, IsString, MaxLength } from 'class-validator';
+import { IsString, IsNotEmpty, IsOptional, MaxLength } from 'class-validator';
 
 export class CreateIndustriaDto {
-  @ApiProperty({ required: false, maxLength: 20 })
+  @ApiProperty({ example: 'Laticínios Búfalo Dourado', description: 'Nome da indústria/laticínio' })
   @IsString()
-  @IsOptional()
+  @IsNotEmpty()
   @MaxLength(20)
-  nome?: string;
+  nome: string;
 
-  @ApiProperty({ required: false, maxLength: 20 })
+  @ApiProperty({ example: 'Carlos Silva', description: 'Nome do representante comercial', required: false })
   @IsString()
   @IsOptional()
   @MaxLength(20)
   representante?: string;
 
-  @ApiProperty({ required: false, maxLength: 20 })
+  @ApiProperty({ example: '(13) 99999-8888', description: 'Telefone ou email de contato', required: false })
   @IsString()
   @IsOptional()
   @MaxLength(20)
   contato?: string;
 
-  @ApiProperty({ required: false, maxLength: 50 })
+  @ApiProperty({ example: 'Coleta realizada às segundas e quintas.', description: 'Observações gerais', required: false })
   @IsString()
   @IsOptional()
   @MaxLength(50)

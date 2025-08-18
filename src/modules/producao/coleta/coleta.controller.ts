@@ -1,7 +1,10 @@
 import { Controller, Get, Post, Body, Patch, Param, Delete, ParseIntPipe, UseGuards } from '@nestjs/common';
-import { ApiBearerAuth, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiOperation, ApiResponse, ApiTags, ApiParam, ApiBody } from '@nestjs/swagger';
 import { SupabaseAuthGuard } from '../../auth/auth.guard';
+import { User } from '../../auth/user.decorator';
 import { ColetaService } from './coleta.service';
+import { CreateColetaDto } from './dto/create-coleta.dto';
+import { UpdateColetaDto } from './dto/update-coleta.dto';
 
 @ApiBearerAuth('JWT-auth')
 @UseGuards(SupabaseAuthGuard)
@@ -11,21 +14,24 @@ export class ColetaController {
   constructor(private readonly service: ColetaService) {}
 
   @Post()
-  @ApiOperation({ summary: 'Cria uma coleta de leite' })
-  @ApiResponse({ status: 201, description: 'Coleta criada com sucesso.' })
-  create(@Body() dto: any) {
-    return this.service.create(dto);
+  @ApiOperation({ summary: 'Cria um novo registro de coleta de leite' })
+  @ApiBody({ type: CreateColetaDto })
+  @ApiResponse({ status: 201, description: 'Coleta registrada com sucesso.' })
+  @ApiResponse({ status: 400, description: 'Dados inválidos.' })
+  create(@Body() dto: CreateColetaDto, @User('sub') id_funcionario: string) {
+    return this.service.create(dto, id_funcionario);
   }
 
   @Get()
-  @ApiOperation({ summary: 'Lista coletas de leite' })
-  @ApiResponse({ status: 200, description: 'Lista retornada com sucesso.' })
+  @ApiOperation({ summary: 'Lista todas as coletas de leite' })
+  @ApiResponse({ status: 200, description: 'Lista de coletas retornada com sucesso.' })
   findAll() {
     return this.service.findAll();
   }
 
   @Get(':id')
-  @ApiOperation({ summary: 'Busca uma coleta por ID' })
+  @ApiOperation({ summary: 'Busca uma coleta de leite pelo ID' })
+  @ApiParam({ name: 'id', description: 'ID da coleta' })
   @ApiResponse({ status: 200, description: 'Coleta encontrada.' })
   @ApiResponse({ status: 404, description: 'Coleta não encontrada.' })
   findOne(@Param('id', ParseIntPipe) id: number) {
@@ -33,15 +39,20 @@ export class ColetaController {
   }
 
   @Patch(':id')
-  @ApiOperation({ summary: 'Atualiza uma coleta' })
-  @ApiResponse({ status: 200, description: 'Coleta atualizada.' })
-  update(@Param('id', ParseIntPipe) id: number, @Body() dto: any) {
+  @ApiOperation({ summary: 'Atualiza um registro de coleta' })
+  @ApiParam({ name: 'id', description: 'ID da coleta a ser atualizada' })
+  @ApiBody({ type: UpdateColetaDto })
+  @ApiResponse({ status: 200, description: 'Coleta atualizada com sucesso.' })
+  @ApiResponse({ status: 404, description: 'Coleta não encontrada.' })
+  update(@Param('id', ParseIntPipe) id: number, @Body() dto: UpdateColetaDto) {
     return this.service.update(id, dto);
   }
 
   @Delete(':id')
-  @ApiOperation({ summary: 'Remove uma coleta' })
-  @ApiResponse({ status: 200, description: 'Coleta removida.' })
+  @ApiOperation({ summary: 'Remove um registro de coleta' })
+  @ApiParam({ name: 'id', description: 'ID da coleta a ser removida' })
+  @ApiResponse({ status: 200, description: 'Coleta removida com sucesso.' })
+  @ApiResponse({ status: 404, description: 'Coleta não encontrada.' })
   remove(@Param('id', ParseIntPipe) id: number) {
     return this.service.remove(id);
   }
