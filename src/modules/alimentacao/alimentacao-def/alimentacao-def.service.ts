@@ -31,7 +31,7 @@ export class AlimentacaoDefService {
     const { data, error } = await this.supabase
       .from('AlimentacaoDef')
       .select('*')
-      .order('nome_alimentacao', { ascending: true });
+      .order('id_aliment_def', { ascending: true });
 
     if (error) {
       console.error('Erro ao buscar alimentações definidas:', error);
@@ -45,7 +45,7 @@ export class AlimentacaoDefService {
     const { data, error } = await this.supabase
       .from('AlimentacaoDef')
       .select('*')
-      .eq('id_alimentacao_def', id)
+      .eq('id_aliment_def', id)
       .single();
 
     if (error) {
@@ -66,7 +66,7 @@ export class AlimentacaoDefService {
     const { data, error } = await this.supabase
       .from('AlimentacaoDef')
       .update(updateAlimentacaoDefDto)
-      .eq('id_alimentacao_def', id)
+      .eq('id_aliment_def', id)
       .select()
       .single();
 
@@ -85,7 +85,7 @@ export class AlimentacaoDefService {
     const { error } = await this.supabase
       .from('AlimentacaoDef')
       .delete()
-      .eq('id_alimentacao_def', id);
+      .eq('id_aliment_def', id);
 
     if (error) {
       console.error('Erro ao deletar alimentação definida:', error);
