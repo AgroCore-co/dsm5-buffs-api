@@ -45,7 +45,7 @@ export class EnderecoService {
     const { data, error } = await this.supabase
       .from('Endereco')
       .select('*')
-      .eq('id', id)
+      .eq('id_endereco', id)
       .single();
 
     if (error) {
@@ -66,7 +66,7 @@ export class EnderecoService {
     const { data, error } = await this.supabase
       .from('Endereco')
       .update(updateEnderecoDto)
-      .eq('id', id)
+      .eq('id_endereco', id)
       .select()
       .single();
 
@@ -85,7 +85,7 @@ export class EnderecoService {
     const { error } = await this.supabase
       .from('Endereco')
       .delete()
-      .eq('id', id);
+      .eq('id_endereco', id);
 
     if (error) {
       console.error('Erro ao deletar endereço:', error);

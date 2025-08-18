@@ -22,10 +22,11 @@ export class PropriedadeService {
    * Reutilizado em vários métodos para evitar repetição de código.
    */
   private async getUserId(user: any): Promise<number> {
+    // Sem coluna auth_id no schema: buscamos pelo e-mail do token
     const { data: perfilUsuario, error } = await this.supabase
       .from('Usuario')
       .select('id_usuario')
-      .eq('auth_id', user.sub)
+      .eq('email', user.email)
       .single();
 
     if (error || !perfilUsuario) {

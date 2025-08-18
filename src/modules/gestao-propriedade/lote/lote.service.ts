@@ -36,7 +36,7 @@ export class LoteService {
     const { data, error } = await this.supabase
       .from('Lote')
       .select('*')
-      .eq('id', id)
+      .eq('id_lote', id)
       .single();
 
     if (error) {
@@ -62,7 +62,7 @@ export class LoteService {
           nome_lote: createLoteDto.nome_lote,
           id_propriedade: createLoteDto.id_propriedade,
           descricao: createLoteDto.descricao,
-          // O PostGIS converte o GeoJSON recebido para o formato GEOMETRY automaticamente
+          // O banco utiliza POLYGON; o DTO espera WKT como string
           geo_mapa: createLoteDto.geo_mapa,
         },
       ])
@@ -86,7 +86,7 @@ export class LoteService {
     const { data, error } = await this.supabase
       .from('Lote')
       .update(updateLoteDto)
-      .eq('id', id)
+      .eq('id_lote', id)
       .select()
       .single();
 
@@ -108,7 +108,7 @@ export class LoteService {
     const { error } = await this.supabase
       .from('Lote')
       .delete()
-      .eq('id', id);
+      .eq('id_lote', id);
 
     if (error) {
       console.error('Erro ao deletar lote:', error);

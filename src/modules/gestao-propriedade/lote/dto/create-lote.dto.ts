@@ -1,11 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsString, IsNotEmpty, IsOptional, IsInt, IsObject } from 'class-validator';
-
-// Interface para definir a estrutura do objeto GeoJSON que esperamos
-interface GeoJSONPolygon {
-  type: 'Polygon';
-  coordinates: number[][][];
-}
+import { IsString, IsNotEmpty, IsOptional, IsInt } from 'class-validator';
 
 export class CreateLoteDto {
   @ApiProperty({
@@ -33,22 +27,11 @@ export class CreateLoteDto {
   descricao?: string;
 
   @ApiProperty({
-    description: 'Objeto GeoJSON representando o polígono do lote no mapa. O frontend deve fornecer isso.',
-    example: {
-      type: 'Polygon',
-      coordinates: [
-        [
-          [-47.5, -24.5],
-          [-47.4, -24.5],
-          [-47.4, -24.4],
-          [-47.5, -24.4],
-          [-47.5, -24.5],
-        ],
-      ],
-    },
+    description: 'Polígono no formato WKT aceito pelo PostgreSQL (ex.: POLYGON((x y, ...))).',
+    example: 'POLYGON((-47.5 -24.5, -47.4 -24.5, -47.4 -24.4, -47.5 -24.4, -47.5 -24.5))',
     required: false,
   })
-  @IsObject()
+  @IsString()
   @IsOptional()
-  geo_mapa?: GeoJSONPolygon;
+  geo_mapa?: string;
 }
