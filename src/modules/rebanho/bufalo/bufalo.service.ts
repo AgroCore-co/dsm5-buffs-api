@@ -1,7 +1,7 @@
 import { Injectable, NotFoundException, InternalServerErrorException } from '@nestjs/common';
 import { CreateBufaloDto } from './dto/create-bufalo.dto';
 import { UpdateBufaloDto } from './dto/update-bufalo.dto';
-import { SupabaseService } from '../../core/supabase/supabase.service';
+import { SupabaseService } from '../../../core/supabase/supabase.service';
 
 @Injectable()
 export class BufaloService {

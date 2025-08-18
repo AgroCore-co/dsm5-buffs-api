@@ -8,7 +8,6 @@ import { EnderecoModule } from './endereco/endereco.module';
     LoteModule,
     PropriedadeModule,
     EnderecoModule,
-    // Quando criar novos submódulos (ex: 'culturas'), importe-os aqui
   ],
 })
 export class GestaoPropriedadeModule {}

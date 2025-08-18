@@ -3,7 +3,7 @@ import { BufaloService } from './bufalo.service';
 import { CreateBufaloDto } from './dto/create-bufalo.dto';
 import { UpdateBufaloDto } from './dto/update-bufalo.dto';
 import { ApiTags, ApiOperation, ApiResponse, ApiParam, ApiBearerAuth } from '@nestjs/swagger';
-import { SupabaseAuthGuard } from '../auth/auth.guard';
+import { SupabaseAuthGuard } from '../../auth/auth.guard';
 
 @ApiBearerAuth('JWT-auth')
 @UseGuards(SupabaseAuthGuard)
