@@ -1,6 +1,7 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, ParseIntPipe, UseGuards } from '@nestjs/common';
-import { ApiBearerAuth, ApiTags, ApiOperation, ApiResponse, ApiParam, ApiBody } from '@nestjs/swagger';
+import { Controller, Get, Post, Body, Patch, Param, Delete, ParseIntPipe, UseGuards, HttpCode } from '@nestjs/common';
+import { ApiBearerAuth, ApiTags, ApiOperation, ApiResponse, ApiParam } from '@nestjs/swagger';
 import { SupabaseAuthGuard } from '../../auth/auth.guard';
+import { User } from '../../auth/user.decorator';
 import { MovLoteService } from './mov-lote.service';
 import { CreateMovLoteDto } from './dto/create-mov-lote.dto';
 import { UpdateMovLoteDto } from './dto/update-mov-lote.dto';
@@ -13,46 +14,46 @@ export class MovLoteController {
   constructor(private readonly service: MovLoteService) {}
 
   @Post()
-  @ApiOperation({ summary: 'Cria um novo registro de movimentação de lote' })
-  @ApiBody({ type: CreateMovLoteDto })
+  @ApiOperation({ summary: 'Registra a movimentação de um grupo entre lotes' })
   @ApiResponse({ status: 201, description: 'Movimentação registrada com sucesso.' })
-  @ApiResponse({ status: 400, description: 'Dados inválidos.' })
-  create(@Body() dto: CreateMovLoteDto) {
-    return this.service.create(dto);
+  @ApiResponse({ status: 400, description: 'Dados inválidos (ex: lotes iguais, ID não existe).' })
+  @ApiResponse({ status: 404, description: 'Lote/Grupo não encontrado ou não pertence ao usuário.' })
+  create(@Body() dto: CreateMovLoteDto, @User() user: any) {
+    return this.service.create(dto, user);
   }
 
   @Get()
-  @ApiOperation({ summary: 'Lista todos os registros de movimentação' })
+  @ApiOperation({ summary: 'Lista todas as movimentações de lotes do usuário logado' })
   @ApiResponse({ status: 200, description: 'Lista de movimentações retornada com sucesso.' })
-  findAll() {
-    return this.service.findAll();
+  findAll(@User() user: any) {
+    return this.service.findAll(user);
   }
 
   @Get(':id')
-  @ApiOperation({ summary: 'Busca um registro de movimentação pelo ID' })
-  @ApiParam({ name: 'id', description: 'ID do registro de movimentação' })
+  @ApiOperation({ summary: 'Busca uma movimentação pelo ID' })
+  @ApiParam({ name: 'id', description: 'ID da movimentação' })
   @ApiResponse({ status: 200, description: 'Registro encontrado.' })
-  @ApiResponse({ status: 404, description: 'Registro não encontrado.' })
-  findOne(@Param('id', ParseIntPipe) id: number) {
-    return this.service.findOne(id);
+  @ApiResponse({ status: 404, description: 'Movimentação não encontrada ou não pertence ao usuário.' })
+  findOne(@Param('id', ParseIntPipe) id: number, @User() user: any) {
+    return this.service.findOne(id, user);
   }
 
   @Patch(':id')
-  @ApiOperation({ summary: 'Atualiza um registro de movimentação' })
-  @ApiParam({ name: 'id', description: 'ID do registro a ser atualizado' })
-  @ApiBody({ type: UpdateMovLoteDto })
+  @ApiOperation({ summary: 'Atualiza uma movimentação' })
+  @ApiParam({ name: 'id', description: 'ID da movimentação a ser atualizada' })
   @ApiResponse({ status: 200, description: 'Registro atualizado com sucesso.' })
-  @ApiResponse({ status: 404, description: 'Registro não encontrado.' })
-  update(@Param('id', ParseIntPipe) id: number, @Body() dto: UpdateMovLoteDto) {
-    return this.service.update(id, dto);
+  @ApiResponse({ status: 404, description: 'Movimentação não encontrada ou não pertence ao usuário.' })
+  update(@Param('id', ParseIntPipe) id: number, @Body() dto: UpdateMovLoteDto, @User() user: any) {
+    return this.service.update(id, dto, user);
   }
 
   @Delete(':id')
-  @ApiOperation({ summary: 'Remove um registro de movimentação' })
-  @ApiParam({ name: 'id', description: 'ID do registro a ser removido' })
-  @ApiResponse({ status: 200, description: 'Registro removido com sucesso.' })
-  @ApiResponse({ status: 404, description: 'Registro não encontrado.' })
-  remove(@Param('id', ParseIntPipe) id: number) {
-    return this.service.remove(id);
+  @HttpCode(204)
+  @ApiOperation({ summary: 'Remove o registro de uma movimentação' })
+  @ApiParam({ name: 'id', description: 'ID da movimentação a ser removida' })
+  @ApiResponse({ status: 204, description: 'Registro removido com sucesso.' })
+  @ApiResponse({ status: 404, description: 'Movimentação não encontrada ou não pertence ao usuário.' })
+  remove(@Param('id', ParseIntPipe) id: number, @User() user: any) {
+    return this.service.remove(id, user);
   }
 }
