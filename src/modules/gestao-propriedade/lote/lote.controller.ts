@@ -7,7 +7,7 @@ import { SupabaseAuthGuard } from '../../auth/auth.guard';
 
 @ApiBearerAuth('JWT-auth')
 @UseGuards(SupabaseAuthGuard)
-@ApiTags('Gestão de Propriedade / Lotes (Piquetes)')
+@ApiTags('Gestão de Propriedade - Lotes (Piquetes)')
 @Controller('lotes')
 export class LoteController {
   constructor(private readonly loteService: LoteService) {}
