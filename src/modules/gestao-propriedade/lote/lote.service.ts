@@ -1,4 +1,4 @@
-import { Injectable, InternalServerErrorException, NotFoundException } from '@nestjs/common';
+import { Injectable, InternalServerErrorException, NotFoundException, BadRequestException } from '@nestjs/common';
 import { SupabaseClient } from '@supabase/supabase-js';
 import { SupabaseService } from '../../../core/supabase/supabase.service';
 import { CreateLoteDto } from './dto/create-lote.dto';
@@ -12,113 +12,145 @@ export class LoteService {
     this.supabase = this.supabaseService.getClient();
   }
 
-  /**
-   * Busca todos os lotes (piquetes) do banco de dados.
-   * O campo 'geo_mapa' será retornado no formato GeoJSON, pronto para o Leaflet.
-   */
-  async findAll() {
-    const { data, error } = await this.supabase.from('Lote').select('*').order('created_at', { ascending: false });
+  private async getUserId(user: any): Promise<number> {
+    const { data: perfilUsuario, error } = await this.supabase
+      .from('Usuario')
+      .select('id_usuario')
+      .eq('email', user.email)
+      .single();
 
-    if (error) {
-      console.error('Erro ao buscar lotes:', error);
-      throw new InternalServerErrorException('Falha ao buscar os lotes.');
+    if (error || !perfilUsuario) {
+      throw new NotFoundException('Perfil de usuário não encontrado.');
     }
-    return data;
+    return perfilUsuario.id_usuario;
   }
 
-  /**
-   * Busca um lote específico pelo ID.
-   */
-  async findOne(id: number) {
-    const { data, error } = await this.supabase.from('Lote').select('*').eq('id_lote', id).single();
-
-    if (error) {
-      if (error.code === 'PGRST116') {
-        throw new NotFoundException('Lote não encontrado.');
+  // Função helper para converter a string GeoJSON em objeto
+  private parseGeoMapa(lote: any): any {
+    if (lote && typeof lote.geo_mapa === 'string') {
+      try {
+        lote.geo_mapa = JSON.parse(lote.geo_mapa);
+      } catch (e) {
+        // Se falhar, deixa como está para não quebrar a aplicação
+        console.error('Falha ao parsear GeoJSON:', e);
       }
-      console.error('Erro ao buscar lote:', error);
-      throw new InternalServerErrorException('Falha ao buscar o lote.');
     }
-
-    return data;
+    return lote;
   }
   
-  /**
-   * Busca todos os lotes (piquetes) de uma propriedade específica.
-   * @param id_propriedade - O ID da propriedade para filtrar os lotes.
-   */
-  async findAllByPropriedade(id_propriedade: number) {
-    const { data, error } = await this.supabase
-      .from('Lote')
-      .select('*')
-      .eq('id_propriedade', id_propriedade) // AQUI ESTÁ A OTIMIZAÇÃO
-      .order('created_at', { ascending: false });
-
-    if (error) {
-      console.error(`Erro ao buscar lotes para a propriedade ${id_propriedade}:`, error);
-      throw new InternalServerErrorException('Falha ao buscar os lotes da propriedade.');
-    }
-
-    // Se não encontrar lotes, retorna um array vazio, o que é um comportamento esperado.
-    return data;
+  private async validateOwnership(propriedadeId: number, userId: number) {
+      const { data: propriedade, error } = await this.supabase
+        .from('Propriedade')
+        .select('id_propriedade')
+        .eq('id_propriedade', propriedadeId)
+        .eq('id_dono', userId)
+        .single();
+      
+      if (error || !propriedade) {
+        throw new NotFoundException(`Propriedade com ID ${propriedadeId} não encontrada ou não pertence a este usuário.`);
+      }
   }
 
-  /**
-   * Cria um novo lote no banco de dados.
-   * @param createLoteDto - Dados do novo lote, incluindo a geometria.
-   */
-  async create(createLoteDto: CreateLoteDto) {
+  async create(createLoteDto: CreateLoteDto, user: any) {
+    const userId = await this.getUserId(user);
+    await this.validateOwnership(createLoteDto.id_propriedade, userId);
+    
+    // Prepara o objeto para inserção, stringificando o geo_mapa
+    const loteToInsert = {
+        ...createLoteDto,
+        geo_mapa: JSON.stringify(createLoteDto.geo_mapa)
+    };
+
     const { data, error } = await this.supabase
       .from('Lote')
-      .insert([
-        {
-          nome_lote: createLoteDto.nome_lote,
-          id_propriedade: createLoteDto.id_propriedade,
-          descricao: createLoteDto.descricao,
-          geo_mapa: JSON.stringify(createLoteDto.geo_mapa),
-        },
-      ])
+      .insert(loteToInsert)
       .select()
       .single();
 
     if (error) {
-      console.error('Erro ao criar lote:', error);
+       if (error.code === '23503') { // Erro de chave estrangeira
+        throw new BadRequestException(`A propriedade com ID ${createLoteDto.id_propriedade} não existe.`);
+      }
       throw new InternalServerErrorException('Falha ao criar o lote.');
     }
-    return data;
+    // Parseia o retorno para o cliente
+    return this.parseGeoMapa(data);
   }
 
-  /**
-   * Atualiza um lote existente.
-   */
-  async update(id: number, updateLoteDto: UpdateLoteDto) {
-    // Primeiro verifica se o lote existe
-    await this.findOne(id);
+  async findAllByPropriedade(id_propriedade: number, user: any) {
+    const userId = await this.getUserId(user);
+    await this.validateOwnership(id_propriedade, userId);
 
-    const { data, error } = await this.supabase.from('Lote').update(updateLoteDto).eq('id_lote', id).select().single();
+    const { data, error } = await this.supabase
+      .from('Lote')
+      .select('*')
+      .eq('id_propriedade', id_propriedade)
+      .order('created_at', { ascending: false });
 
     if (error) {
-      console.error('Erro ao atualizar lote:', error);
-      throw new InternalServerErrorException('Falha ao atualizar o lote.');
+      throw new InternalServerErrorException('Falha ao buscar os lotes da propriedade.');
     }
-
-    return data;
+    // Parseia cada lote da lista
+    return data.map(this.parseGeoMapa);
   }
 
-  /**
-   * Remove um lote do sistema.
-   */
-  async remove(id: number) {
-    // Primeiro verifica se o lote existe
-    await this.findOne(id);
+  async findOne(id: number, user: any) {
+    const userId = await this.getUserId(user);
+    
+    const { data, error } = await this.supabase
+      .from('Lote')
+      .select('*, Propriedade(id_dono)')
+      .eq('id_lote', id)
+      .single();
+
+    if (error || !data) {
+      throw new NotFoundException(`Lote com ID ${id} não encontrado.`);
+    }
+
+    if (data.Propriedade?.id_dono !== userId) {
+        throw new NotFoundException(`Lote com ID ${id} não encontrado ou não pertence a este usuário.`);
+    }
+    
+    delete (data as any).Propriedade;
+    return this.parseGeoMapa(data);
+  }
+
+  async update(id: number, updateLoteDto: UpdateLoteDto, user: any) {
+    await this.findOne(id, user); // Valida a posse do lote que será atualizado
+
+    // Se o DTO de update contiver um novo geo_mapa, ele precisa ser stringificado
+    const loteToUpdate: any = { ...updateLoteDto };
+    if (loteToUpdate.geo_mapa) {
+        loteToUpdate.geo_mapa = JSON.stringify(loteToUpdate.geo_mapa);
+    }
+    
+    // Se a propriedade estiver sendo alterada, valida a posse da nova propriedade
+    if(loteToUpdate.id_propriedade){
+        const userId = await this.getUserId(user);
+        await this.validateOwnership(loteToUpdate.id_propriedade, userId);
+    }
+
+    const { data, error } = await this.supabase
+        .from('Lote')
+        .update(loteToUpdate)
+        .eq('id_lote', id)
+        .select()
+        .single();
+
+    if (error) {
+      throw new InternalServerErrorException('Falha ao atualizar o lote.');
+    }
+    return this.parseGeoMapa(data);
+  }
+
+  async remove(id: number, user: any) {
+    await this.findOne(id, user); // Valida posse
 
     const { error } = await this.supabase.from('Lote').delete().eq('id_lote', id);
 
     if (error) {
-      console.error('Erro ao deletar lote:', error);
       throw new InternalServerErrorException('Falha ao deletar o lote.');
     }
-
-    return { message: 'Lote deletado com sucesso.' };
+    return;
   }
 }

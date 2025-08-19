@@ -1,5 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsObject, IsString, IsNotEmpty, IsOptional, IsInt } from 'class-validator';
+import { IsObject, IsString, IsNotEmpty, IsOptional, IsInt, IsPositive } from 'class-validator';
 
 export class CreateLoteDto {
   @ApiProperty({
@@ -15,6 +15,7 @@ export class CreateLoteDto {
     example: 1,
   })
   @IsInt()
+  @IsPositive()
   id_propriedade: number;
 
   @ApiProperty({
