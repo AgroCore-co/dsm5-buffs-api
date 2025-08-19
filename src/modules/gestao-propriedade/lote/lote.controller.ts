@@ -13,14 +13,6 @@ import { User } from '../../auth/user.decorator';
 export class LoteController {
   constructor(private readonly loteService: LoteService) {}
 
-  @Post()
-  @ApiOperation({ summary: 'Cria um novo lote (piquete) com dados geográficos' })
-  @ApiResponse({ status: 201, description: 'Lote criado com sucesso.' })
-  @ApiResponse({ status: 404, description: 'Propriedade não encontrada ou não pertence ao usuário.' })
-  create(@Body() createLoteDto: CreateLoteDto, @User() user: any) {
-    return this.loteService.create(createLoteDto, user);
-  }
-
   @Get('propriedade/:id_propriedade')
   @ApiOperation({ summary: 'Lista todos os lotes de uma propriedade específica' })
   @ApiParam({ name: 'id_propriedade', description: 'ID da propriedade' })
@@ -28,6 +20,14 @@ export class LoteController {
   @ApiResponse({ status: 404, description: 'Propriedade não encontrada ou não pertence ao usuário.' })
   findAllByPropriedade(@Param('id_propriedade', ParseIntPipe) id_propriedade: number, @User() user: any) {
     return this.loteService.findAllByPropriedade(id_propriedade, user);
+  }
+  
+  @Post()
+  @ApiOperation({ summary: 'Cria um novo lote (piquete) com dados geográficos' })
+  @ApiResponse({ status: 201, description: 'Lote criado com sucesso.' })
+  @ApiResponse({ status: 404, description: 'Propriedade não encontrada ou não pertence ao usuário.' })
+  create(@Body() createLoteDto: CreateLoteDto, @User() user: any) {
+    return this.loteService.create(createLoteDto, user);
   }
 
   @Get(':id')
