@@ -9,9 +9,9 @@ export class CreateDadoZootecnicoDto {
   peso: number;
 
   @ApiProperty({ description: 'Condição corporal (escala numérica)', example: 3.25 })
-  @IsNumber()
+  @IsString()
   @IsNotEmpty()
-  condicao_corporal: number;
+  condicao_corporal: string;
 
   @ApiProperty({ description: 'Cor da pelagem', required: false, example: 'Preta' })
   @IsString()
