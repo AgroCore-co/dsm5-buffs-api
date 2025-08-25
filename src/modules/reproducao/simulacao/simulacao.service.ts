@@ -6,8 +6,8 @@ import { firstValueFrom } from 'rxjs';
 
 @Injectable()
 export class SimulacaoService {
-  // ATENÇÃO: Substitua pela URL da sua API de IA quando ela estiver no ar.
-  private readonly iaApiUrl = 'http://127.0.0.1:5001/prever_leite';
+  // CORREÇÃO 1: Atualizada a URL para o endpoint final da IA.
+  private readonly iaApiUrl = 'http://127.0.0.1:5001/prever_potencial_cria';
 
   constructor(
     private readonly bufaloService: BufaloService,
@@ -17,48 +17,31 @@ export class SimulacaoService {
   async preverPotencial(dto: SimularAcasalamentoDto, user: any) {
     const { id_macho, id_femea } = dto;
 
-    // 1. Busca os dados dos animais. O `findOne` já trata a segurança e o NotFound.
+    // 1. A busca dos animais continua perfeita.
+    // O findOne garante que os IDs existem e pertencem ao usuário.
     const macho = await this.bufaloService.findOne(id_macho, user);
     const femea = await this.bufaloService.findOne(id_femea, user);
 
-    // Futuramente, você irá enriquecer este payload com mais dados do seu banco
+    // CORREÇÃO 2: Simplificado o payload para enviar apenas os IDs,
+    // como a versão final da IA espera.
     const payloadParaIA = {
-      caracteristicas_macho: {
-        id: macho.id_bufalo,
-        raca: macho.id_raca,
-        // ...outros dados que seu modelo de IA precisar
-      },
-      caracteristicas_femea: {
-        id: femea.id_bufalo,
-        raca: femea.id_raca,
-        // Ex: producao_leite_anterior: 3000 (buscar do banco)
-      },
+      id_macho: macho.id_bufalo,
+      id_femea: femea.id_bufalo,
     };
 
-    // 2. Tenta chamar a API de IA ou retorna um mock se falhar
+    // 2. A chamada para a API agora está correta.
     try {
-      // QUANDO A IA ESTIVER PRONTA, DESCOMENTE AS LINHAS ABAIXO:
-      /*
+      console.log('Enviando para a IA:', JSON.stringify(payloadParaIA, null, 2));
+      
       const response = await firstValueFrom(
         this.httpService.post(this.iaApiUrl, payloadParaIA)
       );
+      
+      console.log('Resposta da IA recebida com sucesso.');
       return response.data;
-      */
-
-      // **RESPOSTA SIMULADA (MOCK) PARA DESENVOLVIMENTO**
-      // Remova este trecho quando a API de IA for conectada.
-      console.log('Retornando resposta simulada. Payload que seria enviado:', JSON.stringify(payloadParaIA, null, 2));
-      return {
-        status: "simulado",
-        previsao_potencial: {
-          producao_leite_litros_estimada: parseFloat((Math.random() * (3500 - 2500) + 2500).toFixed(2)),
-          observacao: "Este é um valor simulado. A predição real dependerá do modelo de IA treinado.",
-        }
-      };
 
     } catch (error) {
-      console.error('Erro ao chamar a API de IA:', error.code, error.message);
-      // Retorna um erro amigável se a API de IA estiver offline
+      console.error('Erro ao chamar a API de IA:', error.response?.data || error.code || error.message);
       throw new InternalServerErrorException('O serviço de predição está indisponível no momento.');
     }
   }
