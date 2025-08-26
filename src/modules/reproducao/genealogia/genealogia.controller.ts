@@ -22,7 +22,7 @@ export class GenealogiaController {
     @Param('id', ParseIntPipe) id: number,
     @User() user: any,
     @Query('geracoes', new ParseIntPipe({ optional: true })) geracoes?: number,
-  ): Promise<GenealogiaNodeDto | null> { // <-- TIPO DE RETORNO CORRIGIDO
+  ): Promise<GenealogiaNodeDto | null> {
     const profundidade = geracoes || 3;
     return this.genealogiaService.buildTree(id, profundidade, user);
   }

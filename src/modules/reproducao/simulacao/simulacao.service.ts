@@ -6,8 +6,7 @@ import { firstValueFrom } from 'rxjs';
 
 @Injectable()
 export class SimulacaoService {
-  // CORREÇÃO 1: Atualizada a URL para o endpoint final da IA.
-  private readonly iaApiUrl = 'http://127.0.0.1:5001/prever_potencial_cria';
+  private readonly iaApiUrl = process.env.IA_API_URL;
 
   constructor(
     private readonly bufaloService: BufaloService,
@@ -17,29 +16,25 @@ export class SimulacaoService {
   async preverPotencial(dto: SimularAcasalamentoDto, user: any) {
     const { id_macho, id_femea } = dto;
 
-    // 1. A busca dos animais continua perfeita.
-    // O findOne garante que os IDs existem e pertencem ao usuário.
+    // 1. A validação dos animais continua perfeita.
     const macho = await this.bufaloService.findOne(id_macho, user);
     const femea = await this.bufaloService.findOne(id_femea, user);
 
-    // CORREÇÃO 2: Simplificado o payload para enviar apenas os IDs,
-    // como a versão final da IA espera.
     const payloadParaIA = {
       id_macho: macho.id_bufalo,
       id_femea: femea.id_bufalo,
     };
 
-    // 2. A chamada para a API agora está correta.
+    // 2. A chamada para a API agora está correta e completa.
     try {
       console.log('Enviando para a IA:', JSON.stringify(payloadParaIA, null, 2));
-      
+
       const response = await firstValueFrom(
-        this.httpService.post(this.iaApiUrl, payloadParaIA)
+        this.httpService.post(`${this.iaApiUrl}/simular-acasalamento`, payloadParaIA, { params: { incluir_predicao_femea: true } }),
       );
-      
+
       console.log('Resposta da IA recebida com sucesso.');
       return response.data;
-
     } catch (error) {
       console.error('Erro ao chamar a API de IA:', error.response?.data || error.code || error.message);
       throw new InternalServerErrorException('O serviço de predição está indisponível no momento.');
