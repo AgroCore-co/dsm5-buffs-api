@@ -56,4 +56,6 @@ export class BufaloController {
   remove(@Param('id', ParseIntPipe) id: number, @User() user: any) {
     return this.bufaloService.remove(id, user);
   }
+
+
 }
