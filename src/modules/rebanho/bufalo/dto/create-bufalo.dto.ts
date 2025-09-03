@@ -1,6 +1,7 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsString, IsNotEmpty, IsOptional, IsBoolean, IsInt, MaxLength, IsDate, IsEnum, IsPositive } from 'class-validator';
+import { IsString, IsNotEmpty, IsOptional, IsBoolean, IsInt, MaxLength, IsDate, IsEnum, IsPositive, ValidateIf, ValidationArguments, ValidatorConstraint, ValidatorConstraintInterface, Validate } from 'class-validator';
 import { Type } from 'class-transformer';
+import { BufaloValidationUtils } from '../utils/validation.utils';
 
 // Isso melhora a validação, evita erros de digitação e documenta a API no Swagger.
 export enum NivelMaturidade {
@@ -13,6 +14,18 @@ export enum NivelMaturidade {
 export enum SexoBufalo {
   FEMEA = 'F',
   MACHO = 'M',
+}
+
+// Validador customizado para idade máxima de 50 anos
+@ValidatorConstraint({ name: 'MaxAgeValidator', async: false })
+export class MaxAgeValidator implements ValidatorConstraintInterface {
+  validate(birthDate: Date, args: ValidationArguments) {
+    return BufaloValidationUtils.validateMaxAge(birthDate);
+  }
+
+  defaultMessage(args: ValidationArguments) {
+    return 'O búfalo não pode ter mais de 50 anos de idade';
+  }
 }
 
 // Este DTO define a estrutura de dados para criar um novo búfalo.
@@ -43,14 +56,19 @@ export class CreateBufaloDto {
   @MaxLength(30)
   microchip?: string;
 
-  @ApiProperty({ description: 'Data de nascimento do búfalo.', example: '2023-05-20T00:00:00.000Z', required: false })
+  @ApiProperty({ 
+    description: 'Data de nascimento do búfalo. A idade máxima permitida é 50 anos. O nível de maturidade será calculado automaticamente baseado na idade e sexo.', 
+    example: '2023-05-20T00:00:00.000Z', 
+    required: false 
+  })
   @Type(() => Date)
   @IsDate()
   @IsOptional()
+  @Validate(MaxAgeValidator)
   dt_nascimento?: Date;
 
   @ApiProperty({
-    description: 'Nível de maturidade (B-Bezerro, N-Novilho/Novilha, V-Vaca, T-Touro).',
+    description: 'Nível de maturidade (B-Bezerro, N-Novilho/Novilha, V-Vaca, T-Touro). Se não informado, será calculado automaticamente baseado na data de nascimento e sexo. Bezerro: 0-12 meses, Novilho/Novilha: 12-24 meses, Vaca: após primeira cria (~3 anos), Touro: machos reprodutores a partir de 24 meses.',
     enum: NivelMaturidade,
     example: NivelMaturidade.NOVILHO_NOVILHA,
     required: false,
@@ -98,7 +116,11 @@ export class CreateBufaloDto {
   @IsOptional()
   id_mae?: number;
 
-  @ApiProperty({ description: 'Status do búfalo (true para ativo, false para inativo).', example: true, default: true })
+  @ApiProperty({ 
+    description: 'Status do búfalo (true para ativo, false para inativo). Será automaticamente definido como false se a idade for superior a 50 anos.', 
+    example: true, 
+    default: true 
+  })
   @IsBoolean()
   @IsOptional()
   status?: boolean = true;

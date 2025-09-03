@@ -3,13 +3,26 @@ import { SupabaseClient } from '@supabase/supabase-js';
 import { SupabaseService } from '../../../core/supabase/supabase.service';
 import { CreateBufaloDto } from './dto/create-bufalo.dto';
 import { UpdateBufaloDto } from './dto/update-bufalo.dto';
+import { BufaloMaturityUtils } from './utils/maturity.utils';
+import { BufaloAgeUtils } from './utils/age.utils';
+import { BufaloValidationUtils } from './utils/validation.utils';
+import { NivelMaturidade } from './dto/create-bufalo.dto';
+
+// Interface para tipar as atualizações de maturidade
+interface MaturityUpdate {
+  id_bufalo: number;
+  nivel_maturidade: NivelMaturidade;
+  status: boolean;
+}
 
 @Injectable()
 export class BufaloService {
   private supabase: SupabaseClient;
   private readonly tableName = 'Bufalo';
 
-  constructor(private readonly supabaseService: SupabaseService) {
+  constructor(
+    private readonly supabaseService: SupabaseService
+  ) {
     this.supabase = this.supabaseService.getClient();
   }
 
@@ -62,9 +75,12 @@ export class BufaloService {
     const userId = await this.getUserId(user);
     await this.validateReferencesAndOwnership(createDto, userId);
 
+    // Processa dados com lógica de maturidade
+    const processedDto = await this.processMaturityData(createDto);
+
     const { data, error } = await this.supabase
       .from(this.tableName)
-      .insert(createDto)
+      .insert(processedDto)
       .select()
       .single();
 
@@ -96,6 +112,10 @@ export class BufaloService {
 
     // Extrai e achata a lista de búfalos de todas as propriedades
     const allBufalos = data.flatMap(propriedade => propriedade.Bufalo || []);
+    
+    // Atualiza maturidade automaticamente para búfalos que precisam
+    await this.updateMaturityIfNeeded(allBufalos);
+    
     return allBufalos;
   }
 
@@ -117,19 +137,25 @@ export class BufaloService {
       throw new NotFoundException(`Búfalo com ID ${id} não encontrado ou não pertence a este usuário.`);
     }
     
+    // Atualiza maturidade automaticamente se necessário
+    await this.updateMaturityIfNeeded([data]);
+    
     delete (data as any).Propriedade; // Limpa o objeto de retorno
     return data;
   }
 
   async update(id: number, updateDto: UpdateBufaloDto, user: any) {
-    await this.findOne(id, user); // Garante que o búfalo existe e pertence ao usuário
+    const existingBufalo = await this.findOne(id, user); // Garante que o búfalo existe e pertence ao usuário
     
     const userId = await this.getUserId(user);
     await this.validateReferencesAndOwnership(updateDto, userId); // Valida os novos dados
 
+    // Processa dados com lógica de maturidade
+    const processedDto = await this.processMaturityData(updateDto, existingBufalo);
+
     const { data, error } = await this.supabase
       .from(this.tableName)
-      .update(updateDto)
+      .update(processedDto)
       .eq('id_bufalo', id)
       .select()
       .single();
@@ -149,5 +175,105 @@ export class BufaloService {
       throw new InternalServerErrorException('Falha ao remover o búfalo.');
     }
     return;
+  }
+
+  /**
+   * Processa os dados do búfalo aplicando a lógica de maturidade e validações de idade
+   */
+  private async processMaturityData(dto: CreateBufaloDto | UpdateBufaloDto, existingBufalo?: any): Promise<any> {
+    const processedDto = { ...dto };
+
+    // Se há data de nascimento, processa a maturidade
+    if (dto.dt_nascimento) {
+      const birthDate = new Date(dto.dt_nascimento);
+      
+      // Valida idade máxima
+      if (!BufaloValidationUtils.validateMaxAge(birthDate)) {
+        processedDto.status = false; // Define como inativo se idade > 50 anos
+      }
+
+      // Se não foi informado nível de maturidade, calcula automaticamente
+      if (!dto.nivel_maturidade) {
+        const sexo = dto.sexo || existingBufalo?.sexo;
+        if (sexo) {
+          // Verifica se o búfalo tem descendentes (para determinar se é vaca/touro)
+          const hasOffspring = await this.checkIfHasOffspring(existingBufalo?.id_bufalo);
+          processedDto.nivel_maturidade = BufaloMaturityUtils.determineMaturityLevel(
+            birthDate, 
+            sexo, 
+            hasOffspring
+          );
+        }
+      }
+    }
+
+    return processedDto;
+  }
+
+  /**
+   * Atualiza automaticamente a maturidade de búfalos quando necessário
+   * Este método é chamado automaticamente em findAll e findOne
+   */
+  private async updateMaturityIfNeeded(bufalos: any[]): Promise<void> {
+    if (!bufalos || bufalos.length === 0) return;
+
+    const updates: MaturityUpdate[] = []; // Tipagem explícita do array
+
+    for (const bufalo of bufalos) {
+      if (bufalo.dt_nascimento && bufalo.sexo) {
+        const birthDate = new Date(bufalo.dt_nascimento);
+        const hasOffspring = await this.checkIfHasOffspring(bufalo.id_bufalo);
+        
+        const newMaturityLevel = BufaloMaturityUtils.determineMaturityLevel(
+          birthDate, 
+          bufalo.sexo, 
+          hasOffspring
+        );
+        
+        const shouldBeInactive = BufaloValidationUtils.validateMaxAge(birthDate) === false;
+        
+        // Só atualiza se houve mudança
+        if (newMaturityLevel !== bufalo.nivel_maturidade || 
+            (shouldBeInactive && bufalo.status !== false)) {
+          updates.push({
+            id_bufalo: bufalo.id_bufalo,
+            nivel_maturidade: newMaturityLevel,
+            status: shouldBeInactive ? false : bufalo.status
+          });
+        }
+      }
+    }
+    
+    // Executa atualizações em lote se necessário
+    if (updates.length > 0) {
+      console.log(`Atualizando maturidade de ${updates.length} búfalo(s)...`);
+      
+      for (const update of updates) {
+        await this.supabase
+          .from(this.tableName)
+          .update({
+            nivel_maturidade: update.nivel_maturidade,
+            status: update.status
+          })
+          .eq('id_bufalo', update.id_bufalo);
+      }
+      
+      console.log(`Maturidade atualizada para ${updates.length} búfalo(s)`);
+    }
+  }
+
+  /**
+   * Verifica se um búfalo tem descendentes
+   */
+  private async checkIfHasOffspring(bufaloId?: number): Promise<boolean> {
+    if (!bufaloId) return false;
+
+    const { data, error } = await this.supabase
+      .from(this.tableName)
+      .select('id_bufalo')
+      .or(`id_pai.eq.${bufaloId},id_mae.eq.${bufaloId}`)
+      .limit(1);
+
+    return !error && data && data.length > 0;
   }
 }
