@@ -10,15 +10,9 @@ export class CreateDadosSanitariosDto {
   @IsInt()
   id_usuario: number;
 
-  @ApiProperty({ description: 'Tipo de tratamento', example: 'Vermifugação' })
-  @IsString()
-  @MaxLength(30)
-  tipo_tratamento: string;
-
-  @ApiProperty({ description: 'Medicação aplicada', example: 'Ivermectina 1%' })
-  @IsString()
-  @MaxLength(30)
-  medicacao: string;
+  @ApiProperty({ description: 'ID da medicação aplicada', example: 1 })
+  @IsInt()
+  id_medicao: number;
 
   @ApiProperty({ description: 'Data de aplicação', example: '2025-02-10' })
   @IsDateString()
