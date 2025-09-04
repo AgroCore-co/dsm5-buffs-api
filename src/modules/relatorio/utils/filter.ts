@@ -1,45 +1,43 @@
 import { CreateRelatorioDto } from '../dto/create-relatorio.dto';
 
 /**
- * Define as colunas específicas a serem usadas para filtragem em cada tipo de relatório.
+ * Interface para definir os nomes das colunas que serão usadas nos filtros.
+ * Isso torna a função genérica e reutilizável para diferentes tabelas.
  */
-interface TabelaFiltroOptions {
-  idBufaloColumn: string; // Coluna de ID do búfalo na tabela principal do relatório
-  dateColumn: string;     // Coluna de data principal para o filtro de período
+export interface TabelaFiltroOptions {
+  idPropriedade?: string; // Nome da coluna de ID da propriedade (ex: 'id_propriedade')
+  idBufalo?: string;      // Nome da coluna de ID do búfalo (ex: 'id_bufalo', 'id_bufala')
+  data?: string;          // Nome da coluna de data para o filtro de período (ex: 'dt_nascimento')
 }
 
 /**
- * Aplica filtros genéricos a uma query do Supabase com base no DTO.
- * Esta função centralizada evita a repetição de código.
- *
- * @param query A instância da query do Supabase a ser modificada.
- * @param dto O DTO com os parâmetros de filtro.
- * @param options As colunas específicas da tabela a serem usadas nos filtros.
+ * Aplica filtros comuns a uma query do Supabase de forma genérica.
+ * @param query A instância da query do Supabase.
+ * @param dto O DTO com os dados do filtro vindos da requisição.
+ * @param options Um objeto que mapeia os filtros para os nomes de coluna corretos na tabela.
  */
 export function aplicarFiltros(
   query: any,
   dto: CreateRelatorioDto,
   options: TabelaFiltroOptions,
 ) {
-  // Filtro obrigatório por propriedade
-  // Assumindo que todas as tabelas principais têm uma coluna `id_propriedade`
-  query.eq('id_propriedade', dto.id_propriedade);
+  // Filtro obrigatório de propriedade
+  const colunaPropriedade = options.idPropriedade || 'id_propriedade';
+  query.eq(colunaPropriedade, dto.id_propriedade);
 
-  // Filtro opcional por IDs de búfalos específicos
-  if (dto.ids_bufalos && dto.ids_bufalos.length > 0) {
-    // Usa o nome da coluna de ID do búfalo fornecido nas opções
-    query.in(options.idBufaloColumn, dto.ids_bufalos);
+  // Filtro opcional por IDs de búfalos
+  if (dto.ids_bufalos && dto.ids_bufalos.length > 0 && options.idBufalo) {
+    query.in(options.idBufalo, dto.ids_bufalos);
   }
 
   // Filtro opcional por período (data de início)
-  if (dto.data_inicio) {
-    // Usa o nome da coluna de data fornecido nas opções
-    query.gte(options.dateColumn, dto.data_inicio);
+  if (dto.data_inicio && options.data) {
+    query.gte(options.data, dto.data_inicio);
   }
 
   // Filtro opcional por período (data de fim)
-  if (dto.data_fim) {
-    // Usa o nome da coluna de data fornecido nas opções
-    query.lte(options.dateColumn, dto.data_fim);
+  if (dto.data_fim && options.data) {
+    query.lte(options.data, dto.data_fim);
   }
 }
+
