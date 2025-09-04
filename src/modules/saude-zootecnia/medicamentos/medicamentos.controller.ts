@@ -1,5 +1,3 @@
-// Caminho: src/modules/saude-zootecnia/medicamentos/medicamentos.controller.ts
-
 import { Controller, Get, Post, Body, Patch, Param, Delete, ParseIntPipe, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiResponse, ApiTags, ApiParam } from '@nestjs/swagger';
 import { SupabaseAuthGuard } from '../../auth/auth.guard';
