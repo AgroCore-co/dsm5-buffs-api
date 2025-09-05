@@ -9,7 +9,7 @@ import { UpdateDadoZootecnicoDto } from './dto/update-dado-zootecnico.dto';
 @ApiBearerAuth('JWT-auth')
 @UseGuards(SupabaseAuthGuard)
 @ApiTags('Saúde/Zootecnia - Dados Zootécnicos')
-@Controller('dados-zootecnicos') // Rota base para operações diretas
+@Controller('dados-zootecnicos')
 export class DadosZootecnicosController {
   constructor(private readonly service: DadosZootecnicosService) {}
 
@@ -24,11 +24,14 @@ export class DadosZootecnicosController {
   @ApiResponse({ status: 201, description: 'Registro criado com sucesso.' })
   create(
     @Param('id_bufalo', ParseIntPipe) id_bufalo: number,
-    @User() id_usuario: string, // <-- Pega o ID do usuário logado
+    @User() user: any, // <-- CORRIGIDO: Recebe o objeto 'user' completo
     @Body() dto: CreateDadoZootecnicoDto,
   ) {
-    // Agora passamos todos os parâmetros que o service espera
-    return this.service.create(dto, id_bufalo, id_usuario);
+    // CORRIGIDO: Extraímos o 'sub' (ID do usuário) do objeto de usuário injetado
+    const id_usuario_logado = user.sub;
+
+    // Passamos o ID (UUID) correto para o serviço
+    return this.service.create(dto, id_bufalo, id_usuario_logado);
   }
 
   @Get('/bufalo/:id_bufalo')
