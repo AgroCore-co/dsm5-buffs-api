@@ -6,10 +6,6 @@ export class CreateDadosSanitariosDto {
   @IsInt()
   id_bufalo: number;
 
-  @ApiProperty({ description: 'ID do usuário responsável pelo registro', example: 3 })
-  @IsInt()
-  id_usuario: number;
-
   @ApiProperty({ description: 'ID da medicação aplicada', example: 1 })
   @IsInt()
   id_medicao: number;

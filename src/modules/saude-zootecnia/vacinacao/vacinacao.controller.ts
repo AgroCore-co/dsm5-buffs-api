@@ -13,44 +13,53 @@ import { UpdateVacinacaoDto } from './dto/update-vacinacao.dto';
 export class VacinacaoController {
   constructor(private readonly service: VacinacaoService) {}
 
+  // Rota aninhada para criar uma vacinação para um búfalo específico
   @Post('/bufalo/:id_bufalo')
-  @ApiOperation({ summary: 'Cria um registro de vacinação para um búfalo' })
-  @ApiParam({ name: 'id_bufalo', description: 'ID do búfalo que recebeu a vacina' })
-  @ApiResponse({ status: 201, description: 'Registro de vacinação criado com sucesso.' })
-  create(@Param('id_bufalo', ParseIntPipe) id_bufalo: number, @User('sub') id_usuario: string, @Body() dto: CreateVacinacaoDto) {
-    return this.service.create(dto, id_bufalo, id_usuario);
+  @ApiOperation({ summary: 'Cria um registo de vacinação para um búfalo' })
+  @ApiParam({ name: 'id_bufalo', description: 'ID do búfalo que recebeu a vacina', type: Number })
+  @ApiResponse({ status: 201, description: 'Registo criado com sucesso.' })
+  create(
+    @Param('id_bufalo', ParseIntPipe) id_bufalo: number,
+    @Body() dto: CreateVacinacaoDto,
+    @User('sub') auth_uuid: string,
+  ) {
+    return this.service.create(dto, id_bufalo, auth_uuid);
   }
 
+  // Rota aninhada para listar todas as vacinas de um búfalo
   @Get('/bufalo/:id_bufalo')
-  @ApiOperation({ summary: 'Lista todos os registros de vacinação de um búfalo' })
-  @ApiParam({ name: 'id_bufalo', description: 'ID do búfalo para consultar o histórico' })
-  @ApiResponse({ status: 200, description: 'Histórico de vacinação retornado com sucesso.' })
+  @ApiOperation({ summary: 'Lista todos os registos de vacinação de um búfalo' })
+  @ApiParam({ name: 'id_bufalo', description: 'ID do búfalo a ser consultado', type: Number })
+  @ApiResponse({ status: 200, description: 'Lista retornada com sucesso.' })
   findAllByBufalo(@Param('id_bufalo', ParseIntPipe) id_bufalo: number) {
     return this.service.findAllByBufalo(id_bufalo);
   }
 
-  @Get(':id_vacinacao')
-  @ApiOperation({ summary: 'Busca um registro de vacinação pelo ID' })
-  @ApiParam({ name: 'id_vacinacao', description: 'ID do registro de vacinação' })
-  @ApiResponse({ status: 200, description: 'Registro encontrado.' })
-  @ApiResponse({ status: 404, description: 'Registro não encontrado.' })
-  findOne(@Param('id_vacinacao', ParseIntPipe) id_vacinacao: number) {
-    return this.service.findOne(id_vacinacao);
+  // Rotas diretas para um registo de vacinação específico
+  @Get(':id')
+  @ApiOperation({ summary: 'Busca um registo de vacinação pelo seu ID' })
+  @ApiParam({ name: 'id', description: 'ID do registo de vacinação', type: Number })
+  @ApiResponse({ status: 200, description: 'Registo encontrado.' })
+  @ApiResponse({ status: 404, description: 'Registo não encontrado.' })
+  findOne(@Param('id', ParseIntPipe) id: number) {
+    return this.service.findOne(id);
   }
 
-  @Patch(':id_vacinacao')
-  @ApiOperation({ summary: 'Atualiza um registro de vacinação' })
-  @ApiParam({ name: 'id_vacinacao', description: 'ID do registro a ser atualizado' })
-  @ApiResponse({ status: 200, description: 'Registro atualizado com sucesso.' })
-  update(@Param('id_vacinacao', ParseIntPipe) id_vacinacao: number, @Body() dto: UpdateVacinacaoDto) {
-    return this.service.update(id_vacinacao, dto);
+  @Patch(':id')
+  @ApiOperation({ summary: 'Atualiza um registo de vacinação' })
+  @ApiParam({ name: 'id', description: 'ID do registo a ser atualizado', type: Number })
+  @ApiResponse({ status: 200, description: 'Registo atualizado com sucesso.' })
+  @ApiResponse({ status: 404, description: 'Registo não encontrado.' })
+  update(@Param('id', ParseIntPipe) id: number, @Body() dto: UpdateVacinacaoDto) {
+    return this.service.update(id, dto);
   }
 
-  @Delete(':id_vacinacao')
-  @ApiOperation({ summary: 'Remove um registro de vacinação' })
-  @ApiParam({ name: 'id_vacinacao', description: 'ID do registro a ser removido' })
-  @ApiResponse({ status: 200, description: 'Registro removido com sucesso.' })
-  remove(@Param('id_vacinacao', ParseIntPipe) id_vacinacao: number) {
-    return this.service.remove(id_vacinacao);
+  @Delete(':id')
+  @ApiOperation({ summary: 'Remove um registo de vacinação' })
+  @ApiParam({ name: 'id', description: 'ID do registo a ser removido', type: Number })
+  @ApiResponse({ status: 200, description: 'Registo removido com sucesso.' })
+  @ApiResponse({ status: 404, description: 'Registo não encontrado.' })
+  remove(@Param('id', ParseIntPipe) id: number) {
+    return this.service.remove(id);
   }
 }

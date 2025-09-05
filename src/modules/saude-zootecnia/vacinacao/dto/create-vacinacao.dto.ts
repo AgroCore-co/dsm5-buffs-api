@@ -17,12 +17,12 @@ export class CreateVacinacaoDto {
   @ApiProperty({ example: '2025-08-18', description: 'Data em que a vacina foi aplicada' })
   @IsDateString()
   @IsNotEmpty()
-  dt_aplicacao: Date;
+  dt_aplicacao: string;
 
   @ApiProperty({ example: '2026-08-18', description: 'Data agendada para a próxima dose ou reforço', required: false })
   @IsDateString()
   @IsOptional()
-  dt_revacinacao?: Date;
+  dt_revacinacao?: string;
 
   @ApiProperty({ example: 'LOTE-XYZ-123', description: 'Número do lote da vacina', required: false })
   @IsString()

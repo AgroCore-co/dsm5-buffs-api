@@ -1,4 +1,10 @@
-import { Injectable, InternalServerErrorException, NotFoundException, BadRequestException } from '@nestjs/common';
+import {
+  Injectable,
+  InternalServerErrorException,
+  NotFoundException,
+  BadRequestException,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { SupabaseService } from '../../../core/supabase/supabase.service';
 import { CreateDadosSanitariosDto } from './dto/create-dados-sanitarios.dto';
 import { UpdateDadosSanitariosDto } from './dto/update-dados-sanitarios.dto';
@@ -10,25 +16,54 @@ export class DadosSanitariosService {
   private readonly tableName = 'DadosSanitarios';
   private readonly tableMedicacoes = 'Medicacoes';
 
-  async create(dto: CreateDadosSanitariosDto, id_usuario: string) {
-    // Validar se a medicação existe
+  /**
+   * Função auxiliar para encontrar o ID numérico interno (bigint) do utilizador
+   * a partir do UUID de autenticação do Supabase (o 'sub' do JWT).
+   */
+  private async getInternalUserId(authUuid: string): Promise<number> {
+    const { data, error } = await this.supabase
+      .getClient()
+      .from('Usuario')
+      .select('id_usuario')
+      .eq('auth_id', authUuid)
+      .single();
+
+    if (error || !data) {
+      throw new UnauthorizedException(
+        `Falha na sincronização do utilizador. O utilizador (auth: ${authUuid}) não foi encontrado no registo local 'Usuario'.`,
+      );
+    }
+
+    return data.id_usuario;
+  }
+
+  /**
+   * O parâmetro 'auth_uuid' é o 'sub' (string UUID) vindo do controller.
+   */
+  async create(dto: CreateDadosSanitariosDto, auth_uuid: string) {
+    // 1. Validar se a medicação existe
     const { data: medicacao, error: errorMedicacao } = await this.supabase
       .getClient()
       .from(this.tableMedicacoes)
-      .select('*')
+      .select('id_medicacao')
       .eq('id_medicacao', dto.id_medicao)
       .single();
 
     if (errorMedicacao || !medicacao) {
-      throw new BadRequestException('Medicação não encontrada.');
+      throw new BadRequestException(`Medicação com ID ${dto.id_medicao} não encontrada.`);
     }
 
+    // 2. Traduzir o Auth UUID (string) para o ID interno (bigint)
+    const internalUserId = await this.getInternalUserId(auth_uuid);
+
+    // 3. Inserir no banco de dados usando o ID numérico (bigint) correto
     const { data, error } = await this.supabase
       .getClient()
       .from(this.tableName)
       .insert({
+        // O DTO não contém mais id_usuario, então espalhamos apenas os campos válidos
         ...dto,
-        id_usuario: id_usuario,
+        id_usuario: internalUserId, // <-- CORRIGIDO: Inserindo o ID numérico correto
       })
       .select()
       .single();
@@ -43,10 +78,12 @@ export class DadosSanitariosService {
     const { data, error } = await this.supabase
       .getClient()
       .from(this.tableName)
-      .select(`
+      .select(
+        `
         *,
         medicacao:Medicacoes!inner(id_medicacao, tipo_tratamento, medicacao, descricao)
-      `)
+      `,
+      )
       .order('dt_aplicacao', { ascending: false });
 
     if (error) {
@@ -59,10 +96,12 @@ export class DadosSanitariosService {
     const { data, error } = await this.supabase
       .getClient()
       .from(this.tableName)
-      .select(`
+      .select(
+        `
         *,
         medicacao:Medicacoes!inner(id_medicacao, tipo_tratamento, medicacao, descricao)
-      `)
+      `,
+      )
       .eq('id_sanit', id_sanit)
       .single();
 
@@ -73,29 +112,22 @@ export class DadosSanitariosService {
   }
 
   async update(id_sanit: number, dto: UpdateDadosSanitariosDto) {
-    await this.findOne(id_sanit); // Garante que o registro existe antes de atualizar
+    await this.findOne(id_sanit);
 
-    // Se dto.id_medicao for fornecido, validar se a medicação existe
     if (dto.id_medicao) {
       const { data: medicacao, error: errorMedicacao } = await this.supabase
         .getClient()
         .from(this.tableMedicacoes)
-        .select('*')
-        .eq('id_medicacao', dto.id_medicao)
+        .select('id_medicacao')
+        .eq('id_medicao', dto.id_medicao)
         .single();
 
       if (errorMedicacao || !medicacao) {
-        throw new BadRequestException('Medicação não encontrada.');
+        throw new BadRequestException(`Medicação com ID ${dto.id_medicao} não encontrada.`);
       }
     }
 
-    const { data, error } = await this.supabase
-      .getClient()
-      .from(this.tableName)
-      .update(dto)
-      .eq('id_sanit', id_sanit)
-      .select()
-      .single();
+    const { data, error } = await this.supabase.getClient().from(this.tableName).update(dto).eq('id_sanit', id_sanit).select().single();
 
     if (error) {
       throw new InternalServerErrorException(`Falha ao atualizar dado sanitário: ${error.message}`);
@@ -104,13 +136,9 @@ export class DadosSanitariosService {
   }
 
   async remove(id_sanit: number) {
-    await this.findOne(id_sanit); // Garante que o registro existe antes de remover
+    await this.findOne(id_sanit);
 
-    const { error } = await this.supabase
-      .getClient()
-      .from(this.tableName)
-      .delete()
-      .eq('id_sanit', id_sanit);
+    const { error } = await this.supabase.getClient().from(this.tableName).delete().eq('id_sanit', id_sanit);
 
     if (error) {
       throw new InternalServerErrorException(`Falha ao remover dado sanitário: ${error.message}`);
