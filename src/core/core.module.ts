@@ -1,19 +1,18 @@
-    import { Module } from '@nestjs/common';
-    import { LoggerModule } from './logger/logger.module';
-    import { SupabaseModule } from './supabase/supabase.module';
-    import { GeminiModule } from './gemini/gemini.module'; 
+import { Module } from '@nestjs/common';
+import { GeminiModule } from './gemini/gemini.module';
+import { LoggerModule } from './logger/logger.module';
+import { SupabaseModule } from './supabase/supabase.module';
 
-    @Module({
-      imports: [
-        LoggerModule, 
-        SupabaseModule, 
-        GeminiModule
-      ],
-      exports: [
-        LoggerModule, 
-        SupabaseModule, 
-        GeminiModule
-      ],
-    })
-    export class CoreModule {}
-    
+@Module({
+  imports: [
+    GeminiModule,
+    LoggerModule,
+    SupabaseModule,
+  ],
+  exports: [
+    GeminiModule,
+    LoggerModule,
+    SupabaseModule,
+  ],
+})
+export class CoreModule {}
