@@ -30,7 +30,7 @@ export class CreateDadosLactacaoDto {
 
   @ApiProperty({ description: 'Ocorrência', example: 'Mastite leve', required: false })
   @IsString()
-  @MaxLength(50)
+  @MaxLength(255)
   @IsOptional()
   ocorrencia?: string;
 

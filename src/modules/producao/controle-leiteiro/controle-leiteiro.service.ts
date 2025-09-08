@@ -5,6 +5,7 @@ import { CreateDadosLactacaoDto } from './dto/create-dados-lactacao.dto';
 import { UpdateDadosLactacaoDto } from './dto/update-dados-lactacao.dto';
 import { AlertasService } from '../../alerta/alerta.service';
 import { CreateAlertaDto, NichoAlerta, PrioridadeAlerta } from '../../alerta/dto/create-alerta.dto';
+import { GeminiService } from '../../../core/gemini/gemini.service';
 
 @Injectable()
 export class ControleLeiteiroService {
@@ -13,6 +14,7 @@ export class ControleLeiteiroService {
   constructor(
     private readonly supabaseService: SupabaseService,
     private readonly alertasService: AlertasService,
+    private readonly geminiService: GeminiService,
   ) {
     this.supabase = this.supabaseService.getClient();
   }
@@ -94,6 +96,9 @@ export class ControleLeiteiroService {
         throw new Error('Informações do búfalo não encontradas.');
       }
 
+      // Classificar prioridade usando Gemini
+      const prioridadeClassificada = await this.geminiService.classificarPrioridadeOcorrencia(createDto.ocorrencia!);
+
       const alertaDto: CreateAlertaDto = {
         animal_id: createDto.id_bufala,
         grupo: (bufaloInfo.grupo as any)?.nome_grupo || 'Não informado',
@@ -101,8 +106,8 @@ export class ControleLeiteiroService {
         motivo: createDto.ocorrencia!,
         nicho: NichoAlerta.CLINICO,
         data_alerta: createDto.dt_ordenha,
-        prioridade: PrioridadeAlerta.ALTA,
-        observacao: `Ocorrência registrada durante a ordenha do dia ${createDto.dt_ordenha}.`,
+        prioridade: prioridadeClassificada,
+        observacao: `Ocorrência registrada durante a ordenha do dia ${createDto.dt_ordenha}. Prioridade classificada automaticamente pela IA.`,
       };
       
       await this.alertasService.create(alertaDto);
