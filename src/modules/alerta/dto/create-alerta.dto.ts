@@ -60,6 +60,17 @@ export class CreateAlertaDto {
   @IsBoolean()
   @IsOptional()
   visto?: boolean;
+
+  @ApiProperty({ description: 'ID do evento que originou o alerta', required: false, example: 123 })
+  @IsInt()
+  @IsPositive()
+  @IsOptional()
+  id_evento_origem?: number;
+
+  @ApiProperty({ description: 'Tipo do evento que originou o alerta', required: false, example: 'DADOS_SANITARIOS' })
+  @IsString()
+  @IsOptional()
+  tipo_evento_origem?: string;
 }
 
 export class UpdateAlertaDto extends PartialType(CreateAlertaDto) {}

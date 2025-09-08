@@ -35,6 +35,45 @@ export class AlertasService {
     }
   }
 
+/**
+   * Cria um alerta apenas se não existir um alerta com a mesma origem de evento.
+   * Isso torna a tarefa (CRON) idempotente.
+   * @param createAlertaDto - Os dados para a criação do novo alerta.
+   */
+  async createIfNotExists(createAlertaDto: CreateAlertaDto) {
+    try {
+      // Verifica se já existe um alerta com os mesmos critérios
+      if (createAlertaDto.tipo_evento_origem && createAlertaDto.id_evento_origem) {
+        const { data: existingAlert, error: searchError } = await this.supabase
+          .from('Alertas')
+          .select('id_alerta')
+          .eq('tipo_evento_origem', createAlertaDto.tipo_evento_origem)
+          .eq('id_evento_origem', createAlertaDto.id_evento_origem)
+          .maybeSingle(); // Perfeito para verificar 0 ou 1 resultado
+
+        if (searchError) {
+          console.error('Erro ao verificar alerta existente:', searchError.message);
+          throw new InternalServerErrorException(`Erro ao verificar alerta existente: ${searchError.message}`);
+        }
+
+        // Se o alerta JÁ EXISTE (independente do status 'visto'), não faz nada.
+        if (existingAlert) {
+          // console.log(`Alerta para evento ${createAlertaDto.tipo_evento_origem}:${createAlertaDto.id_evento_origem} já existe. Ignorando.`);
+          return existingAlert;
+        }
+      }
+
+      // Se não existe, cria um novo alerta
+      return await this.create(createAlertaDto);
+    } catch (error) {
+      if (error instanceof InternalServerErrorException) {
+        throw error;
+      }
+      console.error('Erro inesperado ao criar alerta condicional:', error);
+      throw new InternalServerErrorException('Ocorreu um erro inesperado ao verificar/criar o alerta.');
+    }
+  }
+
   /**
    * Retorna uma lista de alertas com base nos filtros fornecidos.
    * @param tipo - Filtra os alertas por nicho (ex: 'CLINICO', 'REPRODUCAO').
