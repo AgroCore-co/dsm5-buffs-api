@@ -2,6 +2,7 @@ import { ApiProperty } from '@nestjs/swagger';
 import { IsString, IsNotEmpty, IsOptional, IsBoolean, IsInt, MaxLength, IsDate, IsEnum, IsPositive, ValidateIf, ValidationArguments, ValidatorConstraint, ValidatorConstraintInterface, Validate } from 'class-validator';
 import { Type } from 'class-transformer';
 import { BufaloValidationUtils } from '../utils/validation.utils';
+import { CategoriaABCB } from './categoria-abcb.dto';
 
 // Isso melhora a validação, evita erros de digitação e documenta a API no Swagger.
 export enum NivelMaturidade {
@@ -86,11 +87,11 @@ export class CreateBufaloDto {
   @IsNotEmpty()
   sexo: SexoBufalo;
 
-  @ApiProperty({ description: 'ID da raça do búfalo.', example: 1 })
+  @ApiProperty({ description: 'ID da raça do búfalo. Se não informado e houver dados zootécnicos, o sistema tentará sugerir automaticamente usando IA.', example: 1, required: false })
   @IsInt()
   @IsPositive()
-  @IsNotEmpty()
-  id_raca: number;
+  @IsOptional()
+  id_raca?: number;
 
   @ApiProperty({ description: 'ID da propriedade onde o búfalo está localizado.', example: 1 })
   @IsInt()
@@ -124,4 +125,14 @@ export class CreateBufaloDto {
   @IsBoolean()
   @IsOptional()
   status?: boolean = true;
+
+  @ApiProperty({
+    description: 'Categoria ABCB do animal (PO, PC, PA, CCG, SRD). Se não informada, será calculada automaticamente baseada na genealogia.',
+    enum: CategoriaABCB,
+    example: CategoriaABCB.PA,
+    required: false,
+  })
+  @IsEnum(CategoriaABCB)
+  @IsOptional()
+  categoria?: CategoriaABCB;
 }

@@ -5,6 +5,7 @@ import { UpdateBufaloDto } from './dto/update-bufalo.dto';
 import { ApiTags, ApiOperation, ApiResponse, ApiParam, ApiBearerAuth } from '@nestjs/swagger';
 import { SupabaseAuthGuard } from '../../auth/auth.guard';
 import { User } from '../../auth/user.decorator';
+import { CategoriaABCB } from './dto/categoria-abcb.dto';
 
 @ApiBearerAuth('JWT-auth')
 @UseGuards(SupabaseAuthGuard)
@@ -27,6 +28,14 @@ export class BufaloController {
   @ApiResponse({ status: 200, description: 'Lista de búfalos retornada com sucesso.' })
   findAll(@User() user: any) {
     return this.bufaloService.findAll(user);
+  }
+
+  @Get('categoria/:categoria')
+  @ApiOperation({ summary: 'Lista búfalos por categoria ABCB' })
+  @ApiParam({ name: 'categoria', description: 'Categoria ABCB', enum: CategoriaABCB })
+  @ApiResponse({ status: 200, description: 'Búfalos da categoria retornados com sucesso.' })
+  findByCategoria(@Param('categoria') categoria: CategoriaABCB, @User() user: any) {
+    return this.bufaloService.findByCategoria(categoria, user);
   }
 
   @Get(':id')
@@ -57,5 +66,12 @@ export class BufaloController {
     return this.bufaloService.remove(id, user);
   }
 
-
+  @Post('processar-categoria/:id')
+  @ApiOperation({ summary: 'Força o processamento da categoria ABCB de um búfalo' })
+  @ApiParam({ name: 'id', description: 'ID do búfalo' })
+  @ApiResponse({ status: 200, description: 'Categoria processada com sucesso.' })
+  async processarCategoria(@Param('id', ParseIntPipe) id: number) {
+    await this.bufaloService.processarCategoriaABCB(id);
+    return { message: 'Categoria processada com sucesso' };
+  }
 }

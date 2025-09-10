@@ -7,6 +7,10 @@ import { BufaloMaturityUtils } from './utils/maturity.utils';
 import { BufaloAgeUtils } from './utils/age.utils';
 import { BufaloValidationUtils } from './utils/validation.utils';
 import { NivelMaturidade } from './dto/create-bufalo.dto';
+import { CategoriaABCBUtil } from './utils/categoria-abcb.util';
+import { GeminiRacaUtil } from './utils/gemini-raca.util';
+import { CategoriaABCB } from './dto/categoria-abcb.dto';
+import { GenealogiaService } from '../../reproducao/genealogia/genealogia.service';
 
 // Interface para tipar as atualizações de maturidade
 interface MaturityUpdate {
@@ -21,7 +25,9 @@ export class BufaloService {
   private readonly tableName = 'Bufalo';
 
   constructor(
-    private readonly supabaseService: SupabaseService
+    private readonly supabaseService: SupabaseService,
+    private readonly geminiRacaUtil: GeminiRacaUtil,
+    private readonly genealogiaService: GenealogiaService
   ) {
     this.supabase = this.supabaseService.getClient();
   }
@@ -90,6 +96,12 @@ export class BufaloService {
       }
       throw new InternalServerErrorException(`Falha ao criar o búfalo: ${error.message}`);
     }
+
+    // Processa categoria ABCB em background
+    if (data?.id_bufalo) {
+      setTimeout(() => this.processarCategoriaABCB(data.id_bufalo), 1000);
+    }
+
     return data;
   }
 
@@ -163,6 +175,10 @@ export class BufaloService {
     if (error) {
       throw new InternalServerErrorException(`Falha ao atualizar o búfalo: ${error.message}`);
     }
+
+    // Processa categoria ABCB em background
+    setTimeout(() => this.processarCategoriaABCB(id), 1000);
+
     return data;
   }
 
@@ -267,13 +283,127 @@ export class BufaloService {
    */
   private async checkIfHasOffspring(bufaloId?: number): Promise<boolean> {
     if (!bufaloId) return false;
+    return this.genealogiaService.verificarSeTemDescendentes(bufaloId);
+  }
 
+  /**
+   * Processa categoria ABCB do búfalo após criação/atualização
+   */
+  async processarCategoriaABCB(bufaloId: number): Promise<void> {
+    const bufalo = await this.buscarBufaloCompleto(bufaloId);
+    if (!bufalo) return;
+
+    // Se não tem raça definida, tenta sugerir com Gemini
+    if (!bufalo.id_raca) {
+      await this.tentarSugerirRaca(bufalo);
+      // Recarrega búfalo após possível atualização de raça
+      const bufaloAtualizado = await this.buscarBufaloCompleto(bufaloId);
+      if (bufaloAtualizado) {
+        Object.assign(bufalo, bufaloAtualizado);
+      }
+    }
+
+    // Constrói árvore genealógica usando serviço compartilhado
+    const arvore = await this.genealogiaService.construirArvoreParaCategoria(bufaloId, 1);
+    
+    if (!arvore) return; // Se não conseguir construir a árvore, sai
+    
+    // Calcula categoria
+    const categoria = CategoriaABCBUtil.calcularCategoria(
+      arvore,
+      bufalo.Propriedade.p_abcb,
+      Boolean(bufalo.id_raca)
+    );
+
+    // Atualiza categoria no banco
+    await this.supabase
+      .from(this.tableName)
+      .update({ categoria })
+      .eq('id_bufalo', bufaloId);
+  }
+
+  /**
+   * Tenta sugerir raça usando Gemini baseado em características físicas
+   */
+  private async tentarSugerirRaca(bufalo: any): Promise<void> {
+    // Busca dados zootécnicos mais recentes
+    const { data: dadosZootecnicos } = await this.supabase
+      .from('DadosZootecnicos')
+      .select('*')
+      .eq('id_bufalo', bufalo.id_bufalo)
+      .order('dt_registro', { ascending: false })
+      .limit(1)
+      .single();
+
+    if (!dadosZootecnicos) return;
+
+    const caracteristicas = {
+      cor_pelagem: dadosZootecnicos.cor_pelagem,
+      formato_chifre: dadosZootecnicos.formato_chifre,
+      porte_corporal: dadosZootecnicos.porte_corporal,
+      peso: dadosZootecnicos.peso,
+      regiao_origem: bufalo.Propriedade?.Endereco?.estado,
+    };
+
+    // Agora retorna diretamente o ID da raça
+    const idRacaSugerida = await this.geminiRacaUtil.sugerirRacaBufalo(caracteristicas, this.supabase);
+    
+    if (idRacaSugerida) {
+      await this.supabase
+        .from(this.tableName)
+        .update({ id_raca: idRacaSugerida })
+        .eq('id_bufalo', bufalo.id_bufalo);
+    }
+  }
+
+  /**
+   * Busca búfalo com dados completos
+   */
+  private async buscarBufaloCompleto(bufaloId: number): Promise<any> {
     const { data, error } = await this.supabase
       .from(this.tableName)
-      .select('id_bufalo')
-      .or(`id_pai.eq.${bufaloId},id_mae.eq.${bufaloId}`)
-      .limit(1);
+      .select(`
+        *,
+        Propriedade!inner (
+          p_abcb,
+          Endereco (estado)
+        )
+      `)
+      .eq('id_bufalo', bufaloId)
+      .single();
 
-    return !error && data && data.length > 0;
+    return error ? null : data;
+  }
+
+  /**
+   * Busca búfalos por categoria
+   */
+  async findByCategoria(categoria: CategoriaABCB, user: any) {
+    const userId = await this.getUserId(user);
+
+    const { data, error } = await this.supabase
+      .from('Propriedade')
+      .select(`
+        id_propriedade,
+        nome,
+        Bufalo!inner (
+          *,
+          Raca (nome)
+        )
+      `)
+      .eq('id_dono', userId)
+      .eq('Bufalo.categoria', categoria)
+      .eq('Bufalo.status', true);
+
+    if (error) {
+      throw new InternalServerErrorException(`Falha ao buscar búfalos da categoria ${categoria}.`);
+    }
+
+    return data.flatMap(propriedade => 
+      propriedade.Bufalo.map(bufalo => ({
+        ...bufalo,
+        propriedade: propriedade.nome
+      }))
+    );
   }
 }
