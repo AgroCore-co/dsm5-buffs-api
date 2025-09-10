@@ -6,6 +6,7 @@ import { ApiTags, ApiOperation, ApiResponse, ApiParam, ApiBearerAuth } from '@ne
 import { SupabaseAuthGuard } from '../../auth/auth.guard';
 import { User } from '../../auth/user.decorator';
 import { CategoriaABCB } from './dto/categoria-abcb.dto';
+import { NotFoundException, InternalServerErrorException } from '@nestjs/common';
 
 @ApiBearerAuth('JWT-auth')
 @UseGuards(SupabaseAuthGuard)
@@ -70,8 +71,50 @@ export class BufaloController {
   @ApiOperation({ summary: 'Força o processamento da categoria ABCB de um búfalo' })
   @ApiParam({ name: 'id', description: 'ID do búfalo' })
   @ApiResponse({ status: 200, description: 'Categoria processada com sucesso.' })
-  async processarCategoria(@Param('id', ParseIntPipe) id: number) {
-    await this.bufaloService.processarCategoriaABCB(id);
-    return { message: 'Categoria processada com sucesso' };
+  @ApiResponse({ status: 404, description: 'Búfalo não encontrado.' })
+  @ApiResponse({ status: 500, description: 'Erro interno no processamento.' })
+  async processarCategoria(@Param('id', ParseIntPipe) id: number, @User() user: any) {
+    try {
+      console.log(`Iniciando processamento da categoria para búfalo ID: ${id}`);
+      
+      // Primeiro verifica se o usuário tem acesso ao búfalo
+      const bufaloAntes = await this.bufaloService.findOne(id, user);
+      console.log(`Categoria antes do processamento: ${bufaloAntes.categoria}`);
+      
+      // Processa a categoria
+      const resultado = await this.bufaloService.processarCategoriaABCB(id);
+      
+      // Busca o búfalo atualizado para retornar a categoria
+      const bufaloAtualizado = await this.bufaloService.findOne(id, user);
+      console.log(`Categoria após processamento: ${bufaloAtualizado.categoria}`);
+      
+      return { 
+        message: 'Categoria processada com sucesso',
+        bufalo: {
+          id: bufaloAtualizado.id_bufalo,
+          nome: bufaloAtualizado.nome,
+          categoriaAntes: bufaloAntes.categoria,
+          categoriaDepois: bufaloAtualizado.categoria
+        },
+        processamento: {
+          sucesso: resultado !== null,
+          categoriaCalculada: resultado
+        }
+      };
+
+    } catch (error) {
+      console.error(`Erro no processamento da categoria para búfalo ${id}:`, error);
+      
+      // Re-throw erros conhecidos
+      if (error instanceof NotFoundException || 
+          error instanceof InternalServerErrorException) {
+        throw error;
+      }
+      
+      // Para erros não tratados
+      throw new InternalServerErrorException(
+        `Erro inesperado no processamento da categoria: ${error.message}`
+      );
+    }
   }
 }

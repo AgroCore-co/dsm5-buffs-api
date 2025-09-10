@@ -99,7 +99,13 @@ export class BufaloService {
 
     // Processa categoria ABCB em background
     if (data?.id_bufalo) {
-      setTimeout(() => this.processarCategoriaABCB(data.id_bufalo), 1000);
+      setTimeout(async () => {
+        try {
+          await this.processarCategoriaABCB(data.id_bufalo);
+        } catch (error) {
+          console.error('Erro ao processar categoria ABCB em background:', error);
+        }
+      }, 1000);
     }
 
     return data;
@@ -177,7 +183,13 @@ export class BufaloService {
     }
 
     // Processa categoria ABCB em background
-    setTimeout(() => this.processarCategoriaABCB(id), 1000);
+    setTimeout(async () => {
+      try {
+        await this.processarCategoriaABCB(id);
+      } catch (error) {
+        console.error('Erro ao processar categoria ABCB em background:', error);
+      }
+    }, 1000);
 
     return data;
   }
@@ -289,70 +301,133 @@ export class BufaloService {
   /**
    * Processa categoria ABCB do búfalo após criação/atualização
    */
-  async processarCategoriaABCB(bufaloId: number): Promise<void> {
-    const bufalo = await this.buscarBufaloCompleto(bufaloId);
-    if (!bufalo) return;
-
-    // Se não tem raça definida, tenta sugerir com Gemini
-    if (!bufalo.id_raca) {
-      await this.tentarSugerirRaca(bufalo);
-      // Recarrega búfalo após possível atualização de raça
-      const bufaloAtualizado = await this.buscarBufaloCompleto(bufaloId);
-      if (bufaloAtualizado) {
-        Object.assign(bufalo, bufaloAtualizado);
+  async processarCategoriaABCB(bufaloId: number): Promise<CategoriaABCB | null> {
+    try {
+      console.log(`Iniciando processamento da categoria ABCB para búfalo ${bufaloId}`);
+      
+      const bufalo = await this.buscarBufaloCompleto(bufaloId);
+      if (!bufalo) {
+        console.warn(`Búfalo ${bufaloId} não encontrado para processamento de categoria`);
+        return null;
       }
+
+      console.log(`Búfalo encontrado: ${bufalo.nome}, Raça: ${bufalo.id_raca}, Propriedade ABCB: ${bufalo.Propriedade?.p_abcb}`);
+
+      // Se não tem raça definida, tenta sugerir com Gemini
+      if (!bufalo.id_raca) {
+        console.log(`Tentando sugerir raça com Gemini para ${bufalo.nome}...`);
+        try {
+          await this.tentarSugerirRaca(bufalo);
+          // Recarrega búfalo após possível atualização de raça
+          const bufaloAtualizado = await this.buscarBufaloCompleto(bufaloId);
+          if (bufaloAtualizado) {
+            Object.assign(bufalo, bufaloAtualizado);
+            console.log(`Búfalo atualizado, nova raça: ${bufalo.id_raca}`);
+          }
+        } catch (error) {
+          console.warn(`Falha ao sugerir raça para ${bufalo.nome}:`, error.message);
+          // Continua o processamento mesmo sem raça
+        }
+      }
+
+      // Constrói árvore genealógica usando serviço compartilhado
+      console.log(`Construindo árvore genealógica para ${bufalo.nome}...`);
+      const arvore = await this.genealogiaService.construirArvoreParaCategoria(bufaloId, 1);
+      
+      if (!arvore) {
+        console.warn(`Não foi possível construir a árvore genealógica para ${bufalo.nome}`);
+        return null;
+      }
+      
+      console.log(`Árvore genealógica construída com sucesso para ${bufalo.nome}`);
+      
+      // Calcula categoria
+      console.log(`Calculando categoria ABCB para ${bufalo.nome}...`);
+      console.log(`Parâmetros: propriedadeABCB=${bufalo.Propriedade.p_abcb}, temRaca=${Boolean(bufalo.id_raca)}`);
+      
+      const categoria = CategoriaABCBUtil.calcularCategoria(
+        arvore,
+        bufalo.Propriedade.p_abcb,
+        Boolean(bufalo.id_raca)
+      );
+
+      console.log(`Categoria calculada para ${bufalo.nome}: ${categoria}`);
+
+      // Atualiza categoria no banco
+      const { error } = await this.supabase
+        .from(this.tableName)
+        .update({ categoria })
+        .eq('id_bufalo', bufaloId);
+
+      if (error) {
+        console.error(`Erro ao salvar categoria ${categoria} para ${bufalo.nome}:`, error);
+        throw new InternalServerErrorException(`Falha ao salvar categoria ABCB: ${error.message}`);
+      }
+
+      console.log(`Categoria ${categoria} salva com sucesso para ${bufalo.nome}`);
+      return categoria;
+
+    } catch (error) {
+      console.error(`Erro no processamento da categoria ABCB para búfalo ${bufaloId}:`, error);
+      
+      if (error instanceof InternalServerErrorException) {
+        throw error; // Re-throw erros já tratados
+      }
+      
+      // Para outros erros, logga e retorna null
+      return null;
     }
-
-    // Constrói árvore genealógica usando serviço compartilhado
-    const arvore = await this.genealogiaService.construirArvoreParaCategoria(bufaloId, 1);
-    
-    if (!arvore) return; // Se não conseguir construir a árvore, sai
-    
-    // Calcula categoria
-    const categoria = CategoriaABCBUtil.calcularCategoria(
-      arvore,
-      bufalo.Propriedade.p_abcb,
-      Boolean(bufalo.id_raca)
-    );
-
-    // Atualiza categoria no banco
-    await this.supabase
-      .from(this.tableName)
-      .update({ categoria })
-      .eq('id_bufalo', bufaloId);
   }
 
   /**
    * Tenta sugerir raça usando Gemini baseado em características físicas
    */
   private async tentarSugerirRaca(bufalo: any): Promise<void> {
-    // Busca dados zootécnicos mais recentes
-    const { data: dadosZootecnicos } = await this.supabase
-      .from('DadosZootecnicos')
-      .select('*')
-      .eq('id_bufalo', bufalo.id_bufalo)
-      .order('dt_registro', { ascending: false })
-      .limit(1)
-      .single();
+    try {
+      // Busca dados zootécnicos mais recentes
+      const { data: dadosZootecnicos, error: errorZootec } = await this.supabase
+        .from('DadosZootecnicos')
+        .select('*')
+        .eq('id_bufalo', bufalo.id_bufalo)
+        .order('dt_registro', { ascending: false })
+        .limit(1)
+        .single();
 
-    if (!dadosZootecnicos) return;
+      if (errorZootec || !dadosZootecnicos) {
+        console.warn(`Dados zootécnicos não encontrados para ${bufalo.nome}, pulando sugestão de raça`);
+        return;
+      }
 
-    const caracteristicas = {
-      cor_pelagem: dadosZootecnicos.cor_pelagem,
-      formato_chifre: dadosZootecnicos.formato_chifre,
-      porte_corporal: dadosZootecnicos.porte_corporal,
-      peso: dadosZootecnicos.peso,
-      regiao_origem: bufalo.Propriedade?.Endereco?.estado,
-    };
+      const caracteristicas = {
+        cor_pelagem: dadosZootecnicos.cor_pelagem,
+        formato_chifre: dadosZootecnicos.formato_chifre,
+        porte_corporal: dadosZootecnicos.porte_corporal,
+        peso: dadosZootecnicos.peso,
+        regiao_origem: bufalo.Propriedade?.Endereco?.estado,
+      };
 
-    // Agora retorna diretamente o ID da raça
-    const idRacaSugerida = await this.geminiRacaUtil.sugerirRacaBufalo(caracteristicas, this.supabase);
-    
-    if (idRacaSugerida) {
-      await this.supabase
-        .from(this.tableName)
-        .update({ id_raca: idRacaSugerida })
-        .eq('id_bufalo', bufalo.id_bufalo);
+      console.log(`Solicitando sugestão de raça para ${bufalo.nome} via Gemini...`);
+      const idRacaSugerida = await this.geminiRacaUtil.sugerirRacaBufalo(caracteristicas, this.supabase);
+      
+      if (idRacaSugerida) {
+        const { error: errorUpdate } = await this.supabase
+          .from(this.tableName)
+          .update({ id_raca: idRacaSugerida })
+          .eq('id_bufalo', bufalo.id_bufalo);
+
+        if (errorUpdate) {
+          console.error(`Erro ao atualizar raça sugerida para ${bufalo.nome}:`, errorUpdate);
+          throw new InternalServerErrorException(`Falha ao salvar raça sugerida: ${errorUpdate.message}`);
+        }
+
+        console.log(`Raça ${idRacaSugerida} sugerida e salva para ${bufalo.nome}`);
+      } else {
+        console.warn(`Gemini não conseguiu sugerir uma raça para ${bufalo.nome}`);
+      }
+
+    } catch (error) {
+      console.error(`Erro ao tentar sugerir raça para ${bufalo.nome}:`, error);
+      throw error; // Re-throw para que o caller possa tratar
     }
   }
 
@@ -360,19 +435,35 @@ export class BufaloService {
    * Busca búfalo com dados completos
    */
   private async buscarBufaloCompleto(bufaloId: number): Promise<any> {
-    const { data, error } = await this.supabase
-      .from(this.tableName)
-      .select(`
-        *,
-        Propriedade!inner (
-          p_abcb,
-          Endereco (estado)
-        )
-      `)
-      .eq('id_bufalo', bufaloId)
-      .single();
+    try {
+      const { data, error } = await this.supabase
+        .from(this.tableName)
+        .select(`
+          *,
+          Propriedade!inner (
+            p_abcb,
+            Endereco (estado)
+          )
+        `)
+        .eq('id_bufalo', bufaloId)
+        .single();
 
-    return error ? null : data;
+      if (error) {
+        console.error(`Erro ao buscar dados completos do búfalo ${bufaloId}:`, error);
+        throw new InternalServerErrorException(`Falha ao buscar dados do búfalo: ${error.message}`);
+      }
+
+      return data;
+
+    } catch (error) {
+      console.error(`Erro ao buscar búfalo completo ${bufaloId}:`, error);
+      
+      if (error instanceof InternalServerErrorException) {
+        throw error;
+      }
+      
+      return null;
+    }
   }
 
   /**
