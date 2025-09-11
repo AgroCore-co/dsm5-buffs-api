@@ -9,6 +9,7 @@ import { AlimentacaoModule } from './modules/alimentacao/alimentacao.module';
 import { SaudeZootecniaModule } from './modules/saude-zootecnia/saude-zootecnia.module';
 import { ReproducaoModule } from './modules/reproducao/reproducao.module';
 import { ProducaoModule } from './modules/producao/producao.module';
+import { HealthModule } from './health/health.module';
 
 @Module({
   imports: [
@@ -22,6 +23,7 @@ import { ProducaoModule } from './modules/producao/producao.module';
     SaudeZootecniaModule,
     ReproducaoModule,
     ProducaoModule,
+    HealthModule,
   ],
   controllers: [],
   providers: [],

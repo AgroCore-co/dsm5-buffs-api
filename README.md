@@ -3,6 +3,7 @@
 [![TypeScript](https://img.shields.io/badge/TypeScript-007ACC?style=flat-square&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
 [![NestJS](https://img.shields.io/badge/NestJS-E0234E?style=flat-square&logo=nestjs&logoColor=white)](https://nestjs.com/)
 [![Supabase](https://img.shields.io/badge/Supabase-3ECF8E?style=flat-square&logo=supabase&logoColor=white)](https://supabase.com/)
+[![Docker](https://img.shields.io/badge/Docker-2496ED?style=flat-square&logo=docker&logoColor=white)](https://www.docker.com/)
 [![MIT License](https://img.shields.io/badge/License-MIT-green.svg?style=flat-square)](https://choosealicense.com/licenses/mit/)
 
 API REST completa para gerenciamento de rebanhos bufalinos, desenvolvida com **NestJS** e **Supabase**.
@@ -14,14 +15,12 @@ Um sistema abrangente que oferece controle integral desde o cadastro genealógic
 ## ✨ Funcionalidades Principais
 
 ### 🏡 **Gestão de Propriedades**
-
 - Cadastro completo de fazendas e propriedades rurais
 - Sistema de endereçamento detalhado
 - Divisão em lotes/piquetes com georreferenciamento
 - Controle de movimentação de animais entre lotes
 
 ### 🐃 **Controle de Rebanho**
-
 - Registro individual de búfalos com genealogia completa
 - Cadastro de raças e características específicas
 - Agrupamento por categorias (bezerros, novilhas, vacas, touros)
@@ -29,7 +28,6 @@ Um sistema abrangente que oferece controle integral desde o cadastro genealógic
 - Controle de categoria ABCB automático
 
 ### 🥛 **Produção Leiteira**
-
 - Controle detalhado de lactação e ciclos produtivos
 - Registro de coletas diárias de leite
 - Gestão de estoque e qualidade do leite
@@ -37,7 +35,6 @@ Um sistema abrangente que oferece controle integral desde o cadastro genealógic
 - Relatórios de produtividade por animal
 
 ### 🧬 **Reprodução**
-
 - Controle de coberturas e inseminação artificial
 - Gestão de material genético e touros reprodutores
 - Árvore genealógica completa com múltiplas gerações
@@ -45,7 +42,6 @@ Um sistema abrangente que oferece controle integral desde o cadastro genealógic
 - Acompanhamento de prenhez e partos
 
 ### ❤️ **Saúde e Zootecnia**
-
 - Cadastro de medicamentos e protocolos sanitários
 - Histórico completo de vacinações
 - Dados zootécnicos (peso, altura, escore corporal)
@@ -53,21 +49,18 @@ Um sistema abrangente que oferece controle integral desde o cadastro genealógic
 - Alertas automáticos de saúde com IA
 
 ### 🌾 **Alimentação**
-
 - Definição de tipos de alimentação e rações
 - Registro detalhado de fornecimento nutricional
 - Controle de consumo por animal ou grupo
 - Planejamento nutricional
 
 ### 🚨 **Sistema de Alertas Inteligente**
-
 - Alertas automáticos para saúde, reprodução e manejo
 - Classificação de prioridade com inteligência artificial
 - Notificações personalizadas por tipo de evento
 - Sistema de rastreamento de alertas visualizados
 
 ### 👥 **Multi-usuário e Segurança**
-
 - Sistema robusto de autenticação JWT via Supabase
 - Controle de acesso por usuário
 - Políticas de segurança a nível de linha (RLS)
@@ -86,6 +79,8 @@ Um sistema abrangente que oferece controle integral desde o cadastro genealógic
 | **Documentação** | Swagger/OpenAPI | 3.0 |
 | **Validação** | class-validator & class-transformer | Latest |
 | **IA** | Google Gemini | 1.5 |
+| **Segurança** | Helmet | Latest |
+| **Containerização** | Docker | Latest |
 | **Arquitetura** | Modular/Domain-Driven Design | - |
 | **Logs** | Winston | Latest |
 
@@ -97,6 +92,7 @@ Um sistema abrangente que oferece controle integral desde o cadastro genealógic
 - [npm](https://www.npmjs.com/) ou [yarn](https://yarnpkg.com/)
 - Conta no [Supabase](https://supabase.com/)
 - Chave de API do [Google Gemini](https://ai.google.dev/) (opcional, para classificação de alertas)
+- [Docker](https://www.docker.com/) (opcional, para containerização)
 - Git
 
 ---
@@ -112,6 +108,9 @@ cd dsm5-buffs-api
 
 # Instale as dependências
 npm install
+
+# Instale o Helmet para segurança
+npm install helmet
 ```
 
 ### 2. Configure o Ambiente
@@ -121,20 +120,24 @@ Crie o arquivo `.env` na raiz do projeto:
 ```env
 # Supabase Configuration
 SUPABASE_URL=https://seu-projeto.supabase.co
-SUPABASE_KEY=sua_chave_anon_do_supabase
-SUPABASE_JWT_SECRET=sua_chave_jwt_secret_do_supabase
+SUPABASE_ANON_KEY=sua_chave_anon_do_supabase
+SUPABASE_SERVICE_ROLE_KEY=sua_chave_service_role_do_supabase
+
+# JWT Configuration
+JWT_SECRET=sua_chave_super_secreta_pelo_menos_32_caracteres
+JWT_EXPIRES_IN=7d
 
 # Google Gemini AI (opcional)
 GEMINI_API_KEY=sua_chave_api_gemini
 
 # Application Configuration
-PORT=3000
 NODE_ENV=development
+PORT=3001
 
-# CORS Configuration (opcional)
+# CORS Configuration
 CORS_ORIGIN=http://localhost:3000,http://localhost:3001
 
-# Logging Level
+# Logging Configuration
 LOG_LEVEL=debug
 ```
 
@@ -153,7 +156,36 @@ npm run start:dev
 
 # Produção
 npm run build && npm run start:prod
+
+# Com Docker
+docker build -t buffs-api .
+docker run -p 3001:3001 buffs-api
 ```
+
+---
+
+## 🐳 Containerização com Docker
+
+### Build e Execução
+
+```bash
+# Construir a imagem
+docker build -t buffs-api .
+
+# Executar o container
+docker run -p 3001:3001 --env-file .env buffs-api
+
+# Verificar saúde do container
+docker ps  # Veja a coluna STATUS para "healthy"
+```
+
+### Características do Docker
+
+- **🔒 Segurança:** Execução com usuário não-root
+- **⚡ Performance:** Multi-stage build para imagem otimizada
+- **🩺 Health Check:** Monitoramento automático da saúde da API
+- **🔄 Graceful Shutdown:** Parada elegante com dumb-init
+- **📦 Tamanho:** Imagem Alpine (~200MB)
 
 ---
 
@@ -161,8 +193,9 @@ npm run build && npm run start:prod
 
 Após iniciar o servidor, acesse:
 
-- **📖 Swagger UI (Documentação Completa):** [http://localhost:3000/api](http://localhost:3000/api)
-- **💚 Health Check:** [http://localhost:3000](http://localhost:3000)
+- **📖 Swagger UI (Documentação Completa):** [http://localhost:3001/api](http://localhost:3001/api)
+- **💚 Health Check Básico:** [http://localhost:3001/health](http://localhost:3001/health)
+- **🩺 Health Check Detalhado:** [http://localhost:3001/health/detailed](http://localhost:3001/health/detailed)
 
 ### Autenticação
 
@@ -181,58 +214,75 @@ Authorization: Bearer <seu-token-jwt>
 
 ---
 
-## 🏗️ Arquitetura do Projeto
+## 🛡️ Segurança Implementada
 
-```text
-src/
-├── 🔧 core/                      # Serviços fundamentais
-│   ├── logger/                   # Sistema de logs customizado
-│   ├── supabase/                 # Cliente e configuração Supabase
-│   └── gemini/                   # Integração com Google Gemini AI
-│
-├── 📱 modules/                   # Módulos de domínio (Domain-Driven)
-│   ├── 🔐 auth/                  # Autenticação JWT + Guards + Decorators
-│   ├── 👤 usuario/               # Gestão de perfis de usuários
-│   │
-│   ├── 🏡 gestao-propriedade/    # Gestão de Propriedades
-│   │   ├── propriedade/          # CRUD de fazendas
-│   │   ├── endereco/             # Endereços das propriedades
-│   │   └── lote/                 # Lotes/piquetes georreferenciados
-│   │
-│   ├── 🐃 rebanho/               # Controle de Rebanho
-│   │   ├── bufalo/               # CRUD de animais individuais
-│   │   ├── raca/                 # Cadastro de raças bufalinas
-│   │   ├── grupo/                # Agrupamentos e categorias
-│   │   └── mov-lote/             # Movimentações entre lotes
-│   │
-│   ├── ❤️ saude-zootecnia/       # Saúde e Zootecnia
-│   │   ├── medicamentos/         # Cadastro de medicamentos
-│   │   ├── dados-sanitarios/     # Registros sanitários e tratamentos
-│   │   ├── dados-zootecnicos/    # Pesagem, medições, ECC
-│   │   └── vacinacao/            # Controle de vacinas (planejado)
-│   │
-│   ├── 🧬 reproducao/            # Reprodução
-│   │   ├── cobertura/            # Registros de cobertura/IA
-│   │   ├── genealogia/           # Árvore genealógica
-│   │   ├── material-genetico/    # Touros e material genético
-│   │   └── simulacao/            # Simulações de cruzamento (planejado)
-│   │
-│   ├── 🥛 producao/              # Produção Leiteira
-│   │   ├── ciclo-lactacao/       # Controle de lactação
-│   │   ├── coleta/               # Coletas diárias de leite
-│   │   ├── controle-leiteiro/    # Dados de produção (planejado)
-│   │   ├── estoque-leite/        # Controle de estoque (planejado)
-│   │   └── industria/            # Cadastro de indústrias
-│   │
-│   ├── 🌾 alimentacao/           # Alimentação
-│   │   ├── alimentacao-def/      # Definições de tipos de alimento
-│   │   └── registros/            # Registros de alimentação
-│   │
-│   └── � alerta/                # Sistema de Alertas Inteligente
-│       ├── alerta.controller.ts  # CRUD e gestão de alertas
-│       ├── alerta.service.ts     # Lógica de negócio
-│       └── alerta.scheduler.ts   # Agendamento automático
+### Headers de Segurança (Helmet)
+- **X-Content-Type-Options:** Previne MIME sniffing
+- **X-Frame-Options:** Proteção contra clickjacking
+- **X-XSS-Protection:** Proteção contra XSS
+- **Strict-Transport-Security:** Força uso de HTTPS
+- **Content-Security-Policy:** Controla recursos carregados
+
+### CORS Configurado
+- Origens permitidas configuráveis via ambiente
+- Suporte a credenciais
+- Headers específicos permitidos
+- Métodos HTTP controlados
+
+### Validação Robusta
+- Whitelist de propriedades permitidas
+- Rejeição de propriedades não permitidas
+- Transformação automática de tipos
+- Mensagens de erro estruturadas
+
+---
+
+## 🩺 Monitoramento e Health Checks
+
+### Health Check Básico
+```http
+GET /health
 ```
+```json
+{
+  "status": "ok",
+  "timestamp": "2024-01-15T10:30:00.000Z",
+  "environment": "development",
+  "version": "1.0.0",
+  "port": 3001
+}
+```
+
+### Health Check Detalhado
+```http
+GET /health/detailed
+```
+```json
+{
+  "status": "ok",
+  "timestamp": "2024-01-15T10:30:00.000Z",
+  "services": {
+    "database": {
+      "status": "ok",
+      "responseTime": "45ms"
+    },
+    "gemini": {
+      "status": "configured"
+    }
+  },
+  "system": {
+    "uptime": 3600,
+    "memory": {
+      "rss": 52428800,
+      "heapTotal": 29360128,
+      "heapUsed": 20000000
+    },
+    "nodeVersion": "v18.19.0"
+  }
+}
+```
+
+---
 
 ### Padrões Arquiteturais
 
@@ -242,61 +292,6 @@ src/
 - **Guard Pattern**: Proteção de rotas com autenticação JWT
 - **DTO Pattern**: Validação e transformação de dados
 - **Dependency Injection**: Inversão de controle via NestJS
-
----
-
-## 🎯 Principais Funcionalidades por Módulo
-
-### 🔐 Autenticação e Usuários
-
-- Sistema de autenticação JWT via Supabase
-- Gestão de perfis de usuários com dados personalizados
-- Guards customizados para proteção de rotas
-- Decorators para extração de dados do usuário
-
-### 🐃 Gestão de Rebanho
-
-- Cadastro completo de búfalos com validações específicas
-- Sistema de genealogia com pais e mães
-- Controle automático de categorias ABCB
-- Agrupamento por maturidade e características
-
-### 🚨 Sistema de Alertas com IA
-
-- Criação automática de alertas baseada em eventos
-- Classificação de prioridade usando Google Gemini
-- Filtros avançados por tipo, prioridade e status
-- Sistema de notificações e rastreamento
-
-### 🥛 Produção Inteligente
-
-- Ciclos de lactação com controle temporal
-- Coletas de leite com validações de qualidade
-- Integração com indústrias para comercialização
-- Relatórios de produtividade
-
-### ❤️ Saúde Monitorada
-
-- Histórico completo de tratamentos
-- Dados zootécnicos com evolução temporal
-- Controle de medicamentos e posologia
-- Alertas automáticos de saúde
-
----
-
-## 📊 Endpoints da API
-
-Para visualizar todos os endpoints disponíveis, acesse a **documentação completa no Swagger**:
-
-🔗 **[http://localhost:3000/api](http://localhost:3000/api)**
-
-A documentação inclui:
-
-- Todos os endpoints organizados por módulos
-- Exemplos de requisições e respostas
-- Esquemas de validação detalhados
-- Interface para testar os endpoints
-- Modelos de dados com descrições
 
 ---
 
@@ -314,6 +309,10 @@ npm run test:e2e
 
 # Cobertura de testes
 npm run test:cov
+
+# Testar health checks
+curl http://localhost:3001/health
+curl http://localhost:3001/health/detailed
 ```
 
 Os testes incluem:
@@ -322,6 +321,7 @@ Os testes incluem:
 - Validação de autenticação e autorização
 - Testes de integração com Supabase
 - Validação de DTOs e regras de negócio
+- Testes de health checks e monitoramento
 
 ---
 
@@ -340,6 +340,55 @@ Os testes incluem:
 
 ---
 
+## 🚀 Deploy e Produção
+
+### Configurações de Produção
+
+```env
+NODE_ENV=production
+PORT=3001
+LOG_LEVEL=info
+CORS_ORIGIN=https://seu-frontend.com,https://www.buffs.com
+JWT_SECRET=chave_super_secreta_produção_pelo_menos_32_caracteres
+```
+
+### Deploy com Docker
+
+```bash
+# Build para produção
+docker build -t buffs-api:latest .
+
+# Deploy com variáveis de ambiente
+docker run -d \
+  --name buffs-api \
+  -p 3001:3001 \
+  --env-file .env.production \
+  --restart unless-stopped \
+  buffs-api:latest
+
+# Verificar logs
+docker logs buffs-api
+
+# Verificar saúde
+docker exec buffs-api node healthcheck.js
+```
+
+## 📊 Endpoints da API
+
+Para visualizar todos os endpoints disponíveis, acesse a **documentação completa no Swagger**:
+
+🔗 **[http://localhost:3001/api](http://localhost:3001/api)**
+
+A documentação inclui:
+
+- Todos os endpoints organizados por módulos
+- Exemplos de requisições e respostas
+- Esquemas de validação detalhados
+- Interface para testar os endpoints
+- Modelos de dados com descrições
+
+---
+
 ## 🔄 Fluxo de Desenvolvimento
 
 1. **Clone** o repositório e instale as dependências
@@ -347,34 +396,16 @@ Os testes incluem:
 3. **Configure** o banco de dados no Supabase
 4. **Execute** em modo desenvolvimento
 5. **Acesse** a documentação Swagger para explorar a API
-6. **Teste** os endpoints com dados reais
-7. **Desenvolva** novas funcionalidades seguindo os padrões
-8. **Execute** os testes antes de fazer commit
-9. **Documente** alterações importantes
-
----
-
-## 🚀 Deploy e Produção
-
-### Configurações de Produção
-
-```env
-NODE_ENV=development
-PORT=3001
-LOG_LEVEL=info
-CORS_ORIGIN=https://seu-frontend.com
-```
-
-### Considerações para Deploy
-
-- Configure variáveis de ambiente no seu provedor
-- Ative políticas RLS adequadas no Supabase
-- Configure logs de produção
-- Implemente monitoramento de performance
-- Configure backup automático do banco
+6. **Teste** os health checks para verificar funcionamento
+7. **Teste** os endpoints com dados reais
+8. **Desenvolva** novas funcionalidades seguindo os padrões
+9. **Execute** os testes antes de fazer commit
+10. **Documente** alterações importantes
 
 ---
 
 ## 📄 Licença
 
 Este projeto está licenciado sob a **MIT License** - veja o arquivo [LICENSE](LICENSE) para detalhes.
+
+---

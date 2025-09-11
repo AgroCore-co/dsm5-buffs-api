@@ -2,11 +2,17 @@ import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { ValidationPipe } from '@nestjs/common';
+import helmet from 'helmet';
 import * as dotenv from 'dotenv';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
-    dotenv.config();
+  dotenv.config();
+
+  // 🛡️ Segurança básica com Helmet
+  app.use(helmet({
+    crossOriginEmbedderPolicy: false, // Para compatibilidade
+  }));
 
   const swaggerDescription = `
   Documentação da API para o sistema de gerenciamento de búfalos (BUFFS).
@@ -77,12 +83,14 @@ async function bootstrap() {
     }),
   );
 
-  // Configuração de CORS mais segura
-  const allowedOrigins = process.env.CORS_ORIGIN ? process.env.CORS_ORIGIN.split(',') : ['http://localhost:3000', 'http://localhost:3001'];
+  // 🌐 Configuração de CORS mais segura
+  const allowedOrigins = process.env.CORS_ORIGIN ? 
+    process.env.CORS_ORIGIN.split(',') : 
+    ['http://localhost:3000', 'http://localhost:3001'];
 
   app.enableCors({
     origin: (origin, callback) => {
-      // Permitir requisições sem origin (como mobile apps)
+      // Permitir requisições sem origin (como mobile apps, Postman)
       if (!origin) return callback(null, true);
 
       if (allowedOrigins.indexOf(origin) !== -1) {
@@ -96,7 +104,7 @@ async function bootstrap() {
     allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
   });
 
-  const port = process.env.PORT || 3000;
+  const port = process.env.PORT || 3001;
   await app.listen(port);
 
   console.log(`🚀 API rodando em: http://localhost:${port}`);
