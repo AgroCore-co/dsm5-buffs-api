@@ -1,4 +1,5 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, ParseIntPipe, HttpCode } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, ParseIntPipe, HttpCode, UseInterceptors } from '@nestjs/common';
+import { CacheInterceptor, CacheTTL } from '@nestjs/cache-manager';
 import { BufaloService } from './bufalo.service';
 import { CreateBufaloDto } from './dto/create-bufalo.dto';
 import { UpdateBufaloDto } from './dto/update-bufalo.dto';
@@ -25,6 +26,8 @@ export class BufaloController {
   }
 
   @Get()
+  @UseInterceptors(CacheInterceptor)
+  @CacheTTL(300000) // 5 minutos
   @ApiOperation({ summary: 'Lista todos os búfalos do usuário logado' })
   @ApiResponse({ status: 200, description: 'Lista de búfalos retornada com sucesso.' })
   findAll(@User() user: any) {
@@ -32,6 +35,8 @@ export class BufaloController {
   }
 
   @Get('categoria/:categoria')
+  @UseInterceptors(CacheInterceptor)
+  @CacheTTL(600000) // 10 minutos - categorias mudam menos
   @ApiOperation({ summary: 'Lista búfalos por categoria ABCB' })
   @ApiParam({ name: 'categoria', description: 'Categoria ABCB', enum: CategoriaABCB })
   @ApiResponse({ status: 200, description: 'Búfalos da categoria retornados com sucesso.' })
@@ -40,6 +45,8 @@ export class BufaloController {
   }
 
   @Get(':id')
+  @UseInterceptors(CacheInterceptor)
+  @CacheTTL(300000) // 5 minutos
   @ApiOperation({ summary: 'Busca um búfalo específico pelo ID' })
   @ApiParam({ name: 'id', description: 'ID do búfalo', type: Number })
   @ApiResponse({ status: 200, description: 'Dados do búfalo.' })

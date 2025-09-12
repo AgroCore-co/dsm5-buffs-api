@@ -1,4 +1,5 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, ParseIntPipe, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, ParseIntPipe, UseGuards, UseInterceptors } from '@nestjs/common';
+import { CacheInterceptor, CacheTTL } from '@nestjs/cache-manager';
 import { ApiBearerAuth, ApiOperation, ApiResponse, ApiTags, ApiParam, ApiBody } from '@nestjs/swagger';
 import { SupabaseAuthGuard } from '../../auth/auth.guard';
 import { User } from '../../auth/user.decorator';
@@ -23,6 +24,8 @@ export class ColetaController {
   }
 
   @Get()
+  @UseInterceptors(CacheInterceptor)
+  @CacheTTL(300)
   @ApiOperation({ summary: 'Lista todas as coletas de leite' })
   @ApiResponse({ status: 200, description: 'Lista de coletas retornada com sucesso.' })
   findAll() {
@@ -30,6 +33,8 @@ export class ColetaController {
   }
 
   @Get(':id')
+  @UseInterceptors(CacheInterceptor)
+  @CacheTTL(300)
   @ApiOperation({ summary: 'Busca uma coleta de leite pelo ID' })
   @ApiParam({ name: 'id', description: 'ID da coleta' })
   @ApiResponse({ status: 200, description: 'Coleta encontrada.' })

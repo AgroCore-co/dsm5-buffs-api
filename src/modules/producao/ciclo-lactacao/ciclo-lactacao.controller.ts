@@ -1,4 +1,5 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, ParseIntPipe, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, ParseIntPipe, UseGuards, UseInterceptors } from '@nestjs/common';
+import { CacheInterceptor, CacheTTL } from '@nestjs/cache-manager';
 import { ApiBearerAuth, ApiBody, ApiOperation, ApiParam, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { SupabaseAuthGuard } from '../../auth/auth.guard';
 import { CicloLactacaoService } from './ciclo-lactacao.service';
@@ -22,6 +23,8 @@ export class CicloLactacaoController {
   }
 
   @Get()
+  @UseInterceptors(CacheInterceptor)
+  @CacheTTL(900)
   @ApiOperation({ summary: 'Lista todos os ciclos de lactação' })
   @ApiResponse({ status: 200, description: 'Lista retornada com sucesso.' })
   findAll() {
@@ -29,6 +32,8 @@ export class CicloLactacaoController {
   }
 
   @Get(':id')
+  @UseInterceptors(CacheInterceptor)
+  @CacheTTL(900)
   @ApiOperation({ summary: 'Busca um ciclo de lactação pelo ID' })
   @ApiParam({ name: 'id', description: 'ID do ciclo' })
   @ApiResponse({ status: 200, description: 'Ciclo encontrado.' })

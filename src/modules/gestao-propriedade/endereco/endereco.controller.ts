@@ -1,4 +1,5 @@
-import { Controller, Post, Body, UseGuards, Get, Param, Patch, Delete, ParseIntPipe } from '@nestjs/common';
+import { Controller, Post, Body, UseGuards, Get, Param, Patch, Delete, ParseIntPipe, UseInterceptors } from '@nestjs/common';
+import { CacheInterceptor, CacheTTL } from '@nestjs/cache-manager';
 import { EnderecoService } from './endereco.service';
 import { CreateEnderecoDto } from './dto/create-endereco.dto';
 import { UpdateEnderecoDto } from './dto/update-endereco.dto';
@@ -25,6 +26,8 @@ export class EnderecoController {
   }
 
   @Get()
+  @UseInterceptors(CacheInterceptor)
+  @CacheTTL(3600)
   @ApiOperation({
     summary: 'Lista todos os endereços',
     description: 'Retorna uma lista de todos os endereços cadastrados no sistema.',
@@ -36,6 +39,8 @@ export class EnderecoController {
   }
 
   @Get(':id')
+  @UseInterceptors(CacheInterceptor)
+  @CacheTTL(3600)
   @ApiOperation({
     summary: 'Busca um endereço específico',
     description: 'Retorna os dados de um endereço específico pelo ID.',

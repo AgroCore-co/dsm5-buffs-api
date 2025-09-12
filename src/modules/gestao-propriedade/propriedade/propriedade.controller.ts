@@ -1,4 +1,5 @@
-import { Controller, Post, Body, UseGuards, Get, Param, ParseIntPipe, Patch, Delete, HttpCode } from '@nestjs/common';
+import { Controller, Post, Body, UseGuards, Get, Param, ParseIntPipe, Patch, Delete, HttpCode, UseInterceptors } from '@nestjs/common';
+import { CacheInterceptor, CacheTTL } from '@nestjs/cache-manager';
 import { PropriedadeService } from './propriedade.service';
 import { CreatePropriedadeDto } from './dto/create-propiedade.dto';
 import { UpdatePropriedadeDto } from './dto/update-propriedade.dto';
@@ -33,6 +34,8 @@ export class PropriedadeController {
   }
 
   @Get()
+  @UseInterceptors(CacheInterceptor)
+  @CacheTTL(3600)
   @ApiOperation({ summary: 'Lista todas as propriedades do usuário logado' })
   @ApiResponse({ status: 200, description: 'Lista de propriedades retornada com sucesso.' })
   @ApiResponse({ status: 401, description: 'Não autorizado.' })
@@ -41,6 +44,8 @@ export class PropriedadeController {
   }
 
   @Get(':id')
+  @UseInterceptors(CacheInterceptor)
+  @CacheTTL(3600)
   @ApiOperation({ summary: 'Busca uma propriedade específica pelo ID' })
   @ApiResponse({ status: 200, description: 'Dados da propriedade retornados.' })
   @ApiResponse({ status: 401, description: 'Não autorizado.' })

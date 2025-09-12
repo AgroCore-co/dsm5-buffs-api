@@ -1,4 +1,5 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, Query, UseGuards, ParseIntPipe, ParseBoolPipe, HttpCode } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, Query, UseGuards, ParseIntPipe, ParseBoolPipe, HttpCode, UseInterceptors } from '@nestjs/common';
+import { CacheInterceptor, CacheTTL } from '@nestjs/cache-manager';
 import { AlertasService } from './alerta.service';
 import { CreateAlertaDto, PrioridadeAlerta, NichoAlerta } from './dto/create-alerta.dto';
 import { SupabaseAuthGuard } from '../auth/auth.guard';
@@ -42,6 +43,8 @@ export class AlertasController {
   }
 
   @Get()
+  @UseInterceptors(CacheInterceptor)
+  @CacheTTL(30)
   @ApiOperation({ 
     summary: 'Lista alertas com filtros avançados',
     description: `
@@ -94,6 +97,8 @@ export class AlertasController {
   }
 
   @Get(':id')
+  @UseInterceptors(CacheInterceptor)
+  @CacheTTL(30) 
   @ApiOperation({ 
     summary: 'Busca alerta específico com detalhes completos',
     description: 'Retorna informações detalhadas de um alerta, incluindo se a prioridade foi classificada por IA.'

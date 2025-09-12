@@ -1,4 +1,5 @@
-import { Controller, Get, Post, Body, UseGuards, Param, Patch, Delete, ParseIntPipe } from '@nestjs/common';
+import { Controller, Get, Post, Body, UseGuards, Param, Patch, Delete, ParseIntPipe, UseInterceptors } from '@nestjs/common';
+import { CacheInterceptor, CacheTTL } from '@nestjs/cache-manager';
 import { GrupoService } from './grupo.service';
 import { CreateGrupoDto } from './dto/create-grupo.dto';
 import { UpdateGrupoDto } from './dto/update-grupo.dto';
@@ -13,6 +14,8 @@ export class GrupoController {
   constructor(private readonly grupoService: GrupoService) {}
 
   @Get()
+  @UseInterceptors(CacheInterceptor)
+  @CacheTTL(3600)
   @ApiOperation({
     summary: 'Lista todos os grupos',
     description: 'Retorna uma lista de todos os grupos de búfalos cadastrados no sistema, ordenados alfabeticamente.',
@@ -24,6 +27,8 @@ export class GrupoController {
   }
 
   @Get(':id')
+  @UseInterceptors(CacheInterceptor)
+  @CacheTTL(3600)
   @ApiOperation({
     summary: 'Busca um grupo específico',
     description: 'Retorna os dados de um grupo específico pelo ID.',

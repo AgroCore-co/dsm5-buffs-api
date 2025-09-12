@@ -1,4 +1,5 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, ParseIntPipe } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, ParseIntPipe, UseInterceptors } from '@nestjs/common';
+import { CacheInterceptor, CacheTTL } from '@nestjs/cache-manager';
 import { UsuarioService } from './usuario.service';
 import { CreateUsuarioDto } from './dto/create-usuario.dto';
 import { UpdateUsuarioDto } from './dto/update-usuario.dto';
@@ -29,6 +30,8 @@ export class UsuarioController {
   }
 
   @Get()
+  @UseInterceptors(CacheInterceptor)
+  @CacheTTL(300000) // 5 minutos
   @ApiOperation({
     summary: 'Lista todos os perfis de usuário',
     description: 'Retorna uma lista de todos os perfis de usuário cadastrados no banco de dados. Este é um endpoint público.',
@@ -40,6 +43,8 @@ export class UsuarioController {
 
   @Get('me')
   @UseGuards(SupabaseAuthGuard)
+  @UseInterceptors(CacheInterceptor)
+  @CacheTTL(60000) // 1 minuto - dados próprios podem mudar
   @ApiBearerAuth('JWT-auth')
   @ApiOperation({
     summary: 'Retorna o perfil do usuário logado',
@@ -53,6 +58,8 @@ export class UsuarioController {
   }
 
   @Get(':id')
+  @UseInterceptors(CacheInterceptor)
+  @CacheTTL(300000) // 5 minutos
   @ApiOperation({
     summary: 'Busca um perfil de usuário pelo ID numérico',
     description: 'Retorna um perfil de usuário específico com base no seu ID primário (numérico) no banco de dados. Este é um endpoint público.',

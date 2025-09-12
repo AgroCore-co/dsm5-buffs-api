@@ -51,6 +51,34 @@ NODE_OPTIONS="--max-old-space-size=1024"
 UV_THREADPOOL_SIZE=4
 ```
 
+## ⚡ Sistema de Cache
+
+### 📊 Configuração de Cache
+
+A API utiliza cache em memória (`@nestjs/cache-manager`) para otimizar performance e reduzir carga no banco:
+
+```env
+# Cache configurável via variáveis (opcional)
+CACHE_TTL=300  # TTL padrão em segundos (5 minutos)
+CACHE_MAX=100  # Máximo de entradas no cache
+```
+
+### 🕒 Estratégia de TTL por Tipo de Dados
+
+| Tipo de Dados | TTL | Justificativa |
+|---------------|-----|---------------|
+| **Dados Estáticos** (Raças, Grupos, Propriedades) | 1 hora (3600s) | Mudam raramente |
+| **Dados Dinâmicos** (Búfalos, Coletas de Leite) | 5 minutos (300s) | Atualizações frequentes |
+| **Dados Críticos** (Alertas) | 30 segundos (30s) | Requerem dados sempre atuais |
+| **Ciclos de Lactação** | 15 minutos (900s) | Intermediário entre estático e dinâmico |
+
+### 💡 Benefícios do Cache
+
+- **Performance**: Redução de 70-90% no tempo de resposta
+- **Economia**: Menos consultas ao banco (importante para Free Tier)
+- **Escalabilidade**: Suporta mais usuários simultâneos
+- **UX**: Interface mais responsiva
+
 ## 🔐 Segurança
 
 ### ⚠️ Variáveis Sensíveis

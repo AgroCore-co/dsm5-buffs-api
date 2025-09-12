@@ -1,4 +1,5 @@
-import { Controller, Get, Post, Body, UseGuards, Param, Patch, Delete, ParseIntPipe } from '@nestjs/common';
+import { Controller, Get, Post, Body, UseGuards, Param, Patch, Delete, ParseIntPipe, UseInterceptors } from '@nestjs/common';
+import { CacheInterceptor, CacheTTL } from '@nestjs/cache-manager';
 import { AlimentacaoDefService } from './alimentacao-def.service';
 import { CreateAlimentacaoDefDto } from './dto/create-alimentacao-def.dto';
 import { UpdateAlimentacaoDefDto } from './dto/update-alimentacao-def.dto';
@@ -13,6 +14,8 @@ export class AlimentacaoDefController {
   constructor(private readonly alimentacaoDefService: AlimentacaoDefService) {}
 
   @Get()
+  @UseInterceptors(CacheInterceptor)
+  @CacheTTL(3600)
   @ApiOperation({
     summary: 'Lista todas as alimentações definidas',
     description: 'Retorna uma lista de todas as alimentações definidas cadastradas no sistema, ordenadas alfabeticamente.',
@@ -24,6 +27,8 @@ export class AlimentacaoDefController {
   }
 
   @Get(':id')
+  @UseInterceptors(CacheInterceptor)
+  @CacheTTL(3600) // 1 hour - feeding definitions are relatively static
   @ApiOperation({
     summary: 'Busca uma alimentação definida específica',
     description: 'Retorna os dados de uma alimentação definida específica pelo ID.',

@@ -1,4 +1,5 @@
-import { Controller, Get, Post, Body, UseGuards, Param, Patch, Delete, ParseIntPipe } from '@nestjs/common';
+import { Controller, Get, Post, Body, UseGuards, Param, Patch, Delete, ParseIntPipe, UseInterceptors } from '@nestjs/common';
+import { CacheInterceptor, CacheTTL } from '@nestjs/cache-manager';
 import { RacaService } from './raca.service';
 import { CreateRacaDto } from './dto/create-raca.dto';
 import { UpdateRacaDto } from './dto/update-raca.dto';
@@ -13,6 +14,8 @@ export class RacaController {
   constructor(private readonly racaService: RacaService) {}
 
   @Get()
+  @UseInterceptors(CacheInterceptor)
+  @CacheTTL(3600000) // 1 hora - raças são dados estáticos
   @ApiOperation({
     summary: 'Lista todas as raças',
     description: 'Retorna uma lista de todas as raças de búfalos cadastradas no sistema, ordenadas alfabeticamente.',
@@ -24,6 +27,8 @@ export class RacaController {
   }
 
   @Get(':id')
+  @UseInterceptors(CacheInterceptor)
+  @CacheTTL(3600000) // 1 hora
   @ApiOperation({
     summary: 'Busca uma raça específica',
     description: 'Retorna os dados de uma raça específica pelo ID.',
