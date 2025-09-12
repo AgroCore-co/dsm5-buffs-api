@@ -342,17 +342,38 @@ Os testes incluem:
 
 ## 🚀 Deploy e Produção
 
-### Configurações de Produção
+### ☁️ Deploy AWS App Runner (Recomendado)
 
+A API está otimizada para rodar no **AWS App Runner Free Tier**:
+- **1 vCPU, 2GB RAM** (adequado para a aplicação)
+- **720 horas/mês grátis** (~24 dias de execução contínua)
+- **Auto-scaling** e **health checks** inclusos
+
+#### Configuração Rápida
+
+1. **Pré-requisitos**:
+   - Conta AWS criada
+   - Código no GitHub
+   - Credenciais Supabase válidas
+
+2. **Variáveis de Ambiente no AWS Console**:
 ```env
+SUPABASE_URL=https://seu-projeto.supabase.co
+SUPABASE_KEY=eyJhbGci...
+SUPABASE_JWT_SECRET=seu-jwt-secret
+GEMINI_API_KEY=AIzaSy...
 NODE_ENV=production
-PORT=3001
-LOG_LEVEL=info
-CORS_ORIGIN=https://seu-frontend.com,https://www.buffs.com
-JWT_SECRET=chave_super_secreta_produção_pelo_menos_32_caracteres
+CORS_ORIGIN=https://app.seudominio.com
 ```
 
-### Deploy com Docker
+3. **Otimizações para Free Tier** (opcional):
+```env
+NODE_OPTIONS=--max-old-space-size=1024
+UV_THREADPOOL_SIZE=4
+LOG_LEVEL=error
+```
+
+### 🐳 Deploy com Docker Local
 
 ```bash
 # Build para produção
@@ -372,6 +393,16 @@ docker logs buffs-api
 # Verificar saúde
 docker exec buffs-api node healthcheck.js
 ```
+
+### ✅ Checklist Pós-Deploy
+
+- [ ] Health check respondendo (`/health`)
+- [ ] Swagger acessível (`/api`)
+- [ ] CORS funcionando (teste do frontend)
+- [ ] Autenticação Supabase funcionando
+- [ ] Logs sem erros críticos
+
+> 📚 **Para configuração detalhada e troubleshooting**, consulte: [`docs/ENVIRONMENT_SETUP.md`](docs/ENVIRONMENT_SETUP.md)
 
 ## 📊 Endpoints da API
 
@@ -407,5 +438,3 @@ A documentação inclui:
 ## 📄 Licença
 
 Este projeto está licenciado sob a **MIT License** - veja o arquivo [LICENSE](LICENSE) para detalhes.
-
----

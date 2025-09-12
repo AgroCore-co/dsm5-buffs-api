@@ -6,12 +6,15 @@ import helmet from 'helmet';
 import * as dotenv from 'dotenv';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  const app = await NestFactory.create(AppModule, {
+    logger: process.env.NODE_ENV === 'production' 
+      ? ['error', 'warn'] 
+      : ['log', 'debug', 'error', 'verbose', 'warn']
+  });
   dotenv.config();
 
-  // 🛡️ Segurança básica com Helmet
   app.use(helmet({
-    crossOriginEmbedderPolicy: false, // Para compatibilidade
+    crossOriginEmbedderPolicy: false, 
   }));
 
   const swaggerDescription = `
@@ -104,11 +107,14 @@ async function bootstrap() {
     allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
   });
 
-  const port = process.env.PORT || 3001;
-  await app.listen(port);
+  // Graceful shutdown para AWS App Runner
+  app.enableShutdownHooks();
 
-  console.log(`🚀 API rodando em: http://localhost:${port}`);
-  console.log(`📚 Documentação Swagger: http://localhost:${port}/api`);
+  const port = process.env.PORT || 3001;
+  await app.listen(port, '0.0.0.0');
+
+  console.log(`🚀 API rodando em: http://0.0.0.0:${port}`);
+  console.log(`📚 Documentação Swagger: http://0.0.0.0:${port}/api`);
   console.log(`🌍 Ambiente: ${process.env.NODE_ENV || 'development'}`);
 }
 bootstrap();
