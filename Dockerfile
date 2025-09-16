@@ -5,8 +5,17 @@ WORKDIR /app
 # Copiar arquivos de dependência
 COPY package*.json ./
 
-# Instalar dependências
-RUN npm ci --only=production && npm cache clean --force
+# Instalar TODAS as dependências (incluindo as de desenvolvimento)
+RUN npm install
+
+# Copiar o restante do código
+COPY . .
+
+# Construir a aplicação (com as dependências de desenvolvimento)
+RUN npm run build
+
+# Remover dependências de desenvolvimento após build
+RUN npm prune --production
 
 # Estágio de produção
 FROM node:18-alpine AS production
@@ -23,14 +32,8 @@ WORKDIR /app
 # Copiar node_modules do builder
 COPY --from=builder --chown=nestjs:nodejs /app/node_modules ./node_modules
 
-# Copiar código da aplicação
-COPY --chown=nestjs:nodejs . .
-
-# Build da aplicação
-RUN npm run build
-
-# Remover dependências de desenvolvimento após build
-RUN npm prune --production
+# Copiar o código compilado da aplicação
+COPY --from=builder --chown=nestjs:nodejs /app/dist ./dist
 
 # Mudar para usuário não-root
 USER nestjs
