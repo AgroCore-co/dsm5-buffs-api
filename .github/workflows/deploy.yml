@@ -9,52 +9,26 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout do repositório
-      uses: actions/checkout@v4
-
     - name: Deploy para EC2
       uses: appleboy/ssh-action@v1.0.3
       with:
         host: ${{ secrets.EC2_HOST }}
         username: ${{ secrets.EC2_USER }}
         key: ${{ secrets.EC2_SSH_KEY }}
-        port: 22
         script: |
-          echo "🚀 Iniciando deploy..."
+          cd /home/ec2-user/dsm5-buffs-api
           
-          # Navegar para o diretório da aplicação ou criar se não existir
-          cd /home/ec2-user/dsm5-buffs-api || {
-            echo "❌ Diretório não encontrado, clonando repositório..."
-            cd /home/ec2-user
-            git clone https://github.com/${{ github.repository }}.git dsm5-buffs-api
-            cd dsm5-buffs-api
-          }
-          
-          echo "📥 Baixando atualizações..."
-          git fetch origin
-          git reset --hard origin/main
+          echo "📥 Atualizando código..."
+          git pull origin main
           
           echo "📦 Instalando dependências..."
           npm install
           
-          echo "🔨 Building aplicação..."
+          echo "🔨 Building..."
           npm run build
           
-          echo "🔄 Reiniciando aplicação com PM2..."
-          # Para a aplicação se estiver rodando
-          pm2 stop dsm5-buffs-api || true
-          
-          # Inicia/reinicia a aplicação
-          pm2 start dist/main.js --name "dsm5-buffs-api" --update-env || pm2 restart dsm5-buffs-api
-          
-          # Salva configuração do PM2
-          pm2 save
+          echo "🔄 Reiniciando PM2..."
+          pm2 restart dsm5-buffs-api
           
           echo "✅ Deploy concluído!"
-          
-          # Verificar se está rodando
-          sleep 10
           pm2 status dsm5-buffs-api
-          
-          echo "🔎 Testando health check..."
-          curl -f http://localhost:3001/health || echo "⚠️ Health check falhou"
