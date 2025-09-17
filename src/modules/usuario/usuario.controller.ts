@@ -12,7 +12,7 @@ import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagg
 export class UsuarioController {
   constructor(private readonly usuarioService: UsuarioService) {}
 
-  @Post()
+  @Post('perfil')
   @UseGuards(SupabaseAuthGuard)
   @ApiBearerAuth('JWT-auth')
   @ApiOperation({
