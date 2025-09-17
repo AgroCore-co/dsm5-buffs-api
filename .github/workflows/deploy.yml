@@ -1,34 +1,12 @@
-name: Deploy to AWS EC2
-
-on:
-  push:
-    branches: [ main, master ]
-
-jobs:
-  deploy:
-    runs-on: ubuntu-latest
-
-    steps:
-    - name: Deploy para EC2
-      uses: appleboy/ssh-action@v1.0.3
-      with:
-        host: ${{ secrets.EC2_HOST }}
-        username: ${{ secrets.EC2_USER }}
-        key: ${{ secrets.EC2_SSH_KEY }}
-        script: |
-          cd /home/ec2-user/dsm5-buffs-api
-          
-          echo "📥 Atualizando código..."
-          git pull origin main
-          
-          echo "📦 Instalando dependências..."
-          npm install
-          
-          echo "🔨 Building..."
-          npm run build
-          
-          echo "🔄 Reiniciando PM2..."
-          pm2 restart dsm5-buffs-api
-          
-          echo "✅ Deploy concluído!"
-          pm2 status dsm5-buffs-api
+- name: Deploy para EC2
+  uses: appleboy/ssh-action@v1.0.3
+  with:
+    host: ${{ secrets.EC2_HOST }}
+    username: ec2-user
+    key: ${{ secrets.EC2_SSH_KEY }}
+    script: |
+      cd /home/ec2-user/dsm5-buffs-api
+      git pull origin main
+      npm install
+      npm run build
+      pm2 restart dsm5-buffs-api
