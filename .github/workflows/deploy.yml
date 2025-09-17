@@ -1,15 +1,8 @@
 name: Deploy to AWS EC2
 
 on:
-  p          echo "📥 Baixando atualizações..."
-          git fetch origin
-          git reset --hard origin/main
-          
-          echo "📦 Instalando dependências..."
-          npm install
-          
-          echo "🔨 Building aplicação..."
-          npm run buildbranches: [ main, master ]
+  push:
+    branches: [ main, master ]
 
 jobs:
   deploy:
@@ -42,9 +35,9 @@ jobs:
           git reset --hard origin/main
           
           echo "📦 Instalando dependências..."
-          npm ci --only=production
+          npm install
           
-          echo "� Building aplicação..."
+          echo "🔨 Building aplicação..."
           npm run build
           
           echo "🔄 Reiniciando aplicação com PM2..."
