@@ -87,23 +87,33 @@ async function bootstrap() {
   );
 
   // 🌐 Configuração de CORS mais segura
-  const allowedOrigins = process.env.CORS_ORIGIN ? 
-    process.env.CORS_ORIGIN.split(',') : 
-    ['http://localhost:3000', 'http://localhost:3001'];
+  const corsOrigin = process.env.CORS_ORIGIN;
+  const allowedOrigins = corsOrigin === '*' 
+    ? [] // Array vazio quando * é usado
+    : corsOrigin 
+      ? corsOrigin.split(',').map(origin => origin.trim()) 
+      : ['http://localhost:3000', 'http://localhost:3001'];
 
   app.enableCors({
     origin: (origin, callback) => {
+      // Se CORS_ORIGIN for '*', permitir qualquer origem
+      if (corsOrigin === '*') {
+        return callback(null, true);
+      }
+
       // Permitir requisições sem origin (como mobile apps, Postman)
       if (!origin) return callback(null, true);
 
-      if (allowedOrigins.indexOf(origin) !== -1) {
+      if (allowedOrigins.includes(origin)) {
         callback(null, true);
       } else {
+        console.error(`🚫 CORS bloqueou origem: ${origin}`);
+        console.log(`✅ Origens permitidas: ${allowedOrigins.join(', ')}`);
         callback(new Error('Not allowed by CORS'));
       }
     },
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
-    credentials: true,
+    credentials: corsOrigin !== '*', // Desabilitar credentials quando * é usado
     allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
   });
 
