@@ -22,6 +22,10 @@ export class BufaloController {
   @ApiResponse({ status: 400, description: 'Dados inválidos.' })
   @ApiResponse({ status: 404, description: 'Propriedade, raça ou outra referência não encontrada.' })
   create(@Body() createBufaloDto: CreateBufaloDto, @User() user: any) {
+    console.log('🎯 Controller POST /bufalos chamado');
+    console.log('📝 DTO recebido:', createBufaloDto);
+    console.log('👤 User:', user?.email || user?.sub);
+    
     return this.bufaloService.create(createBufaloDto, user);
   }
 
@@ -61,6 +65,10 @@ export class BufaloController {
   @ApiResponse({ status: 200, description: 'Búfalo atualizado com sucesso.' })
   @ApiResponse({ status: 404, description: 'Búfalo não encontrado ou não pertence a este usuário.' })
   update(@Param('id', ParseIntPipe) id: number, @Body() updateBufaloDto: UpdateBufaloDto, @User() user: any) {
+    console.log('🔄 Controller PATCH /bufalos/:id chamado');
+    console.log('📝 DTO recebido:', updateBufaloDto);
+    console.log('👤 User:', user?.email || user?.sub);
+    
     return this.bufaloService.update(id, updateBufaloDto, user);
   }
 
@@ -71,6 +79,9 @@ export class BufaloController {
   @ApiResponse({ status: 204, description: 'Búfalo removido com sucesso.' })
   @ApiResponse({ status: 404, description: 'Búfalo não encontrado ou não pertence a este usuário.' })
   remove(@Param('id', ParseIntPipe) id: number, @User() user: any) {
+    console.log('🗑️ Controller DELETE /bufalos/:id chamado');
+    console.log('👤 User:', user?.email || user?.sub);
+    
     return this.bufaloService.remove(id, user);
   }
 

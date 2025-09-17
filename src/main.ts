@@ -124,7 +124,7 @@ async function bootstrap() {
   await app.listen(port, '0.0.0.0');
 
   console.log(`🚀 API rodando em: http://0.0.0.0:${port}`);
-  console.log(`📚 Documentação Swagger: http://0.0.0.0:${port}/api`);
+  console.log(`📚 Documentação Swagger: http://localhost:${port}/api`);
   console.log(`🌍 Ambiente: ${process.env.NODE_ENV || 'development'}`);
 }
 bootstrap();

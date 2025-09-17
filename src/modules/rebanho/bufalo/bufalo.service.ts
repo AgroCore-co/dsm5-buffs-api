@@ -78,12 +78,20 @@ export class BufaloService {
   }
 
   async create(createDto: CreateBufaloDto, user: any) {
+    console.log('BufaloService.create - Iniciando criação de búfalo:', createDto);
+    console.log('BufaloService.create - User:', user);
+    
     const userId = await this.getUserId(user);
+    console.log('BufaloService.create - UserId obtido:', userId);
+    
     await this.validateReferencesAndOwnership(createDto, userId);
+    console.log('BufaloService.create - Validações passaram');
 
     // Processa dados com lógica de maturidade
     const processedDto = await this.processMaturityData(createDto);
+    console.log('BufaloService.create - Dados processados:', processedDto);
 
+    console.log('BufaloService.create - Inserindo no banco de dados...');
     const { data, error } = await this.supabase
       .from(this.tableName)
       .insert(processedDto)
@@ -91,11 +99,14 @@ export class BufaloService {
       .single();
 
     if (error) {
+      console.error('BufaloService.create - Erro ao inserir:', error);
       if (error.code === '23503') { // Erro de chave estrangeira
         throw new BadRequestException('Falha ao criar búfalo: uma das referências (raça, grupo, etc.) é inválida.');
       }
       throw new InternalServerErrorException(`Falha ao criar o búfalo: ${error.message}`);
     }
+
+    console.log('BufaloService.create - Búfalo criado com sucesso:', data);
 
     // Processa categoria ABCB em background
     if (data?.id_bufalo) {
