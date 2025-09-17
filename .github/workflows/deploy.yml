@@ -1,10 +1,15 @@
 name: Deploy to AWS EC2
 
 on:
-  push:
-    branches: [ main, master ]
-  pull_request:
-    branches: [ main, master ]
+  p          echo "📥 Baixando atualizações..."
+          git fetch origin
+          git reset --hard origin/main
+          
+          echo "📦 Instalando dependências..."
+          npm install
+          
+          echo "🔨 Building aplicação..."
+          npm run buildbranches: [ main, master ]
 
 jobs:
   deploy:
@@ -14,18 +19,6 @@ jobs:
     - name: Checkout do repositório
       uses: actions/checkout@v4
 
-    - name: Configurar Node.js
-      uses: actions/setup-node@v4
-      with:
-        node-version: '18'
-        cache: 'npm'
-
-    - name: Instalar dependências
-      run: npm ci
-
-    - name: Build da aplicação
-      run: npm run build
-
     - name: Deploy para EC2
       uses: appleboy/ssh-action@v1.0.3
       with:
@@ -34,33 +27,41 @@ jobs:
         key: ${{ secrets.EC2_SSH_KEY }}
         port: 22
         script: |
-          # Navega até a pasta do projeto no servidor
-          cd /home/ec2-user/dsm5-buffs-api
-
-          # Tenta parar o serviço
-          echo "🛑 Parando serviços..."
-          sudo systemctl stop buffs-api || true
-
-          # Puxa a versão mais recente do código
-          echo "🔄 Atualizando código..."
+          echo "🚀 Iniciando deploy..."
+          
+          # Navegar para o diretório da aplicação ou criar se não existir
+          cd /home/ec2-user/dsm5-buffs-api || {
+            echo "❌ Diretório não encontrado, clonando repositório..."
+            cd /home/ec2-user
+            git clone https://github.com/${{ github.repository }}.git dsm5-buffs-api
+            cd dsm5-buffs-api
+          }
+          
+          echo "📥 Baixando atualizações..."
           git fetch origin
           git reset --hard origin/main
-
-          # Instala dependências de produção
+          
           echo "📦 Instalando dependências..."
           npm ci --only=production
-
-          # Roda o build no servidor
-          echo "🛠️ Gerando build..."
+          
+          echo "� Building aplicação..."
           npm run build
-
-          # Inicia o serviço novamente
-          echo "🚀 Reiniciando o serviço..."
-          sudo systemctl start buffs-api
-
-          # Verifica se a API está respondendo
-          echo "🔎 Verificando status..."
-          sleep 5
-          curl -f http://localhost:3001/health || echo "⚠️ Serviço pode não estar respondendo"
-
+          
+          echo "🔄 Reiniciando aplicação com PM2..."
+          # Para a aplicação se estiver rodando
+          pm2 stop dsm5-buffs-api || true
+          
+          # Inicia/reinicia a aplicação
+          pm2 start dist/main.js --name "dsm5-buffs-api" --update-env || pm2 restart dsm5-buffs-api
+          
+          # Salva configuração do PM2
+          pm2 save
+          
           echo "✅ Deploy concluído!"
+          
+          # Verificar se está rodando
+          sleep 10
+          pm2 status dsm5-buffs-api
+          
+          echo "🔎 Testando health check..."
+          curl -f http://localhost:3001/health || echo "⚠️ Health check falhou"
