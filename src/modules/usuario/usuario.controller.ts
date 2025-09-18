@@ -3,6 +3,7 @@ import { CacheInterceptor, CacheTTL } from '@nestjs/cache-manager';
 import { UsuarioService } from './usuario.service';
 import { CreateUsuarioDto } from './dto/create-usuario.dto';
 import { UpdateUsuarioDto } from './dto/update-usuario.dto';
+import { CreateFuncionarioDto } from './dto/create-funcionario.dto';
 import { SupabaseAuthGuard } from '../auth/auth.guard';
 import { User } from '../auth/user.decorator';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
@@ -98,5 +99,71 @@ export class UsuarioController {
   @ApiResponse({ status: 404, description: 'Usuário não encontrado.' })
   remove(@Param('id', ParseIntPipe) id: number) {
     return this.usuarioService.remove(id);
+  }
+
+  // ===== ENDPOINTS PARA GESTÃO DE FUNCIONÁRIOS =====
+
+  @Post('funcionarios')
+  @UseGuards(SupabaseAuthGuard)
+  @ApiBearerAuth('JWT-auth')
+  @ApiOperation({
+    summary: 'Cria um novo funcionário',
+    description: `Permite que um proprietário crie um funcionário para sua(s) propriedade(s). 
+    O funcionário será automaticamente vinculado às propriedades do proprietário.
+    Se id_propriedade for especificado, o funcionário será vinculado apenas àquela propriedade específica.`,
+  })
+  @ApiResponse({ status: 201, description: 'Funcionário criado e vinculado com sucesso.' })
+  @ApiResponse({ status: 400, description: 'Dados inválidos.' })
+  @ApiResponse({ status: 401, description: 'Não autorizado.' })
+  @ApiResponse({ status: 403, description: 'Você não é proprietário da propriedade especificada.' })
+  @ApiResponse({ status: 409, description: 'Email já existe.' })
+  createFuncionario(@Body() createFuncionarioDto: CreateFuncionarioDto, @User() user: any) {
+    return this.usuarioService.createFuncionario(createFuncionarioDto, user.email);
+  }
+
+  @Get('funcionarios')
+  @UseGuards(SupabaseAuthGuard)
+  @ApiBearerAuth('JWT-auth')
+  @ApiOperation({
+    summary: 'Lista todos os funcionários do proprietário',
+    description: 'Retorna todos os funcionários vinculados às propriedades do usuário logado.',
+  })
+  @ApiResponse({ status: 200, description: 'Lista de funcionários retornada com sucesso.' })
+  @ApiResponse({ status: 401, description: 'Não autorizado.' })
+  @ApiResponse({ status: 404, description: 'Usuário não possui propriedades.' })
+  listarMeusFuncionarios(@User() user: any) {
+    return this.usuarioService.listarMeusFuncionarios(user.email);
+  }
+
+  @Get('funcionarios/propriedade/:id')
+  @UseGuards(SupabaseAuthGuard)
+  @ApiBearerAuth('JWT-auth')
+  @ApiOperation({
+    summary: 'Lista funcionários de uma propriedade específica',
+    description: 'Retorna todos os funcionários vinculados a uma propriedade específica.',
+  })
+  @ApiResponse({ status: 200, description: 'Lista de funcionários da propriedade retornada com sucesso.' })
+  @ApiResponse({ status: 401, description: 'Não autorizado.' })
+  @ApiResponse({ status: 403, description: 'Você não é proprietário desta propriedade.' })
+  listarFuncionariosPorPropriedade(@Param('id', ParseIntPipe) idPropriedade: number, @User() user: any) {
+    return this.usuarioService.listarFuncionariosPorPropriedade(idPropriedade, user.email);
+  }
+
+  @Delete('funcionarios/:idUsuario/propriedade/:idPropriedade')
+  @UseGuards(SupabaseAuthGuard)
+  @ApiBearerAuth('JWT-auth')
+  @ApiOperation({
+    summary: 'Desvincula um funcionário de uma propriedade',
+    description: 'Remove o vínculo entre um funcionário e uma propriedade específica.',
+  })
+  @ApiResponse({ status: 200, description: 'Funcionário desvinculado com sucesso.' })
+  @ApiResponse({ status: 401, description: 'Não autorizado.' })
+  @ApiResponse({ status: 403, description: 'Você não é proprietário desta propriedade.' })
+  desvincularFuncionario(
+    @Param('idUsuario', ParseIntPipe) idUsuario: number,
+    @Param('idPropriedade', ParseIntPipe) idPropriedade: number,
+    @User() user: any
+  ) {
+    return this.usuarioService.desvincularFuncionario(idUsuario, idPropriedade, user.email);
   }
 }

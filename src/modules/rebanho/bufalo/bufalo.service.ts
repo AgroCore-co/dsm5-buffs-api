@@ -46,24 +46,63 @@ export class BufaloService {
   }
 
   /**
-   * Valida a posse da propriedade e a existência de outras referências (raça, grupo, pais).
+   * Busca todas as propriedades vinculadas ao usuário
    */
-  private async validateReferencesAndOwnership(dto: CreateBufaloDto | UpdateBufaloDto, userId: number): Promise<void> {
-    // 1. Validação de Posse (a mais importante)
-    if (dto.id_propriedade) {
-      const { data: propriedade, error } = await this.supabase
-        .from('Propriedade')
-        .select('id_propriedade')
-        .eq('id_propriedade', dto.id_propriedade)
-        .eq('id_dono', userId) // Garante que a propriedade pertence ao usuário
-        .single();
-      
-      if (error || !propriedade) {
-        throw new NotFoundException(`Propriedade com ID ${dto.id_propriedade} não encontrada ou não pertence a este usuário.`);
-      }
+  private async getUserPropriedades(userId: number): Promise<number[]> {
+    const { data, error } = await this.supabase
+      .from('UsuarioPropriedade')
+      .select('id_propriedade')
+      .eq('id_usuario', userId);
+
+    if (error) {
+      throw new InternalServerErrorException('Falha ao buscar propriedades do usuário.');
     }
 
-    // 2. Validação de Referências Adicionais
+    if (!data || data.length === 0) {
+      throw new NotFoundException('Usuário não está associado a nenhuma propriedade.');
+    }
+
+    return data.map(item => item.id_propriedade);
+  }
+
+  /**
+   * Valida se o usuário tem acesso ao búfalo através das propriedades vinculadas
+   */
+  private async validateBufaloAccess(bufaloId: number, userId: number): Promise<void> {
+    // Busca as propriedades do usuário
+    const propriedadesUsuario = await this.getUserPropriedades(userId);
+
+    // Verifica se o búfalo pertence a alguma das propriedades do usuário
+    const { data: bufalo, error: bufaloError } = await this.supabase
+      .from(this.tableName)
+      .select('id_propriedade')
+      .eq('id_bufalo', bufaloId)
+      .in('id_propriedade', propriedadesUsuario)
+      .single();
+
+    if (bufaloError || !bufalo) {
+      throw new NotFoundException(`Búfalo com ID ${bufaloId} não encontrado nas propriedades vinculadas ao usuário.`);
+    }
+  }
+
+  /**
+   * Valida se a propriedade no DTO está vinculada ao usuário e outras referências
+   */
+  private async validateReferencesAndOwnership(dto: CreateBufaloDto | UpdateBufaloDto, userId: number): Promise<void> {
+    // Busca as propriedades associadas ao usuário
+    const propriedadesUsuario = await this.getUserPropriedades(userId);
+
+    // Valida se a propriedade no DTO está vinculada ao usuário
+    if (dto.id_propriedade && !propriedadesUsuario.includes(dto.id_propriedade)) {
+      throw new BadRequestException('Você só pode criar/atualizar búfalos em propriedades às quais está vinculado.');
+    }
+
+    // Se não foi fornecido id_propriedade, é obrigatório para criação
+    if (!dto.id_propriedade && dto.constructor.name === 'CreateBufaloDto') {
+      throw new BadRequestException('ID da propriedade é obrigatório para criar um búfalo.');
+    }
+
+    // Validação de outras referências
     const checkIfExists = async (tableName: string, columnName: string, id: number) => {
       const { data, error } = await this.supabase.from(tableName).select(columnName).eq(columnName, id).single();
       if (error || !data) {
@@ -125,59 +164,65 @@ export class BufaloService {
   async findAll(user: any) {
     const userId = await this.getUserId(user);
 
-    // Busca búfalos que estão em propriedades pertencentes ao usuário
+    // Busca as propriedades do usuário
+    const propriedadesUsuario = await this.getUserPropriedades(userId);
+
+    // Busca búfalos de todas as propriedades vinculadas ao usuário
     const { data, error } = await this.supabase
-      .from('Propriedade')
-      .select(`
-        id_propriedade,
-        nome,
-        Bufalo (*)
-      `)
-      .eq('id_dono', userId);
+      .from(this.tableName)
+      .select('*')
+      .in('id_propriedade', propriedadesUsuario);
 
     if (error) {
       throw new InternalServerErrorException('Falha ao buscar os búfalos.');
     }
 
-    // Extrai e achata a lista de búfalos de todas as propriedades
-    const allBufalos = data.flatMap(propriedade => propriedade.Bufalo || []);
-    
     // Atualiza maturidade automaticamente para búfalos que precisam
-    await this.updateMaturityIfNeeded(allBufalos);
+    await this.updateMaturityIfNeeded(data || []);
     
-    return allBufalos;
+    return data || [];
   }
 
   async findOne(id: number, user: any) {
     const userId = await this.getUserId(user);
+    
+    // Valida acesso antes de buscar os dados completos
+    await this.validateBufaloAccess(id, userId);
 
     const { data, error } = await this.supabase
       .from(this.tableName)
-      .select('*, Propriedade(id_dono)') // Puxa o id_dono da propriedade relacionada
+      .select('*')
       .eq('id_bufalo', id)
       .single();
 
     if (error || !data) {
       throw new NotFoundException(`Búfalo com ID ${id} não encontrado.`);
     }
-
-    // Verifica se a propriedade do búfalo pertence ao usuário
-    if (data.Propriedade?.id_dono !== userId) {
-      throw new NotFoundException(`Búfalo com ID ${id} não encontrado ou não pertence a este usuário.`);
-    }
     
     // Atualiza maturidade automaticamente se necessário
     await this.updateMaturityIfNeeded([data]);
     
-    delete (data as any).Propriedade; // Limpa o objeto de retorno
     return data;
   }
 
   async update(id: number, updateDto: UpdateBufaloDto, user: any) {
-    const existingBufalo = await this.findOne(id, user); // Garante que o búfalo existe e pertence ao usuário
-    
     const userId = await this.getUserId(user);
-    await this.validateReferencesAndOwnership(updateDto, userId); // Valida os novos dados
+    
+    // Valida acesso ao búfalo
+    await this.validateBufaloAccess(id, userId);
+    
+    // Busca dados existentes para processamento
+    const { data: existingBufalo, error: fetchError } = await this.supabase
+      .from(this.tableName)
+      .select('*')
+      .eq('id_bufalo', id)
+      .single();
+
+    if (fetchError || !existingBufalo) {
+      throw new NotFoundException(`Búfalo com ID ${id} não encontrado.`);
+    }
+    
+    await this.validateReferencesAndOwnership(updateDto, userId);
 
     // Processa dados com lógica de maturidade
     const processedDto = await this.processMaturityData(updateDto, existingBufalo);
@@ -206,7 +251,10 @@ export class BufaloService {
   }
 
   async remove(id: number, user: any) {
-    await this.findOne(id, user); // Garante que o búfalo existe e pertence ao usuário
+    const userId = await this.getUserId(user);
+    
+    // Valida acesso ao búfalo
+    await this.validateBufaloAccess(id, userId);
 
     const { error } = await this.supabase.from(this.tableName).delete().eq('id_bufalo', id);
 
@@ -483,29 +531,24 @@ export class BufaloService {
   async findByCategoria(categoria: CategoriaABCB, user: any) {
     const userId = await this.getUserId(user);
 
+    // Busca as propriedades do usuário
+    const propriedadesUsuario = await this.getUserPropriedades(userId);
+
     const { data, error } = await this.supabase
-      .from('Propriedade')
+      .from(this.tableName)
       .select(`
-        id_propriedade,
-        nome,
-        Bufalo!inner (
-          *,
-          Raca (nome)
-        )
+        *,
+        Raca (nome),
+        Propriedade (nome)
       `)
-      .eq('id_dono', userId)
-      .eq('Bufalo.categoria', categoria)
-      .eq('Bufalo.status', true);
+      .in('id_propriedade', propriedadesUsuario)
+      .eq('categoria', categoria)
+      .eq('status', true);
 
     if (error) {
       throw new InternalServerErrorException(`Falha ao buscar búfalos da categoria ${categoria}.`);
     }
 
-    return data.flatMap(propriedade => 
-      propriedade.Bufalo.map(bufalo => ({
-        ...bufalo,
-        propriedade: propriedade.nome
-      }))
-    );
+    return data || [];
   }
 }

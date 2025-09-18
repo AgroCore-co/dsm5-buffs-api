@@ -1,8 +1,9 @@
-import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
+import { Injectable, NotFoundException, ConflictException, ForbiddenException, BadRequestException, InternalServerErrorException } from '@nestjs/common';
 import { SupabaseClient } from '@supabase/supabase-js';
 import { SupabaseService } from '../../core/supabase/supabase.service';
 import { CreateUsuarioDto } from './dto/create-usuario.dto';
 import { UpdateUsuarioDto } from './dto/update-usuario.dto';
+import { CreateFuncionarioDto } from './dto/create-funcionario.dto';
 
 @Injectable()
 export class UsuarioService {
@@ -117,5 +118,221 @@ export class UsuarioService {
       throw new Error(error.message);
     }
     return { message: `Usuário com ID ${id} deletado com sucesso.` };
+  }
+
+  /**
+   * Busca o ID do usuário pelo email
+   */
+  private async getUserId(email: string): Promise<number> {
+    const { data: perfilUsuario, error } = await this.supabase
+      .from('Usuario')
+      .select('id_usuario')
+      .eq('email', email)
+      .single();
+
+    if (error || !perfilUsuario) {
+      throw new NotFoundException('Perfil de usuário não encontrado.');
+    }
+    return perfilUsuario.id_usuario;
+  }
+
+  /**
+   * Busca todas as propriedades onde o usuário é proprietário
+   */
+  private async getUserPropriedades(userId: number): Promise<number[]> {
+    const { data, error } = await this.supabase
+      .from('Propriedade')
+      .select('id_propriedade')
+      .eq('id_dono', userId);
+
+    if (error) {
+      throw new InternalServerErrorException('Falha ao buscar propriedades do usuário.');
+    }
+
+    if (!data || data.length === 0) {
+      throw new NotFoundException('Usuário não possui nenhuma propriedade.');
+    }
+
+    return data.map(item => item.id_propriedade);
+  }
+
+  /**
+   * Cria um funcionário e o vincula a uma propriedade (apenas proprietários podem fazer isso)
+   */
+  async createFuncionario(createFuncionarioDto: CreateFuncionarioDto, proprietarioEmail: string) {
+    const proprietarioId = await this.getUserId(proprietarioEmail);
+    
+    // Busca as propriedades do proprietário
+    const propriedadesProprietario = await this.getUserPropriedades(proprietarioId);
+    
+    // Se foi especificado id_propriedade, verifica se pertence ao proprietário
+    if (createFuncionarioDto.id_propriedade) {
+      if (!propriedadesProprietario.includes(createFuncionarioDto.id_propriedade)) {
+        throw new ForbiddenException('Você só pode criar funcionários para suas próprias propriedades.');
+      }
+    }
+
+    // Verifica se o email já existe
+    const { data: existingUser } = await this.supabase
+      .from('Usuario')
+      .select('id_usuario')
+      .eq('email', createFuncionarioDto.email)
+      .single();
+
+    if (existingUser) {
+      throw new ConflictException('Já existe um usuário com este email.');
+    }
+
+    // Cria o funcionário
+    const { data: novoFuncionario, error } = await this.supabase
+      .from('Usuario')
+      .insert([{
+        nome: createFuncionarioDto.nome,
+        email: createFuncionarioDto.email,
+        telefone: createFuncionarioDto.telefone,
+        cargo: createFuncionarioDto.cargo || 'Funcionário',
+        id_endereco: createFuncionarioDto.id_endereco
+      }])
+      .select()
+      .single();
+
+    if (error) {
+      throw new InternalServerErrorException(`Falha ao criar funcionário: ${error.message}`);
+    }
+
+    // Determina as propriedades para vincular
+    const propriedadesParaVincular = createFuncionarioDto.id_propriedade 
+      ? [createFuncionarioDto.id_propriedade]
+      : propriedadesProprietario;
+
+    // Vincula o funcionário às propriedades
+    const vinculos = propriedadesParaVincular.map(idPropriedade => ({
+      id_usuario: novoFuncionario.id_usuario,
+      id_propriedade: idPropriedade
+    }));
+
+    const { error: vinculoError } = await this.supabase
+      .from('UsuarioPropriedade')
+      .insert(vinculos);
+
+    if (vinculoError) {
+      // Se falhar o vínculo, remove o usuário criado
+      await this.supabase.from('Usuario').delete().eq('id_usuario', novoFuncionario.id_usuario);
+      throw new InternalServerErrorException(`Falha ao vincular funcionário às propriedades: ${vinculoError.message}`);
+    }
+
+    return {
+      ...novoFuncionario,
+      propriedades_vinculadas: propriedadesParaVincular
+    };
+  }
+
+  /**
+   * Lista todos os funcionários de uma propriedade específica
+   */
+  async listarFuncionariosPorPropriedade(idPropriedade: number, proprietarioEmail: string) {
+    const proprietarioId = await this.getUserId(proprietarioEmail);
+    
+    // Verifica se o usuário é dono da propriedade
+    const { data: propriedade, error } = await this.supabase
+      .from('Propriedade')
+      .select('id_dono')
+      .eq('id_propriedade', idPropriedade)
+      .eq('id_dono', proprietarioId)
+      .single();
+
+    if (error || !propriedade) {
+      throw new ForbiddenException('Acesso negado: você não é proprietário desta propriedade.');
+    }
+
+    // Busca funcionários vinculados à propriedade
+    const { data, error: funcionariosError } = await this.supabase
+      .from('UsuarioPropriedade')
+      .select(`
+        Usuario (
+          id_usuario,
+          nome,
+          email,
+          telefone,
+          cargo,
+          created_at
+        )
+      `)
+      .eq('id_propriedade', idPropriedade);
+
+    if (funcionariosError) {
+      throw new InternalServerErrorException('Erro ao buscar funcionários.');
+    }
+
+    return data?.map(item => item.Usuario) || [];
+  }
+
+  /**
+   * Lista todos os funcionários de todas as propriedades do proprietário
+   */
+  async listarMeusFuncionarios(proprietarioEmail: string) {
+    const proprietarioId = await this.getUserId(proprietarioEmail);
+    const propriedadesProprietario = await this.getUserPropriedades(proprietarioId);
+
+    // Busca funcionários de todas as propriedades do proprietário
+    const { data, error } = await this.supabase
+      .from('UsuarioPropriedade')
+      .select(`
+        id_propriedade,
+        Usuario (
+          id_usuario,
+          nome,
+          email,
+          telefone,
+          cargo,
+          created_at
+        ),
+        Propriedade (
+          nome
+        )
+      `)
+      .in('id_propriedade', propriedadesProprietario);
+
+    if (error) {
+      throw new InternalServerErrorException('Erro ao buscar funcionários.');
+    }
+
+    return data?.map(item => ({
+      ...item.Usuario,
+      propriedade: (item.Propriedade as any)?.nome,
+      id_propriedade: item.id_propriedade
+    })) || [];
+  }
+
+  /**
+   * Remove um funcionário de uma propriedade (desvincular)
+   */
+  async desvincularFuncionario(idUsuario: number, idPropriedade: number, proprietarioEmail: string) {
+    const proprietarioId = await this.getUserId(proprietarioEmail);
+    
+    // Verifica se o usuário é dono da propriedade
+    const { data: propriedade, error } = await this.supabase
+      .from('Propriedade')
+      .select('id_dono')
+      .eq('id_propriedade', idPropriedade)
+      .eq('id_dono', proprietarioId)
+      .single();
+
+    if (error || !propriedade) {
+      throw new ForbiddenException('Acesso negado: você não é proprietário desta propriedade.');
+    }
+
+    // Remove o vínculo
+    const { error: desvincularError } = await this.supabase
+      .from('UsuarioPropriedade')
+      .delete()
+      .eq('id_usuario', idUsuario)
+      .eq('id_propriedade', idPropriedade);
+
+    if (desvincularError) {
+      throw new InternalServerErrorException('Erro ao desvincular funcionário.');
+    }
+
+    return { message: 'Funcionário desvinculado com sucesso.' };
   }
 }
