@@ -92,6 +92,25 @@ export class DadosSanitariosService {
     return data;
   }
 
+  async findByBufalo(id_bufalo: number) {
+    const { data, error } = await this.supabase
+      .getClient()
+      .from(this.tableName)
+      .select(
+        `
+        *,
+        medicacao:Medicacoes!inner(id_medicacao, tipo_tratamento, medicacao, descricao)
+      `,
+      )
+      .eq('id_bufalo', id_bufalo)
+      .order('dt_aplicacao', { ascending: false });
+
+    if (error) {
+      throw new InternalServerErrorException(`Falha ao buscar dados sanitários do búfalo: ${error.message}`);
+    }
+    return data;
+  }
+
   async findOne(id_sanit: number) {
     const { data, error } = await this.supabase
       .getClient()
