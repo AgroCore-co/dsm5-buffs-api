@@ -4,6 +4,7 @@ import { SupabaseService } from '../../core/supabase/supabase.service';
 import { CreateUsuarioDto } from './dto/create-usuario.dto';
 import { UpdateUsuarioDto } from './dto/update-usuario.dto';
 import { CreateFuncionarioDto } from './dto/create-funcionario.dto';
+import { Cargo } from './enums/cargo.enum';
 
 @Injectable()
 export class UsuarioService {
@@ -20,23 +21,32 @@ export class UsuarioService {
    * @returns O perfil do usuário recém-criado.
    */
   async create(createUsuarioDto: CreateUsuarioDto, email: string) {
-    // Sem coluna auth_id no schema: utilizamos e-mail para unicidade
+    // Verifica se usuário já tem perfil
     const { data: existingProfile } = await this.supabase.from('Usuario').select('id_usuario').eq('email', email).single();
 
     if (existingProfile) {
       throw new ConflictException('Este usuário já possui um perfil cadastrado.');
     }
 
+    // Cria perfil SEMPRE como PROPRIETARIO
     const { data, error } = await this.supabase
       .from('Usuario')
-      .insert([{ ...createUsuarioDto, email }])
+      .insert([{ 
+        ...createUsuarioDto, 
+        email,
+        cargo: Cargo.PROPRIETARIO  // ← SEMPRE PROPRIETARIO para este método
+      }])
       .select()
       .single();
 
     if (error) {
-      throw new Error(error.message);
+      throw new BadRequestException(`Erro ao criar perfil: ${error.message}`);
     }
-    return data;
+    
+    return {
+      ...data,
+      message: 'Perfil de proprietário criado com sucesso'
+    };
   }
 
   /**
@@ -160,6 +170,11 @@ export class UsuarioService {
    * Cria um funcionário e o vincula a uma propriedade (apenas proprietários podem fazer isso)
    */
   async createFuncionario(createFuncionarioDto: CreateFuncionarioDto, proprietarioEmail: string) {
+    // Validação: não permitir criação de PROPRIETARIO via este endpoint
+    if (createFuncionarioDto.cargo === Cargo.PROPRIETARIO) {
+      throw new BadRequestException('Não é possível criar usuário com cargo PROPRIETARIO através deste endpoint. Use POST /usuarios');
+    }
+
     const proprietarioId = await this.getUserId(proprietarioEmail);
     
     // Busca as propriedades do proprietário
@@ -183,14 +198,14 @@ export class UsuarioService {
       throw new ConflictException('Já existe um usuário com este email.');
     }
 
-    // Cria o funcionário
+    // Cria o funcionário com cargo específico do enum
     const { data: novoFuncionario, error } = await this.supabase
       .from('Usuario')
       .insert([{
         nome: createFuncionarioDto.nome,
         email: createFuncionarioDto.email,
         telefone: createFuncionarioDto.telefone,
-        cargo: createFuncionarioDto.cargo || 'Funcionário',
+        cargo: createFuncionarioDto.cargo, // ← Agora usa o enum diretamente
         id_endereco: createFuncionarioDto.id_endereco
       }])
       .select()

@@ -20,13 +20,21 @@ export class UsuarioController {
   @UseGuards(SupabaseAuthGuard)
   @ApiBearerAuth('JWT-auth')
   @ApiOperation({
-    summary: 'Cria o perfil de proprietário',
-    description: `Cria o perfil inicial do usuário proprietário. Este endpoint deve ser chamado após o usuário ter se cadastrado e feito login.
-    O email é extraído automaticamente do token JWT. O usuário será automaticamente criado com cargo PROPRIETARIO.`,
+    summary: 'Criar perfil de proprietário',
+    description: `Cria o perfil inicial do usuário no sistema após cadastro e login no Supabase.
+    
+    **IMPORTANTE:** 
+    - Este endpoint é usado APENAS para criar o primeiro perfil do usuário
+    - O cargo será automaticamente definido como PROPRIETARIO
+    - O email é extraído automaticamente do token JWT
+    - Para criar funcionários, use POST /usuarios/funcionarios`,
   })
-  @ApiResponse({ status: 201, description: 'Perfil de proprietário criado com sucesso.' })
-  @ApiResponse({ status: 400, description: 'Dados inválidos.' })
-  @ApiResponse({ status: 401, description: 'Token inválido.' })
+  @ApiResponse({ 
+    status: 201, 
+    description: 'Perfil de proprietário criado com sucesso. Cargo definido automaticamente como PROPRIETARIO.' 
+  })
+  @ApiResponse({ status: 400, description: 'Dados inválidos ou endereço não encontrado.' })
+  @ApiResponse({ status: 401, description: 'Token JWT inválido ou expirado.' })
   @ApiResponse({ status: 409, description: 'Usuário já possui perfil cadastrado.' })
   create(@Body() createUsuarioDto: CreateUsuarioDto, @User() user: any) {
     return this.usuarioService.create(createUsuarioDto, user.email);
@@ -119,11 +127,24 @@ export class UsuarioController {
   @ApiBearerAuth('JWT-auth')
   @ApiOperation({
     summary: 'Criar funcionário',
-    description: 'Permite que proprietários e gerentes criem novos funcionários no sistema.',
+    description: `Permite que proprietários e gerentes criem novos funcionários no sistema.
+    
+    **Cargos disponíveis:**
+    - GERENTE: Pode gerenciar usuários mas não propriedades
+    - FUNCIONARIO: Acesso apenas às operações básicas
+    - VETERINARIO: Acesso apenas às operações básicas
+    
+    **NOTA:** Este endpoint cria tanto a conta no Supabase quanto o perfil na aplicação.`,
   })
-  @ApiResponse({ status: 201, description: 'Funcionário criado com sucesso.' })
-  @ApiResponse({ status: 403, description: 'Acesso negado. Apenas proprietários e gerentes podem criar funcionários.' })
-  @ApiResponse({ status: 409, description: 'Email já existe.' })
+  @ApiResponse({ 
+    status: 201, 
+    description: 'Funcionário criado com sucesso no Supabase e perfil criado na aplicação.' 
+  })
+  @ApiResponse({ 
+    status: 403, 
+    description: 'Acesso negado. Apenas proprietários e gerentes podem criar funcionários.' 
+  })
+  @ApiResponse({ status: 409, description: 'Email já existe no sistema.' })
   createFuncionario(@Body() createFuncionarioDto: CreateFuncionarioDto, @User() user: any) {
     return this.usuarioService.createFuncionario(createFuncionarioDto, user.email);
   }

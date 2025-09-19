@@ -45,11 +45,26 @@ export class CreateFuncionarioDto {
   @ApiProperty({
     description: 'Cargo do funcionário no sistema',
     enum: Cargo,
+    enumName: 'Cargo',
     example: Cargo.FUNCIONARIO,
     required: true,
+    examples: {
+      gerente: { 
+        value: Cargo.GERENTE, 
+        description: 'Pode gerenciar usuários mas não propriedades' 
+      },
+      funcionario: { 
+        value: Cargo.FUNCIONARIO, 
+        description: 'Acesso apenas às operações básicas' 
+      },
+      veterinario: { 
+        value: Cargo.VETERINARIO, 
+        description: 'Acesso apenas às operações básicas' 
+      }
+    }
   })
   @IsEnum(Cargo, {
-    message: 'Cargo deve ser: GERENTE, FUNCIONARIO ou VETERINARIO'
+    message: 'Cargo deve ser: GERENTE, FUNCIONARIO ou VETERINARIO (PROPRIETARIO não é permitido neste endpoint)'
   })
   @IsNotEmpty()
   cargo: Cargo;
