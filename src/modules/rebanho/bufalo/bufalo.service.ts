@@ -46,23 +46,41 @@ export class BufaloService {
   }
 
   /**
-   * Busca todas as propriedades vinculadas ao usuário
+   * Busca todas as propriedades vinculadas ao usuário (como dono OU funcionário)
    */
   private async getUserPropriedades(userId: number): Promise<number[]> {
-    const { data, error } = await this.supabase
+    // 1. Busca propriedades onde o usuário é DONO
+    const { data: propriedadesComoDono, error: errorDono } = await this.supabase
+      .from('Propriedade')
+      .select('id_propriedade')
+      .eq('id_dono', userId);
+
+    // 2. Busca propriedades onde o usuário é FUNCIONÁRIO
+    const { data: propriedadesComoFuncionario, error: errorFuncionario } = await this.supabase
       .from('UsuarioPropriedade')
       .select('id_propriedade')
       .eq('id_usuario', userId);
 
-    if (error) {
+    if (errorDono || errorFuncionario) {
       throw new InternalServerErrorException('Falha ao buscar propriedades do usuário.');
     }
 
-    if (!data || data.length === 0) {
+    // 3. Combina ambas as listas
+    const todasPropriedades = [
+      ...(propriedadesComoDono || []),
+      ...(propriedadesComoFuncionario || [])
+    ];
+
+    // Remove duplicatas
+    const propriedadesUnicas = Array.from(
+      new Set(todasPropriedades.map(p => p.id_propriedade))
+    ).map(id => ({ id_propriedade: id }));
+
+    if (propriedadesUnicas.length === 0) {
       throw new NotFoundException('Usuário não está associado a nenhuma propriedade.');
     }
 
-    return data.map(item => item.id_propriedade);
+    return propriedadesUnicas.map(item => item.id_propriedade);
   }
 
   /**
@@ -131,9 +149,33 @@ export class BufaloService {
     console.log('BufaloService.create - Dados processados:', processedDto);
 
     console.log('BufaloService.create - Inserindo no banco de dados...');
+    console.log('BufaloService.create - DTO para inserção:', JSON.stringify(processedDto, null, 2));
+    
+    // Remove qualquer id_bufalo que possa estar sendo enviado
+    const { id_bufalo, ...insertDto } = processedDto;
+    console.log('BufaloService.create - DTO final (sem id_bufalo):', JSON.stringify(insertDto, null, 2));
+    
+    // Busca o próximo ID disponível para evitar conflitos
+    let maxIdResult;
+    try {
+      console.log('BufaloService.create - Buscando próximo ID...');
+      maxIdResult = await this.supabase
+        .from(this.tableName)
+        .select('id_bufalo')
+        .order('id_bufalo', { ascending: false })
+        .limit(1)
+        .single();
+    } catch (maxIdError) {
+      console.log('BufaloService.create - Sem registros existentes, começando do ID 1');
+    }
+    
+    const nextId = maxIdResult?.data?.id_bufalo ? maxIdResult.data.id_bufalo + 1 : 1;
+    const insertDtoWithId = { ...insertDto, id_bufalo: nextId };
+    console.log('BufaloService.create - Próximo ID calculado:', nextId);
+    
     const { data, error } = await this.supabase
       .from(this.tableName)
-      .insert(processedDto)
+      .insert(insertDtoWithId)
       .select()
       .single();
 

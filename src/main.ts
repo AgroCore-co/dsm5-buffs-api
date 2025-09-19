@@ -92,7 +92,7 @@ async function bootstrap() {
     ? [] // Array vazio quando * é usado
     : corsOrigin 
       ? corsOrigin.split(',').map(origin => origin.trim()) 
-      : ['http://localhost:3000', 'http://localhost:3001'];
+      : ['http://localhost:3000', 'http://localhost:3001', 'http://0.0.0.0:3001'];
 
   app.enableCors({
     origin: (origin, callback) => {
