@@ -17,24 +17,26 @@ export class UsuarioService {
   /**
    * Cria um novo perfil de usuário associado a um ID de autenticação.
    * @param createUsuarioDto - Dados para o novo perfil.
-   * @param authId - O ID de autenticação (sub) do usuário logado.
+   * @param email - Email extraído do JWT.
+   * @param authId - O auth_id (UUID) do Supabase extraído do JWT.
    * @returns O perfil do usuário recém-criado.
    */
-  async create(createUsuarioDto: CreateUsuarioDto, email: string) {
-    // Verifica se usuário já tem perfil
-    const { data: existingProfile } = await this.supabase.from('Usuario').select('id_usuario').eq('email', email).single();
+  async create(createUsuarioDto: CreateUsuarioDto, email: string, authId: string) {
+    // Verifica se usuário já tem perfil (por email OU auth_id)
+    const { data: existingProfile } = await this.supabase.from('Usuario').select('id_usuario').or(`email.eq.${email},auth_id.eq.${authId}`).single();
 
     if (existingProfile) {
       throw new ConflictException('Este usuário já possui um perfil cadastrado.');
     }
 
-    // Cria perfil SEMPRE como PROPRIETARIO
+    // Cria perfil SEMPRE como PROPRIETARIO com auth_id
     const { data, error } = await this.supabase
       .from('Usuario')
       .insert([{ 
         ...createUsuarioDto, 
         email,
-        cargo: Cargo.PROPRIETARIO  // ← SEMPRE PROPRIETARIO para este método
+        auth_id: authId,              // ← AGORA SALVA O AUTH_ID!
+        cargo: Cargo.PROPRIETARIO     // ← SEMPRE PROPRIETARIO para este método
       }])
       .select()
       .single();
@@ -187,59 +189,87 @@ export class UsuarioService {
       }
     }
 
-    // Verifica se o email já existe
-    const { data: existingUser } = await this.supabase
-      .from('Usuario')
-      .select('id_usuario')
-      .eq('email', createFuncionarioDto.email)
-      .single();
+    // 1. PRIMEIRO: Criar conta no Supabase Auth
+    const { data: authUser, error: authError } = await this.supabase.auth.admin.createUser({
+      email: createFuncionarioDto.email,
+      password: createFuncionarioDto.password,
+      email_confirm: true  // Confirma email automaticamente
+    });
 
-    if (existingUser) {
-      throw new ConflictException('Já existe um usuário com este email.');
+    if (authError) {
+      throw new BadRequestException(`Erro ao criar conta de autenticação: ${authError.message}`);
     }
 
-    // Cria o funcionário com cargo específico do enum
-    const { data: novoFuncionario, error } = await this.supabase
-      .from('Usuario')
-      .insert([{
-        nome: createFuncionarioDto.nome,
-        email: createFuncionarioDto.email,
-        telefone: createFuncionarioDto.telefone,
-        cargo: createFuncionarioDto.cargo, // ← Agora usa o enum diretamente
-        id_endereco: createFuncionarioDto.id_endereco
-      }])
-      .select()
-      .single();
+    try {
+      // Verifica se o email já existe na tabela Usuario
+      const { data: existingUser } = await this.supabase
+        .from('Usuario')
+        .select('id_usuario')
+        .eq('email', createFuncionarioDto.email)
+        .single();
 
-    if (error) {
-      throw new InternalServerErrorException(`Falha ao criar funcionário: ${error.message}`);
+      if (existingUser) {
+        // Se der erro, remove a conta criada no Supabase Auth
+        await this.supabase.auth.admin.deleteUser(authUser.user.id);
+        throw new ConflictException('Já existe um usuário com este email.');
+      }
+
+      // 2. SEGUNDO: Cria o perfil na tabela Usuario COM auth_id
+      const { data: novoFuncionario, error } = await this.supabase
+        .from('Usuario')
+        .insert([{
+          auth_id: authUser.user.id,        // ← AGORA SALVA O AUTH_ID!
+          nome: createFuncionarioDto.nome,
+          email: createFuncionarioDto.email,
+          telefone: createFuncionarioDto.telefone,
+          cargo: createFuncionarioDto.cargo,
+          id_endereco: createFuncionarioDto.id_endereco
+        }])
+        .select()
+        .single();
+
+      if (error) {
+        // Se falhar, remove a conta do Supabase Auth
+        await this.supabase.auth.admin.deleteUser(authUser.user.id);
+        throw new InternalServerErrorException(`Falha ao criar funcionário: ${error.message}`);
+      }
+
+      // Determina as propriedades para vincular
+      const propriedadesParaVincular = createFuncionarioDto.id_propriedade 
+        ? [createFuncionarioDto.id_propriedade]
+        : propriedadesProprietario;
+
+      // Vincula o funcionário às propriedades
+      const vinculos = propriedadesParaVincular.map(idPropriedade => ({
+        id_usuario: novoFuncionario.id_usuario,
+        id_propriedade: idPropriedade
+      }));
+
+      const { error: vinculoError } = await this.supabase
+        .from('UsuarioPropriedade')
+        .insert(vinculos);
+
+      if (vinculoError) {
+        // Se falhar o vínculo, remove o usuário criado E a conta do Supabase Auth
+        await this.supabase.from('Usuario').delete().eq('id_usuario', novoFuncionario.id_usuario);
+        await this.supabase.auth.admin.deleteUser(authUser.user.id);
+        throw new InternalServerErrorException(`Falha ao vincular funcionário às propriedades: ${vinculoError.message}`);
+      }
+
+      return {
+        ...novoFuncionario,
+        propriedades_vinculadas: propriedadesParaVincular,
+        auth_credentials: {
+          email: createFuncionarioDto.email,
+          temp_password: createFuncionarioDto.password
+        }
+      };
+
+    } catch (error) {
+      // Se algo der errado, limpa a conta criada no Supabase Auth
+      await this.supabase.auth.admin.deleteUser(authUser.user.id);
+      throw error;
     }
-
-    // Determina as propriedades para vincular
-    const propriedadesParaVincular = createFuncionarioDto.id_propriedade 
-      ? [createFuncionarioDto.id_propriedade]
-      : propriedadesProprietario;
-
-    // Vincula o funcionário às propriedades
-    const vinculos = propriedadesParaVincular.map(idPropriedade => ({
-      id_usuario: novoFuncionario.id_usuario,
-      id_propriedade: idPropriedade
-    }));
-
-    const { error: vinculoError } = await this.supabase
-      .from('UsuarioPropriedade')
-      .insert(vinculos);
-
-    if (vinculoError) {
-      // Se falhar o vínculo, remove o usuário criado
-      await this.supabase.from('Usuario').delete().eq('id_usuario', novoFuncionario.id_usuario);
-      throw new InternalServerErrorException(`Falha ao vincular funcionário às propriedades: ${vinculoError.message}`);
-    }
-
-    return {
-      ...novoFuncionario,
-      propriedades_vinculadas: propriedadesParaVincular
-    };
   }
 
   /**

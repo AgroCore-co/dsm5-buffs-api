@@ -26,7 +26,7 @@ export class UsuarioController {
     **IMPORTANTE:** 
     - Este endpoint é usado APENAS para criar o primeiro perfil do usuário
     - O cargo será automaticamente definido como PROPRIETARIO
-    - O email é extraído automaticamente do token JWT
+    - O email e auth_id são extraídos automaticamente do token JWT
     - Para criar funcionários, use POST /usuarios/funcionarios`,
   })
   @ApiResponse({ 
@@ -37,7 +37,7 @@ export class UsuarioController {
   @ApiResponse({ status: 401, description: 'Token JWT inválido ou expirado.' })
   @ApiResponse({ status: 409, description: 'Usuário já possui perfil cadastrado.' })
   create(@Body() createUsuarioDto: CreateUsuarioDto, @User() user: any) {
-    return this.usuarioService.create(createUsuarioDto, user.email);
+    return this.usuarioService.create(createUsuarioDto, user.email, user.id);
   }
 
   @Get()
