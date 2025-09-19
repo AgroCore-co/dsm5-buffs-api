@@ -35,6 +35,15 @@ export class VacinacaoController {
     return this.service.findAllByBufalo(id_bufalo);
   }
 
+  // Rota específica para buscar apenas vacinas (IDs específicos)
+  @Get('/bufalo/:id_bufalo/vacinas')
+  @ApiOperation({ summary: 'Lista apenas vacinas específicas de um búfalo' })
+  @ApiParam({ name: 'id_bufalo', description: 'ID do búfalo a ser consultado', type: Number })
+  @ApiResponse({ status: 200, description: 'Lista de vacinas retornada com sucesso.' })
+  findVacinasByBufalo(@Param('id_bufalo', ParseIntPipe) id_bufalo: number) {
+    return this.service.findVacinasByBufaloId(id_bufalo);
+  }
+
   // Rotas diretas para um registo de vacinação específico
   @Get(':id')
   @ApiOperation({ summary: 'Busca um registo de vacinação pelo seu ID' })

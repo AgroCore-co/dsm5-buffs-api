@@ -1,43 +1,39 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsString, IsNotEmpty, IsOptional, IsDateString, MaxLength } from 'class-validator';
+import { IsString, IsNotEmpty, IsOptional, IsDateString, IsNumber, IsBoolean } from 'class-validator';
 
 export class CreateVacinacaoDto {
-  @ApiProperty({ example: 'Vacina contra Febre Aftosa', description: 'Nome comercial da vacina aplicada' })
-  @IsString()
+  @ApiProperty({ example: 3, description: 'ID da vacina na tabela Medicacoes' })
+  @IsNumber()
   @IsNotEmpty()
-  @MaxLength(100)
-  nome_vacina: string;
-
-  @ApiProperty({ example: '1ª Dose', description: 'Dose aplicada (ex: dose única, reforço)', required: false })
-  @IsString()
-  @IsOptional()
-  @MaxLength(50)
-  dose?: string;
+  id_medicacao: number;
 
   @ApiProperty({ example: '2025-08-18', description: 'Data em que a vacina foi aplicada' })
   @IsDateString()
   @IsNotEmpty()
   dt_aplicacao: string;
 
-  @ApiProperty({ example: '2026-08-18', description: 'Data agendada para a próxima dose ou reforço', required: false })
+  @ApiProperty({ example: 2.0, description: 'Dosagem aplicada', required: false })
+  @IsNumber()
+  @IsOptional()
+  dosagem?: number;
+
+  @ApiProperty({ example: 'ml', description: 'Unidade de medida da dosagem', required: false })
+  @IsString()
+  @IsOptional()
+  unidade_medida?: string;
+
+  @ApiProperty({ example: 'Vacinação Preventiva', description: 'Doença/prevenção', required: false })
+  @IsString()
+  @IsOptional()
+  doenca?: string;
+
+  @ApiProperty({ example: false, description: 'Se necessita retorno', required: false })
+  @IsBoolean()
+  @IsOptional()
+  necessita_retorno?: boolean;
+
+  @ApiProperty({ example: '2026-08-18', description: 'Data de retorno se necessário', required: false })
   @IsDateString()
   @IsOptional()
-  dt_revacinacao?: string;
-
-  @ApiProperty({ example: 'LOTE-XYZ-123', description: 'Número do lote da vacina', required: false })
-  @IsString()
-  @IsOptional()
-  @MaxLength(50)
-  lote_vacina?: string;
-
-  @ApiProperty({ example: 'Farmacêutica VetBR', description: 'Fabricante da vacina', required: false })
-  @IsString()
-  @IsOptional()
-  @MaxLength(100)
-  fabricante?: string;
-
-  @ApiProperty({ example: 'Animal apresentou febre baixa após a aplicação.', description: 'Observações adicionais', required: false })
-  @IsString()
-  @IsOptional()
-  observacao?: string;
+  dt_retorno?: string;
 }
