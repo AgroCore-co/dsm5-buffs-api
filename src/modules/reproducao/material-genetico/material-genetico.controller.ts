@@ -1,6 +1,6 @@
 import { Controller, Get, Post, Body, Patch, Param, Delete, ParseIntPipe, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiResponse, ApiTags, ApiParam, ApiBody } from '@nestjs/swagger';
-import { SupabaseAuthGuard } from '../../auth/auth.guard';
+import { SupabaseAuthGuard } from '../../auth/guards/auth.guard';
 import { MaterialGeneticoService } from './material-genetico.service';
 import { CreateMaterialGeneticoDto } from './dto/create-material-genetico.dto';
 import { UpdateMaterialGeneticoDto } from './dto/update-material-genetico.dto';

@@ -1,7 +1,7 @@
 import { Controller, Get, Post, Body, Patch, Param, Delete, ParseIntPipe, UseGuards, HttpCode } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags, ApiOperation, ApiResponse, ApiParam } from '@nestjs/swagger';
-import { SupabaseAuthGuard } from '../../auth/auth.guard';
-import { User } from '../../auth/user.decorator';
+import { SupabaseAuthGuard } from '../../auth/guards/auth.guard';
+import { User } from '../../auth/decorators/user.decorator';
 import { MovLoteService } from './mov-lote.service';
 import { CreateMovLoteDto } from './dto/create-mov-lote.dto';
 import { UpdateMovLoteDto } from './dto/update-mov-lote.dto';

@@ -1,7 +1,7 @@
 import { Controller, Get, Post, Body, Patch, Param, Delete, ParseIntPipe, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiResponse, ApiTags, ApiParam } from '@nestjs/swagger';
-import { SupabaseAuthGuard } from '../../auth/auth.guard';
-import { User } from '../../auth/user.decorator';
+import { SupabaseAuthGuard } from '../../auth/guards/auth.guard';
+import { User } from '../../auth/decorators/user.decorator';
 import { DadosSanitariosService } from './dados-sanitarios.service';
 import { CreateDadosSanitariosDto } from './dto/create-dados-sanitarios.dto';
 import { UpdateDadosSanitariosDto } from './dto/update-dados-sanitarios.dto';

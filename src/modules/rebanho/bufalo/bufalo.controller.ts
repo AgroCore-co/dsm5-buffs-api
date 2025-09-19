@@ -4,8 +4,8 @@ import { BufaloService } from './bufalo.service';
 import { CreateBufaloDto } from './dto/create-bufalo.dto';
 import { UpdateBufaloDto } from './dto/update-bufalo.dto';
 import { ApiTags, ApiOperation, ApiResponse, ApiParam, ApiBearerAuth } from '@nestjs/swagger';
-import { SupabaseAuthGuard } from '../../auth/auth.guard';
-import { User } from '../../auth/user.decorator';
+import { SupabaseAuthGuard } from '../../auth/guards/auth.guard';
+import { User } from '../../auth/decorators/user.decorator';
 import { CategoriaABCB } from './dto/categoria-abcb.dto';
 import { NotFoundException, InternalServerErrorException } from '@nestjs/common';
 

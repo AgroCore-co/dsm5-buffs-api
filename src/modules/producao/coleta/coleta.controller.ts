@@ -1,8 +1,8 @@
 import { Controller, Get, Post, Body, Patch, Param, Delete, ParseIntPipe, UseGuards, UseInterceptors } from '@nestjs/common';
 import { CacheInterceptor, CacheTTL } from '@nestjs/cache-manager';
 import { ApiBearerAuth, ApiOperation, ApiResponse, ApiTags, ApiParam, ApiBody } from '@nestjs/swagger';
-import { SupabaseAuthGuard } from '../../auth/auth.guard';
-import { User } from '../../auth/user.decorator';
+import { SupabaseAuthGuard } from '../../auth/guards/auth.guard';
+import { User } from '../../auth/decorators/user.decorator';
 import { ColetaService } from './coleta.service';
 import { CreateColetaDto } from './dto/create-coleta.dto';
 import { UpdateColetaDto } from './dto/update-coleta.dto';

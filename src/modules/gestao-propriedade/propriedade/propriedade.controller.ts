@@ -4,11 +4,15 @@ import { PropriedadeService } from './propriedade.service';
 import { CreatePropriedadeDto } from './dto/create-propiedade.dto';
 import { UpdatePropriedadeDto } from './dto/update-propriedade.dto';
 import { ApiTags, ApiBearerAuth, ApiOperation, ApiResponse } from '@nestjs/swagger';
-import { SupabaseAuthGuard } from '../../auth/auth.guard';
-import { User } from '../../auth/user.decorator';
+import { SupabaseAuthGuard } from '../../auth/guards/auth.guard';
+import { RolesGuard } from '../../auth/guards/roles.guard';
+import { Roles } from '../../auth/decorators/roles.decorator';
+import { User } from '../../auth/decorators/user.decorator';
+import { Cargo } from '../../usuario/enums/cargo.enum';
 
 @ApiBearerAuth('JWT-auth')
-@UseGuards(SupabaseAuthGuard)
+@UseGuards(SupabaseAuthGuard, RolesGuard)
+@Roles(Cargo.PROPRIETARIO)
 @ApiTags('Gestão de Propriedade - Propriedades')
 @Controller('propriedades')
 export class PropriedadeController {
@@ -16,15 +20,12 @@ export class PropriedadeController {
 
   @Post()
   @ApiOperation({
-    summary: 'Cadastra uma nova propriedade para o usuário logado',
-    description: `Cria uma nova propriedade associada ao usuário autenticado. 
-    O fluxo esperado é: 
-    1. O frontend cria um endereço via 'POST /enderecos'.
-    2. O frontend usa o 'id_endereco' retornado para chamar este endpoint.`,
+    summary: 'Criar propriedade',
+    description: 'Cria uma nova propriedade. Disponível apenas para proprietários.',
   })
   @ApiResponse({ status: 201, description: 'Propriedade criada com sucesso.' })
+  @ApiResponse({ status: 403, description: 'Acesso negado. Apenas proprietários podem gerenciar propriedades.' })
   @ApiResponse({ status: 400, description: 'Dados inválidos ou endereço não encontrado.' })
-  @ApiResponse({ status: 401, description: 'Não autorizado.' })
   @ApiResponse({
     status: 404,
     description: 'Perfil do usuário não encontrado.',

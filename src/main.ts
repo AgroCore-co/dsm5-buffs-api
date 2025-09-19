@@ -40,32 +40,84 @@ async function bootstrap() {
 
   ---
 
-  ### **Etapa 3: Criação do Perfil de Dados (Nossa API)**
-  Com o token em mãos, o frontend faz a primeira chamada para nossa API para criar o perfil do usuário.
-  - **Endpoint a ser chamado:** \`POST /usuarios\`
-  - **Autenticação:** A requisição **DEVE** conter o cabeçalho \`Authorization: Bearer <seu_token_jwt>\`.
-  - **Corpo da Requisição:** O corpo deve conter os dados do perfil (nome, telefone, etc.), **MAS NÃO DEVE CONTER O CAMPO 'EMAIL'**, pois ele é extraído automaticamente do token.
+  ## 🔐 Sistema de Autenticação e Permissões
+
+  ### **Fluxo de Autenticação**
+  1. **Cadastro**: Use \`POST /auth/signup\` para criar conta no Supabase
+  2. **Confirmação**: Confirme seu email (se configurado)
+  3. **Login**: Use \`POST /auth/signin\` para obter o JWT token
+  4. **Criar Perfil**: Use \`POST /usuarios\` com o token JWT para criar seu perfil na aplicação
+  5. **Usar a API**: Inclua o header \`Authorization: Bearer <access_token>\` em todas as requisições
+
+  ### **Sistema de Cargos e Permissões**
+
+  | Cargo | Criar Funcionários | Gestão de Propriedade | Outras Operações |
+  |-------|-------------------|----------------------|------------------|
+  | **PROPRIETARIO** | ✅ Sim | ✅ Sim | ✅ Todas |
+  | **GERENTE** | ✅ Sim | ❌ Não | ✅ Todas (exceto gestão propriedade) |
+  | **FUNCIONARIO** | ❌ Não | ❌ Não | ✅ Operações básicas |
+  | **VETERINARIO** | ❌ Não | ❌ Não | ✅ Operações básicas |
+
+  ### **Hierarquia de Permissões**
+  - **Gestão de Propriedade**: Apenas PROPRIETARIO
+  - **Criação de Funcionários**: PROPRIETARIO e GERENTE
+  - **Operações do Rebanho**: Todos os cargos
+  - **Visualização de Dados**: Todos os cargos
 
   ---
 
-  ### **Etapa 4: Requisições Autenticadas (Nossa API)**
-  Para todas as outras operações em endpoints protegidos (ex: \`GET /usuarios/me\`), o frontend deve continuar enviando o cabeçalho \`Authorization: Bearer <seu_token_jwt>\`.
+  ## 🚀 Primeiros Passos
+
+  ### **1. Para o primeiro usuário (Proprietário):**
+  1. **Cadastre-se**: \`POST /auth/signup\` com email, senha e dados opcionais
+  2. **Confirme o email** (se necessário)
+  3. **Faça login**: \`POST /auth/signin\` para obter o \`access_token\`
+  4. **Crie seu perfil**: \`POST /usuarios\` com o token no header - **NÃO inclua email no body**
+  5. Seu perfil será criado automaticamente como **PROPRIETARIO**
+
+  ### **2. Para criar funcionários (apenas Proprietários e Gerentes):**
+  1. Faça login para obter seu JWT token
+  2. Use \`POST /usuarios/funcionarios\` para criar funcionários
+  3. Especifique o cargo: GERENTE, FUNCIONARIO ou VETERINARIO
+  4. O funcionário poderá usar \`POST /auth/signin\` com as credenciais fornecidas
+
+  ### **3. Renovação de Token:**
+  - Use \`POST /auth/refresh\` quando o access_token expirar
+  - Use \`POST /auth/signout\` para fazer logout
+
+  ## 📝 Notas Importantes
+
+  - **Autenticação**: Use os endpoints \`/auth/*\` para cadastro, login e gerenciamento de sessão
+  - **Perfil**: Use \`POST /usuarios\` apenas APÓS ter feito login para criar seu perfil na aplicação
+  - **Email**: NUNCA envie email no body das requisições - ele é extraído do token JWT
+  - **Funcionários**: Criados via \`POST /usuarios/funcionarios\` por proprietários/gerentes
+  - **Tokens**: Use sempre o \`access_token\` retornado pelo login nos headers das requisições
+
+  ## 🔐 Autenticação em Todas as Requisições
+
+  Todos os endpoints protegidos requerem:
+  \`\`\`
+  Authorization: Bearer <access_token_do_auth_signin>
+  \`\`\`
   `;
 
   const config = new DocumentBuilder()
-    .setTitle('BUFFS API')
+    .setTitle('🐃 BUFFS API')
     .setDescription(swaggerDescription)
     .setVersion('1.0')
-    .addTag('Usuários', 'Gerenciamento de perfis de usuários')
-    .addTag('Rebanho - Búfalos', 'Gerenciamento de búfalos individuais')
-    // Adicione mais tags para suas outras entidades aqui
+    .addTag('Autenticação', 'Endpoints de cadastro, login e gerenciamento de sessão')
+    .addTag('Usuários', 'Gerenciamento de perfis e funcionários')
+    .addTag('Gestão de Propriedade - Propriedades', '🏠 Gerenciamento de propriedades (PROPRIETARIO apenas)')
+    .addTag('Gestão de Propriedade - Lotes (Piquetes)', '🌾 Gerenciamento de lotes (PROPRIETARIO apenas)')
+    .addTag('Gestão de Propriedade - Endereços', '📍 Gerenciamento de endereços (PROPRIETARIO apenas)')
+    .addTag('Rebanho - Búfalos', '🐃 Gerenciamento de búfalos (todos os cargos)')
     .addBearerAuth(
       {
         type: 'http',
         scheme: 'bearer',
         bearerFormat: 'JWT',
         name: 'JWT',
-        description: 'Insira o token JWT obtido do Supabase após o login do usuário no cliente.',
+        description: 'Token JWT obtido do endpoint /auth/signin. Exemplo: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...',
         in: 'header',
       },
       'JWT-auth', // Este nome deve corresponder ao usado no decorator @ApiBearerAuth()

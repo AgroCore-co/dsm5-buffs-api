@@ -2,7 +2,7 @@ import { Controller, Get, Post, Body, Param, Patch, Delete, ParseIntPipe, UseGua
 import { RegistrosService } from './registros.service';
 import { CreateRegistroAlimentacaoDto } from './dto/create-registro.dto';
 import { UpdateRegistroAlimentacaoDto } from './dto/update-registro.dto';
-import { SupabaseAuthGuard } from '../../auth/auth.guard';
+import { SupabaseAuthGuard } from '../../auth/guards/auth.guard';
 import { ApiBearerAuth, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 
 @ApiBearerAuth('JWT-auth')

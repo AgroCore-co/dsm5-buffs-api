@@ -1,6 +1,6 @@
 import { Controller, Get, Post, Body, Patch, Param, Delete, ParseIntPipe, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiResponse, ApiTags, ApiParam, ApiBody } from '@nestjs/swagger';
-import { SupabaseAuthGuard } from '../../auth/auth.guard';
+import { SupabaseAuthGuard } from '../../auth/guards/auth.guard';
 import { CoberturaService } from './cobertura.service';
 import { CreateCoberturaDto } from './dto/create-cobertura.dto';
 import { UpdateCoberturaDto } from './dto/update-cobertura.dto';

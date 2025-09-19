@@ -1,8 +1,8 @@
 import { Controller, Get, Param, Query, ParseIntPipe, UseGuards } from '@nestjs/common';
 import { GenealogiaService } from './genealogia.service';
 import { ApiTags, ApiOperation, ApiParam, ApiQuery, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
-import { SupabaseAuthGuard } from '../../auth/auth.guard';
-import { User } from '../../auth/user.decorator';
+import { SupabaseAuthGuard } from '../../auth/guards/auth.guard';
+import { User } from '../../auth/decorators/user.decorator';
 import { GenealogiaNodeDto } from './dto/genealogia-response.dto';
 
 @ApiBearerAuth('JWT-auth')

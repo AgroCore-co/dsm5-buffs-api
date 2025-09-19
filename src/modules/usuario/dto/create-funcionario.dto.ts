@@ -1,5 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsString, IsOptional, IsNotEmpty, IsInt, MaxLength, IsEmail } from 'class-validator';
+import { IsString, IsOptional, IsNotEmpty, IsInt, MaxLength, IsEmail, IsEnum } from 'class-validator';
+import { Cargo } from '../enums/cargo.enum';
 
 export class CreateFuncionarioDto {
   @ApiProperty({
@@ -23,6 +24,15 @@ export class CreateFuncionarioDto {
   email: string;
 
   @ApiProperty({
+    description: 'Senha temporária para o primeiro acesso do funcionário.',
+    example: 'senha123',
+    required: true,
+  })
+  @IsString()
+  @IsNotEmpty()
+  password: string;
+
+  @ApiProperty({
     description: 'Número de telefone para contato.',
     example: '(11) 99999-8888',
     required: false,
@@ -33,14 +43,16 @@ export class CreateFuncionarioDto {
   telefone?: string;
 
   @ApiProperty({
-    description: 'Cargo ou função do funcionário na propriedade.',
-    example: 'Funcionário',
-    required: false,
+    description: 'Cargo do funcionário no sistema',
+    enum: Cargo,
+    example: Cargo.FUNCIONARIO,
+    required: true,
   })
-  @IsString()
-  @IsOptional()
-  @MaxLength(50)
-  cargo?: string;
+  @IsEnum(Cargo, {
+    message: 'Cargo deve ser: GERENTE, FUNCIONARIO ou VETERINARIO'
+  })
+  @IsNotEmpty()
+  cargo: Cargo;
 
   @ApiProperty({
     description: 'ID do endereço associado ao funcionário. Deve corresponder a um endereço já cadastrado.',

@@ -3,11 +3,15 @@ import { LoteService } from './lote.service';
 import { CreateLoteDto } from './dto/create-lote.dto';
 import { UpdateLoteDto } from './dto/update-lote.dto';
 import { ApiTags, ApiBearerAuth, ApiOperation, ApiResponse, ApiParam } from '@nestjs/swagger';
-import { SupabaseAuthGuard } from '../../auth/auth.guard';
-import { User } from '../../auth/user.decorator';
+import { SupabaseAuthGuard } from '../../auth/guards/auth.guard';
+import { RolesGuard } from '../../auth/guards/roles.guard';
+import { Roles } from '../../auth/decorators/roles.decorator';
+import { User } from '../../auth/decorators/user.decorator';
+import { Cargo } from '../../usuario/enums/cargo.enum';
 
 @ApiBearerAuth('JWT-auth')
-@UseGuards(SupabaseAuthGuard)
+@UseGuards(SupabaseAuthGuard, RolesGuard)
+@Roles(Cargo.PROPRIETARIO)
 @ApiTags('Gestão de Propriedade - Lotes (Piquetes)')
 @Controller('lotes')
 export class LoteController {

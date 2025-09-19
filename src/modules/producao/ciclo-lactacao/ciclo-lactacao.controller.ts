@@ -1,7 +1,7 @@
 import { Controller, Get, Post, Body, Patch, Param, Delete, ParseIntPipe, UseGuards, UseInterceptors } from '@nestjs/common';
 import { CacheInterceptor, CacheTTL } from '@nestjs/cache-manager';
 import { ApiBearerAuth, ApiBody, ApiOperation, ApiParam, ApiResponse, ApiTags } from '@nestjs/swagger';
-import { SupabaseAuthGuard } from '../../auth/auth.guard';
+import { SupabaseAuthGuard } from '../../auth/guards/auth.guard';
 import { CicloLactacaoService } from './ciclo-lactacao.service';
 import { CreateCicloLactacaoDto } from './dto/create-ciclo-lactacao.dto';
 import { UpdateCicloLactacaoDto } from './dto/update-ciclo-lactacao.dto';

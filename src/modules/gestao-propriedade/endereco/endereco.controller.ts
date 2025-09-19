@@ -4,10 +4,14 @@ import { EnderecoService } from './endereco.service';
 import { CreateEnderecoDto } from './dto/create-endereco.dto';
 import { UpdateEnderecoDto } from './dto/update-endereco.dto';
 import { ApiTags, ApiBearerAuth, ApiOperation, ApiResponse, ApiParam } from '@nestjs/swagger';
-import { SupabaseAuthGuard } from '../../auth/auth.guard';
+import { SupabaseAuthGuard } from '../../auth/guards/auth.guard';
+import { RolesGuard } from '../../auth/guards/roles.guard';
+import { Roles } from '../../auth/decorators/roles.decorator';
+import { Cargo } from '../../usuario/enums/cargo.enum';
 
 @ApiBearerAuth('JWT-auth')
-@UseGuards(SupabaseAuthGuard)
+@UseGuards(SupabaseAuthGuard, RolesGuard)
+@Roles(Cargo.PROPRIETARIO)
 @ApiTags('Gestão de Propriedade - Endereços')
 @Controller('enderecos')
 export class EnderecoController {

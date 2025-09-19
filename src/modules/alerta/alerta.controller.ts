@@ -2,7 +2,7 @@ import { Controller, Get, Post, Body, Patch, Param, Delete, Query, UseGuards, Pa
 import { CacheInterceptor, CacheTTL } from '@nestjs/cache-manager';
 import { AlertasService } from './alerta.service';
 import { CreateAlertaDto, PrioridadeAlerta, NichoAlerta } from './dto/create-alerta.dto';
-import { SupabaseAuthGuard } from '../auth/auth.guard';
+import { SupabaseAuthGuard } from '../auth/guards/auth.guard';
 import { ApiBearerAuth, ApiOperation, ApiQuery, ApiResponse, ApiTags, ApiParam } from '@nestjs/swagger';
 
 @ApiBearerAuth('JWT-auth')

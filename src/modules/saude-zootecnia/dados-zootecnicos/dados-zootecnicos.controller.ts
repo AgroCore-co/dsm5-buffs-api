@@ -1,7 +1,7 @@
 import { Controller, Get, Post, Body, Patch, Param, Delete, ParseIntPipe, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiResponse, ApiTags, ApiParam } from '@nestjs/swagger';
-import { SupabaseAuthGuard } from '../../auth/auth.guard';
-import { User } from '../../auth/user.decorator'; // <-- Importe o decorator
+import { SupabaseAuthGuard } from '../../auth/guards/auth.guard';
+import { User } from '../../auth/decorators/user.decorator'; // <-- Importe o decorator
 import { DadosZootecnicosService } from './dados-zootecnicos.service';
 import { CreateDadoZootecnicoDto } from './dto/create-dado-zootecnico.dto';
 import { UpdateDadoZootecnicoDto } from './dto/update-dado-zootecnico.dto';

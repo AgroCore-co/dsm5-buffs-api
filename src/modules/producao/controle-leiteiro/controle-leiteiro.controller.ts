@@ -1,7 +1,7 @@
 import { Controller, Get, Post, Body, Patch, Param, Delete, ParseIntPipe, UseGuards, HttpCode } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
-import { SupabaseAuthGuard } from '../../auth/auth.guard';
-import { User } from '../../auth/user.decorator';
+import { SupabaseAuthGuard } from '../../auth/guards/auth.guard';
+import { User } from '../../auth/decorators/user.decorator';
 import { ControleLeiteiroService } from './controle-leiteiro.service';
 import { CreateDadosLactacaoDto } from './dto/create-dados-lactacao.dto';
 import { UpdateDadosLactacaoDto } from './dto/update-dados-lactacao.dto';
