@@ -27,6 +27,15 @@ export class DadosSanitariosController {
     return this.service.findAll();
   }
 
+  @Get('bufalo/:id_bufalo')
+  @ApiOperation({ summary: 'Busca todos os registros sanitários de um búfalo específico' })
+  @ApiParam({ name: 'id_bufalo', description: 'ID do búfalo', type: Number })
+  @ApiResponse({ status: 200, description: 'Registros encontrados.' })
+  @ApiResponse({ status: 404, description: 'Nenhum registro encontrado para este búfalo.' })
+  findByBufalo(@Param('id_bufalo', ParseIntPipe) id_bufalo: number) {
+    return this.service.findByBufalo(id_bufalo);
+  }
+
   @Get(':id')
   @ApiOperation({ summary: 'Busca um registro sanitário pelo ID' })
   @ApiParam({ name: 'id', description: 'ID do registro sanitário', type: Number })
