@@ -70,10 +70,9 @@ async function bootstrap() {
 
   ### **1. Para o primeiro usuário (Proprietário):**
   1. **Cadastre-se**: \`POST /auth/signup\` com email, senha e dados opcionais
-  2. **Confirme o email** (se necessário)
-  3. **Faça login**: \`POST /auth/signin\` para obter o \`access_token\`
-  4. **Crie seu perfil**: \`POST /usuarios\` com o token no header - **NÃO inclua email no body**
-  5. Seu perfil será criado automaticamente como **PROPRIETARIO**
+  2. **Faça login**: \`POST /auth/signin\` para obter o \`access_token\`
+  3. **Crie seu perfil**: \`POST /usuarios\` com o token no header - **NÃO inclua email no body**
+  4. Seu perfil será criado automaticamente como **PROPRIETARIO**
 
   ### **2. Para criar funcionários (apenas Proprietários e Gerentes):**
   1. Faça login para obter seu JWT token
