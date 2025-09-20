@@ -189,14 +189,22 @@ export class UsuarioService {
       }
     }
 
-    // 1. PRIMEIRO: Criar conta no Supabase Auth
-    const { data: authUser, error: authError } = await this.supabase.auth.admin.createUser({
+    // Usar cliente admin para operações de autenticação
+    const adminSupabase = this.supabaseService.getAdminClient();
+
+    // 1. PRIMEIRO: Criar conta no Supabase Auth usando cliente admin
+    const { data: authUser, error: authError } = await adminSupabase.auth.admin.createUser({
       email: createFuncionarioDto.email,
       password: createFuncionarioDto.password,
-      email_confirm: true  // Confirma email automaticamente
+      email_confirm: true,  // Confirma email automaticamente
+      user_metadata: {
+        nome: createFuncionarioDto.nome,
+        cargo: createFuncionarioDto.cargo
+      }
     });
 
     if (authError) {
+      console.error('Erro Supabase Auth:', authError);
       throw new BadRequestException(`Erro ao criar conta de autenticação: ${authError.message}`);
     }
 
@@ -209,8 +217,8 @@ export class UsuarioService {
         .single();
 
       if (existingUser) {
-        // Se der erro, remove a conta criada no Supabase Auth
-        await this.supabase.auth.admin.deleteUser(authUser.user.id);
+        // Se der erro, remove a conta criada no Supabase Auth usando cliente admin
+        await adminSupabase.auth.admin.deleteUser(authUser.user.id);
         throw new ConflictException('Já existe um usuário com este email.');
       }
 
@@ -229,8 +237,8 @@ export class UsuarioService {
         .single();
 
       if (error) {
-        // Se falhar, remove a conta do Supabase Auth
-        await this.supabase.auth.admin.deleteUser(authUser.user.id);
+        // Se falhar, remove a conta do Supabase Auth usando cliente admin
+        await adminSupabase.auth.admin.deleteUser(authUser.user.id);
         throw new InternalServerErrorException(`Falha ao criar funcionário: ${error.message}`);
       }
 
@@ -250,9 +258,9 @@ export class UsuarioService {
         .insert(vinculos);
 
       if (vinculoError) {
-        // Se falhar o vínculo, remove o usuário criado E a conta do Supabase Auth
+        // Se falhar o vínculo, remove o usuário criado E a conta do Supabase Auth usando cliente admin
         await this.supabase.from('Usuario').delete().eq('id_usuario', novoFuncionario.id_usuario);
-        await this.supabase.auth.admin.deleteUser(authUser.user.id);
+        await adminSupabase.auth.admin.deleteUser(authUser.user.id);
         throw new InternalServerErrorException(`Falha ao vincular funcionário às propriedades: ${vinculoError.message}`);
       }
 
@@ -266,8 +274,8 @@ export class UsuarioService {
       };
 
     } catch (error) {
-      // Se algo der errado, limpa a conta criada no Supabase Auth
-      await this.supabase.auth.admin.deleteUser(authUser.user.id);
+      // Se algo der errado, limpa a conta criada no Supabase Auth usando cliente admin
+      await adminSupabase.auth.admin.deleteUser(authUser.user.id);
       throw error;
     }
   }
