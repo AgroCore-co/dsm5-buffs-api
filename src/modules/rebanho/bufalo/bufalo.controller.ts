@@ -48,6 +48,17 @@ export class BufaloController {
     return this.bufaloService.findByCategoria(categoria, user);
   }
 
+  @Get('microchip/:microchip')
+  @UseInterceptors(CacheInterceptor)
+  @CacheTTL(300000) // 5 minutos
+  @ApiOperation({ summary: 'Busca um búfalo pelo microchip' })
+  @ApiParam({ name: 'microchip', description: 'Número do microchip do búfalo', type: String })
+  @ApiResponse({ status: 200, description: 'Búfalo encontrado com sucesso.' })
+  @ApiResponse({ status: 404, description: 'Búfalo com o microchip especificado não encontrado.' })
+  findByMicrochip(@Param('microchip') microchip: string) {
+    return this.bufaloService.findByMicrochip(microchip);
+  }
+
   @Get(':id')
   @UseInterceptors(CacheInterceptor)
   @CacheTTL(300000) // 5 minutos

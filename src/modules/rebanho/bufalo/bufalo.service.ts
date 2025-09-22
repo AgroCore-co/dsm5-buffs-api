@@ -247,6 +247,28 @@ export class BufaloService {
     return data;
   }
 
+  async findByMicrochip(microchip: string) {
+    const { data, error } = await this.supabase
+      .from(this.tableName)
+      .select(`
+        *,
+        raca:id_raca(nome, origem),
+        lote:id_lote(nome),
+        propriedade:id_propriedade(nome)
+      `)
+      .eq('microchip', microchip)
+      .single();
+
+    if (error || !data) {
+      throw new NotFoundException(`Búfalo com microchip ${microchip} não encontrado.`);
+    }
+    
+    // Atualiza maturidade automaticamente se necessário
+    await this.updateMaturityIfNeeded([data]);
+    
+    return data;
+  }
+
   async update(id: number, updateDto: UpdateBufaloDto, user: any) {
     const userId = await this.getUserId(user);
     

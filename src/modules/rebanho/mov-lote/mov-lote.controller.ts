@@ -23,10 +23,10 @@ export class MovLoteController {
   }
 
   @Get()
-  @ApiOperation({ summary: 'Lista todas as movimentações de lotes do usuário logado' })
+  @ApiOperation({ summary: 'Lista todas as movimentações de lotes' })
   @ApiResponse({ status: 200, description: 'Lista de movimentações retornada com sucesso.' })
-  findAll(@User() user: any) {
-    return this.service.findAll(user);
+  findAll() {
+    return this.service.findAll();
   }
 
   @Get(':id')

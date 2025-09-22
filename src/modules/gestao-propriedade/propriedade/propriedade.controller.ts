@@ -11,14 +11,15 @@ import { User } from '../../auth/decorators/user.decorator';
 import { Cargo } from '../../usuario/enums/cargo.enum';
 
 @ApiBearerAuth('JWT-auth')
-@UseGuards(SupabaseAuthGuard, RolesGuard)
-@Roles(Cargo.PROPRIETARIO)
+@UseGuards(SupabaseAuthGuard)
 @ApiTags('Gestão de Propriedade - Propriedades')
 @Controller('propriedades')
 export class PropriedadeController {
   constructor(private readonly propriedadeService: PropriedadeService) {}
 
   @Post()
+  @UseGuards(RolesGuard)
+  @Roles(Cargo.PROPRIETARIO)
   @ApiOperation({
     summary: 'Criar propriedade',
     description: 'Cria uma nova propriedade. Disponível apenas para proprietários.',
@@ -37,11 +38,11 @@ export class PropriedadeController {
   @Get()
   @UseInterceptors(CacheInterceptor)
   @CacheTTL(3600)
-  @ApiOperation({ summary: 'Lista todas as propriedades do usuário logado' })
+  @ApiOperation({ summary: 'Lista todas as propriedades' })
   @ApiResponse({ status: 200, description: 'Lista de propriedades retornada com sucesso.' })
   @ApiResponse({ status: 401, description: 'Não autorizado.' })
-  findAll(@User() user: any) {
-    return this.propriedadeService.findAll(user);
+  findAll() {
+    return this.propriedadeService.findAll();
   }
 
   @Get(':id')
@@ -56,6 +57,8 @@ export class PropriedadeController {
   }
 
   @Patch(':id')
+  @UseGuards(RolesGuard)
+  @Roles(Cargo.PROPRIETARIO)
   @ApiOperation({ summary: 'Atualiza uma propriedade' })
   @ApiResponse({ status: 200, description: 'Propriedade atualizada com sucesso.' })
   @ApiResponse({ status: 401, description: 'Não autorizado.' })
@@ -65,6 +68,8 @@ export class PropriedadeController {
   }
 
   @Delete(':id')
+  @UseGuards(RolesGuard)
+  @Roles(Cargo.PROPRIETARIO)
   @HttpCode(204)
   @ApiOperation({ summary: 'Deleta uma propriedade' })
   @ApiResponse({ status: 204, description: 'Propriedade deletada com sucesso.' })

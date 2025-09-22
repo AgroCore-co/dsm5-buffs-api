@@ -64,13 +64,16 @@ export class MovLoteService {
     return data;
   }
 
-  async findAll(user: any) {
-    const userId = await this.getUserId(user);
-
+  async findAll() {
     const { data, error } = await this.supabase
       .from('MovLote')
-      .select('*')
-      .eq('id_usuario', userId)
+      .select(`
+        *,
+        grupo:id_grupo(nome),
+        lote_atual:id_lote_atual(nome),
+        lote_anterior:id_lote_anterior(nome),
+        usuario:id_usuario(nome)
+      `)
       .order('dt_entrada', { ascending: false });
 
     if (error) {

@@ -47,12 +47,10 @@ export class PropriedadeService {
   }
 
   /**
-   * Lista todas as propriedades que pertencem ao usuário autenticado.
+   * Lista todas as propriedades (para todos os usuários)
    */
-  async findAll(user: any) {
-    const idDono = await this.getUserId(user);
-
-    const { data, error } = await this.supabase.from('Propriedade').select('*').eq('id_dono', idDono);
+  async findAll() {
+    const { data, error } = await this.supabase.from('Propriedade').select('*');
 
     if (error) {
       throw new InternalServerErrorException('Falha ao buscar as propriedades.');
