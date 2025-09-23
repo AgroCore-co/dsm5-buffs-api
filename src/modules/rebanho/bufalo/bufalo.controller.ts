@@ -1,8 +1,9 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, ParseIntPipe, HttpCode, UseInterceptors } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, ParseIntPipe, HttpCode, UseInterceptors, Logger } from '@nestjs/common';
 import { CacheInterceptor, CacheTTL } from '@nestjs/cache-manager';
 import { BufaloService } from './bufalo.service';
 import { CreateBufaloDto } from './dto/create-bufalo.dto';
 import { UpdateBufaloDto } from './dto/update-bufalo.dto';
+import { UpdateGrupoBufaloDto } from './dto/update-grupo-bufalo.dto';
 import { ApiTags, ApiOperation, ApiResponse, ApiParam, ApiBearerAuth } from '@nestjs/swagger';
 import { SupabaseAuthGuard } from '../../auth/guards/auth.guard';
 import { User } from '../../auth/decorators/user.decorator';
@@ -14,6 +15,8 @@ import { NotFoundException, InternalServerErrorException } from '@nestjs/common'
 @ApiTags('Rebanho - Búfalos')
 @Controller('bufalos')
 export class BufaloController {
+  private readonly logger = new Logger(BufaloController.name);
+  
   constructor(private readonly bufaloService: BufaloService) {}
 
   @Post()
@@ -68,6 +71,65 @@ export class BufaloController {
   @ApiResponse({ status: 404, description: 'Búfalo não encontrado ou não pertence a este usuário.' })
   findOne(@Param('id', ParseIntPipe) id: number, @User() user: any) {
     return this.bufaloService.findOne(id, user);
+  }
+
+  @Patch('grupo/mover')
+  @ApiOperation({ 
+    summary: 'Muda o grupo de manejo de um ou mais búfalos',
+    description: `
+      Move búfalos de um grupo para outro, útil para mudanças de status como:
+      - Lactando → Secagem
+      - Novilhas → Reprodução
+      - Tratamento → Rebanho geral
+      
+      Esta operação não move fisicamente os animais de lote/piquete.
+    `
+  })
+  @ApiResponse({ 
+    status: 200, 
+    description: 'Grupo dos búfalos atualizado com sucesso.',
+    schema: {
+      type: 'object',
+      properties: {
+        message: { type: 'string' },
+        grupo_destino: { type: 'string' },
+        total_processados: { type: 'number' },
+        motivo: { type: 'string', nullable: true },
+        animais: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              id_bufalo: { type: 'number' },
+              nome: { type: 'string' },
+              grupo_anterior: { type: 'string' },
+              grupo_novo: { type: 'string' }
+            }
+          }
+        }
+      }
+    }
+  })
+  @ApiResponse({ status: 400, description: 'Dados inválidos ou búfalos duplicados.' })
+  @ApiResponse({ status: 404, description: 'Um dos búfalos ou o grupo de destino não foi encontrado.' })
+  async updateGrupo(@Body() updateGrupoDto: UpdateGrupoBufaloDto, @User() user: any) {
+    const startTime = Date.now();
+    const userInfo = user?.sub || user?.id || 'unknown';
+    
+    this.logger.log(`[REQUEST] Mudanca de grupo solicitada - Usuario: ${userInfo}, Payload: ${JSON.stringify(updateGrupoDto)}`);
+    
+    try {
+      const result = await this.bufaloService.updateGrupo(updateGrupoDto, user);
+      const duration = Date.now() - startTime;
+      
+      this.logger.log(`[RESPONSE_SUCCESS] Mudanca de grupo concluida - Usuario: ${userInfo}, Processados: ${result.total_processados}, Duracao: ${duration}ms`);
+      
+      return result;
+    } catch (error) {
+      const duration = Date.now() - startTime;
+      this.logger.error(`[RESPONSE_ERROR] Falha na mudanca de grupo - Usuario: ${userInfo}, Erro: ${error.message}, Duracao: ${duration}ms`);
+      throw error;
+    }
   }
 
   @Patch(':id')

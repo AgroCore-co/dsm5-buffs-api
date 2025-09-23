@@ -1,8 +1,9 @@
-import { Injectable, NotFoundException, InternalServerErrorException, BadRequestException } from '@nestjs/common';
+import { Injectable, NotFoundException, InternalServerErrorException, BadRequestException, Logger } from '@nestjs/common';
 import { SupabaseClient } from '@supabase/supabase-js';
 import { SupabaseService } from '../../../core/supabase/supabase.service';
 import { CreateBufaloDto } from './dto/create-bufalo.dto';
 import { UpdateBufaloDto } from './dto/update-bufalo.dto';
+import { UpdateGrupoBufaloDto } from './dto/update-grupo-bufalo.dto';
 import { BufaloMaturityUtils } from './utils/maturity.utils';
 import { BufaloAgeUtils } from './utils/age.utils';
 import { BufaloValidationUtils } from './utils/validation.utils';
@@ -21,6 +22,7 @@ interface MaturityUpdate {
 
 @Injectable()
 export class BufaloService {
+  private readonly logger = new Logger(BufaloService.name);
   private supabase: SupabaseClient;
   private readonly tableName = 'Bufalo';
 
@@ -312,6 +314,156 @@ export class BufaloService {
     }, 1000);
 
     return data;
+  }
+
+  /**
+   * Muda o grupo de manejo de um ou mais búfalos
+   * Esta operação é usada para mudanças de status (ex: Lactando -> Secagem)
+   */
+  async updateGrupo(dto: UpdateGrupoBufaloDto, user: any) {
+    const { ids_bufalos, id_novo_grupo, motivo } = dto;
+    const userId = await this.getUserId(user);
+    
+    // Log inicial da operação
+    this.logger.log(`[INICIO] Mudança de grupo iniciada - Usuario: ${userId}, Bufalos: [${ids_bufalos.join(', ')}], Novo Grupo: ${id_novo_grupo}`);
+    
+    try {
+      // Validação de duplicatas
+      const uniqueIds = [...new Set(ids_bufalos)];
+      if (uniqueIds.length !== ids_bufalos.length) {
+        this.logger.warn(`[VALIDACAO] IDs duplicados detectados - Original: [${ids_bufalos.join(', ')}], Unicos: [${uniqueIds.join(', ')}]`);
+        throw new BadRequestException('IDs de búfalos duplicados encontrados na lista.');
+      }
+
+      // Log de validação de acesso
+      this.logger.debug(`[VALIDACAO] Verificando acesso do usuario ${userId} aos ${uniqueIds.length} bufalos`);
+      
+      // Validação: Garante que o usuário tem acesso a TODOS os búfalos
+      const validacaoPromises = uniqueIds.map(async (bufaloId) => {
+        try {
+          await this.validateBufaloAccess(bufaloId, userId);
+          this.logger.debug(`[ACESSO_OK] Usuario ${userId} tem acesso ao bufalo ${bufaloId}`);
+          return { bufaloId, acesso: true };
+        } catch (error) {
+          this.logger.error(`[ACESSO_NEGADO] Usuario ${userId} sem acesso ao bufalo ${bufaloId}: ${error.message}`);
+          return { bufaloId, acesso: false, erro: error.message };
+        }
+      });
+
+      const resultadosValidacao = await Promise.all(validacaoPromises);
+      const semAcesso = resultadosValidacao.filter(r => !r.acesso);
+      
+      if (semAcesso.length > 0) {
+        this.logger.error(`[ERRO_ACESSO] ${semAcesso.length} bufalos sem acesso: [${semAcesso.map(s => s.bufaloId).join(', ')}]`);
+        throw new BadRequestException(`Você não tem acesso aos búfalos: ${semAcesso.map(s => s.bufaloId).join(', ')}`);
+      }
+
+      // Log de validação do grupo
+      this.logger.debug(`[VALIDACAO] Verificando existencia do grupo ${id_novo_grupo}`);
+      
+      // Validação: Garante que o grupo de destino existe
+      const { data: grupoExiste, error: grupoError } = await this.supabase
+        .from('Grupo')
+        .select('id_grupo, nome_grupo')
+        .eq('id_grupo', id_novo_grupo)
+        .single();
+
+      if (grupoError || !grupoExiste) {
+        this.logger.error(`[GRUPO_NAO_ENCONTRADO] Grupo ${id_novo_grupo} nao existe - Erro: ${grupoError?.message || 'Não encontrado'}`);
+        throw new NotFoundException(`O grupo de destino com ID ${id_novo_grupo} não existe.`);
+      }
+
+      this.logger.log(`[GRUPO_VALIDADO] Grupo destino encontrado: ${grupoExiste.nome_grupo} (ID: ${id_novo_grupo})`);
+
+      // Buscar dados atuais dos búfalos
+      this.logger.debug(`[CONSULTA] Buscando dados atuais dos bufalos para comparacao`);
+      
+      const { data: bufalosAtuais, error: fetchError } = await this.supabase
+        .from(this.tableName)
+        .select('id_bufalo, nome, id_grupo, Grupo(nome_grupo)')
+        .in('id_bufalo', uniqueIds);
+
+      if (fetchError) {
+        this.logger.error(`[ERRO_CONSULTA] Falha ao buscar dados dos bufalos: ${fetchError.message}`);
+        throw new InternalServerErrorException(`Erro ao buscar dados dos búfalos: ${fetchError.message}`);
+      }
+
+      // Log dos búfalos encontrados vs solicitados
+      const bufalosEncontrados = bufalosAtuais.map(b => b.id_bufalo);
+      const bufalosNaoEncontrados = uniqueIds.filter(id => !bufalosEncontrados.includes(id));
+      
+      if (bufalosNaoEncontrados.length > 0) {
+        this.logger.warn(`[BUFALOS_NAO_ENCONTRADOS] ${bufalosNaoEncontrados.length} bufalos nao encontrados: [${bufalosNaoEncontrados.join(', ')}]`);
+      }
+
+      // Filtrar apenas búfalos que realmente precisam ser movidos
+      const bufalosParaMover = bufalosAtuais.filter(bufalo => bufalo.id_grupo !== id_novo_grupo);
+      const bufalosJaNoGrupo = bufalosAtuais.filter(bufalo => bufalo.id_grupo === id_novo_grupo);
+      
+      if (bufalosJaNoGrupo.length > 0) {
+        this.logger.log(`[JA_NO_GRUPO] ${bufalosJaNoGrupo.length} bufalos ja estao no grupo destino: [${bufalosJaNoGrupo.map(b => `${b.nome}(${b.id_bufalo})`).join(', ')}]`);
+      }
+
+      if (bufalosParaMover.length === 0) {
+        this.logger.log(`[NENHUMA_ALTERACAO] Todos os bufalos ja estao no grupo destino - Operacao finalizada`);
+        return {
+          message: 'Todos os búfalos já estão no grupo de destino.',
+          grupo_destino: grupoExiste.nome_grupo,
+          total_processados: 0,
+          animais: []
+        };
+      }
+
+      // Log da operação de movimentação
+      this.logger.log(`[MOVIMENTACAO] Iniciando movimentacao de ${bufalosParaMover.length} bufalos para o grupo "${grupoExiste.nome_grupo}"`);
+      
+      bufalosParaMover.forEach(bufalo => {
+        this.logger.debug(`[DETALHE_MOVIMENTACAO] ${bufalo.nome}(${bufalo.id_bufalo}): "${(bufalo.Grupo as any)?.nome_grupo || 'N/A'}" -> "${grupoExiste.nome_grupo}"`);
+      });
+
+      // Executa a atualização
+      const idsParaMover = bufalosParaMover.map(b => b.id_bufalo);
+      const { data: bufalosAtualizados, error: updateError } = await this.supabase
+        .from(this.tableName)
+        .update({ 
+          id_grupo: id_novo_grupo,
+          updated_at: new Date().toISOString()
+        })
+        .in('id_bufalo', idsParaMover)
+        .select('id_bufalo, nome, id_grupo');
+
+      if (updateError) {
+        this.logger.error(`[ERRO_ATUALIZACAO] Falha na atualizacao do banco: ${updateError.message}`);
+        throw new InternalServerErrorException(`Falha ao atualizar o grupo dos búfalos: ${updateError.message}`);
+      }
+
+      // Log de sucesso
+      this.logger.log(`[SUCESSO] ${bufalosAtualizados.length} bufalos movidos com sucesso para o grupo "${grupoExiste.nome_grupo}"`);
+
+      // Monta resposta detalhada
+      const resultado = bufalosParaMover.map(bufalo => ({
+        id_bufalo: bufalo.id_bufalo,
+        nome: bufalo.nome,
+        grupo_anterior: (bufalo.Grupo as any)?.nome_grupo || 'N/A',
+        grupo_novo: grupoExiste.nome_grupo
+      }));
+
+      // Log final da operação
+      this.logger.log(`[FINALIZACAO] Operacao concluida - Usuario: ${userId}, Bufalos movidos: ${bufalosAtualizados.length}, Grupo destino: "${grupoExiste.nome_grupo}"`);
+
+      return {
+        message: `${bufalosAtualizados.length} búfalo(s) foram movidos para o grupo "${grupoExiste.nome_grupo}".`,
+        grupo_destino: grupoExiste.nome_grupo,
+        total_processados: bufalosAtualizados.length,
+        motivo: motivo || null,
+        animais: resultado,
+        processado_em: new Date().toISOString()
+      };
+
+    } catch (error) {
+      this.logger.error(`[ERRO_GERAL] Falha na mudanca de grupo - Usuario: ${userId}, Erro: ${error.message}`, error.stack);
+      throw error;
+    }
   }
 
   async remove(id: number, user: any) {
