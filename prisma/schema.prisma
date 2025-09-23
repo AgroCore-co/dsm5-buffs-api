@@ -152,6 +152,7 @@ model Bufalo {
   categoria             String?            @db.VarChar(2)
   id_pai                BigInt?
   id_mae                BigInt?
+  id_pai_semen          BigInt?
   created_at            DateTime           @default(now())
   updated_at            DateTime           @updatedAt
   Raca                  Raca?              @relation(fields: [id_raca], references: [id_raca])
