@@ -15,7 +15,7 @@ import { PrismaService } from './prisma/prisma.service';
     CacheConfigModule,
     PrismaModule
   ],
-  providers: [CacheService],
+  providers: [CacheService, PrismaService],
   exports: [
     GeminiModule,
     LoggerModule,
