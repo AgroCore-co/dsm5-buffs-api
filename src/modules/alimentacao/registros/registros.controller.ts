@@ -26,6 +26,14 @@ export class RegistrosController {
     return this.service.findAll();
   }
 
+  @Get('propriedade/:id_propriedade')
+  @ApiOperation({ summary: 'Lista todos os registros de alimentação de uma propriedade' })
+  @ApiResponse({ status: 200, description: 'Lista de registros da propriedade retornada com sucesso.' })
+  @ApiResponse({ status: 401, description: 'Não autorizado.' })
+  findByPropriedade(@Param('id_propriedade', ParseIntPipe) idPropriedade: number) {
+    return this.service.findByPropriedade(idPropriedade);
+  }
+
   @Get(':id')
   @ApiOperation({ summary: 'Busca um registro por ID' })
   @ApiResponse({ status: 200, description: 'Registro encontrado.' })

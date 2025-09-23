@@ -34,6 +34,22 @@ export class AlimentacaoDefService {
     return data;
   }
 
+  async findByPropriedade(idPropriedade: number) {
+    const { data, error } = await this.supabase
+      .from('AlimentacaoDef')
+      .select('*')
+      .eq('id_propriedade', idPropriedade)
+      .order('tipo_alimentacao', { ascending: true })
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      console.error('Erro ao buscar alimentações definidas por propriedade:', error);
+      throw new InternalServerErrorException('Falha ao buscar as alimentações definidas da propriedade.');
+    }
+
+    return data;
+  }
+
   async findOne(id: number) {
     const { data, error } = await this.supabase.from('AlimentacaoDef').select('*').eq('id_aliment_def', id).single();
 

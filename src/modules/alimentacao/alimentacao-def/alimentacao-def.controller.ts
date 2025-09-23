@@ -26,6 +26,20 @@ export class AlimentacaoDefController {
     return this.alimentacaoDefService.findAll();
   }
 
+  @Get('propriedade/:id_propriedade')
+  @UseInterceptors(CacheInterceptor)
+  @CacheTTL(1800) // 30 minutes
+  @ApiOperation({
+    summary: 'Lista todas as definições de alimentação de uma propriedade',
+    description: 'Retorna uma lista de todas as definições de alimentação cadastradas para uma propriedade específica.',
+  })
+  @ApiParam({ name: 'id_propriedade', description: 'ID da propriedade', type: 'number' })
+  @ApiResponse({ status: 200, description: 'Lista de definições de alimentação da propriedade retornada com sucesso.' })
+  @ApiResponse({ status: 401, description: 'Não autorizado.' })
+  findByPropriedade(@Param('id_propriedade', ParseIntPipe) idPropriedade: number) {
+    return this.alimentacaoDefService.findByPropriedade(idPropriedade);
+  }
+
   @Get(':id')
   @UseInterceptors(CacheInterceptor)
   @CacheTTL(3600) // 1 hour - feeding definitions are relatively static
