@@ -11,13 +11,43 @@ export class MaterialGeneticoService {
 
   private readonly tableName = 'MaterialGenetico';
 
-  async create(dto: CreateMaterialGeneticoDto) {
-    const { data, error } = await this.supabase.getClient().from(this.tableName).insert(dto).select().single();
+  async create(createMaterialGeneticoDto: CreateMaterialGeneticoDto) {
+    this.logger.log('[INICIO] Criando novo material genético');
+    
+    try {
+      // IMPORTANTE: Garantir que NÃO enviamos id_material - deixa o banco gerar automaticamente
+      const dadosLimpos = {
+        tipo: createMaterialGeneticoDto.tipo,
+        origem: createMaterialGeneticoDto.origem,
+        ...(createMaterialGeneticoDto.id_bufalo_origem && { id_bufalo_origem: createMaterialGeneticoDto.id_bufalo_origem }),
+        ...(createMaterialGeneticoDto.fornecedor && { fornecedor: createMaterialGeneticoDto.fornecedor }),
+        data_coleta: createMaterialGeneticoDto.data_coleta
+      };
+      
+      this.logger.debug(`[DADOS_LIMPOS] Inserindo: ${JSON.stringify(dadosLimpos)}`);
+      
+      const { data, error } = await this.supabase
+        .getClient()
+        .from(this.tableName)
+        .insert([dadosLimpos]) // Só os campos necessários, SEM id_material
+        .select()
+        .single();
 
-    if (error) {
-      throw new InternalServerErrorException(`Falha ao criar material genético: ${error.message}`);
+      if (error) {
+        this.logger.error(`[ERRO_INSERCAO] ${error.message}`);
+        throw new InternalServerErrorException(`Falha ao criar material genético: ${error.message}`);
+      }
+
+      this.logger.log(`[SUCESSO] Material genético criado com ID: ${data.id_material}`);
+      
+      return {
+        message: 'Material genético criado com sucesso',
+        data
+      };
+    } catch (error) {
+      this.logger.error(`[ERRO_GERAL] ${error.message}`, error.stack);
+      throw error;
     }
-    return data;
   }
 
   async findAll() {
@@ -69,24 +99,72 @@ export class MaterialGeneticoService {
   }
 
   async update(id_material: number, dto: UpdateMaterialGeneticoDto) {
+    this.logger.log(`[INICIO] Atualizando material genético ID: ${id_material}`);
+    this.logger.debug(`[UPDATE] Dados recebidos: ${JSON.stringify(dto)}`);
+
+    // Verifica se existe
     await this.findOne(id_material);
 
-    const { data, error } = await this.supabase.getClient().from(this.tableName).update(dto).eq('id_material', id_material).select().single();
+    try {
+      // Remove qualquer id_material que possa ter vindo no dto
+      const { id_material: _, ...cleanedDto } = dto as any;
+      
+      this.logger.debug(`[UPDATE] Dados limpos para atualização: ${JSON.stringify(cleanedDto)}`);
 
-    if (error) {
-      throw new InternalServerErrorException(`Falha ao atualizar material genético: ${error.message}`);
+      const { data, error } = await this.supabase
+        .getClient()
+        .from(this.tableName)
+        .update(cleanedDto)
+        .eq('id_material', id_material)
+        .select()
+        .single();
+
+      if (error) {
+        this.logger.error(`[ERRO] Falha na atualização: ${error.message}`);
+        throw new InternalServerErrorException(`Falha ao atualizar material genético: ${error.message}`);
+      }
+
+      this.logger.log(`[SUCESSO] Material genético ID: ${id_material} atualizado`);
+      return data;
+
+    } catch (error) {
+      if (error instanceof InternalServerErrorException) {
+        throw error;
+      }
+      
+      this.logger.error(`[ERRO] Erro inesperado na atualização: ${error.message}`);
+      throw new InternalServerErrorException(`Erro interno ao atualizar material genético: ${error.message}`);
     }
-    return data;
   }
 
   async remove(id_material: number) {
+    this.logger.log(`[INICIO] Removendo material genético ID: ${id_material}`);
+
+    // Verifica se existe
     await this.findOne(id_material);
 
-    const { error } = await this.supabase.getClient().from(this.tableName).delete().eq('id_material', id_material);
+    try {
+      const { error } = await this.supabase
+        .getClient()
+        .from(this.tableName)
+        .delete()
+        .eq('id_material', id_material);
 
-    if (error) {
-      throw new InternalServerErrorException(`Falha ao remover material genético: ${error.message}`);
+      if (error) {
+        this.logger.error(`[ERRO] Falha na remoção: ${error.message}`);
+        throw new InternalServerErrorException(`Falha ao remover material genético: ${error.message}`);
+      }
+
+      this.logger.log(`[SUCESSO] Material genético ID: ${id_material} removido`);
+      return { message: 'Registro removido com sucesso' };
+
+    } catch (error) {
+      if (error instanceof InternalServerErrorException) {
+        throw error;
+      }
+      
+      this.logger.error(`[ERRO] Erro inesperado na remoção: ${error.message}`);
+      throw new InternalServerErrorException(`Erro interno ao remover material genético: ${error.message}`);
     }
-    return { message: 'Registro removido com sucesso' };
   }
 }
