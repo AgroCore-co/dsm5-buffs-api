@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, InternalServerErrorException, BadRequestException } from '@nestjs/common';
+import { Injectable, NotFoundException, InternalServerErrorException, BadRequestException, Logger } from '@nestjs/common';
 import { SupabaseClient } from '@supabase/supabase-js';
 import { SupabaseService } from '../../../core/supabase/supabase.service';
 import { CreateDadosLactacaoDto } from './dto/create-dados-lactacao.dto';
@@ -9,6 +9,7 @@ import { GeminiService } from '../../../core/gemini/gemini.service';
 
 @Injectable()
 export class ControleLeiteiroService {
+  private readonly logger = new Logger(ControleLeiteiroService.name);
   private supabase: SupabaseClient;
 
   constructor(
@@ -118,21 +119,42 @@ export class ControleLeiteiroService {
   }
 
   /**
-   * Lista todos os registros de lactação que pertencem ao usuário autenticado.
+   * Lista todos os registros de lactação (sem limitação de usuário).
    */
-  async findAll(user: any) {
-    const idUsuario = await this.getUserId(user);
+  async findAll() {
+    this.logger.log('[INICIO] Buscando todos os dados de lactação');
+    
+    try {
+      const { data, error } = await this.supabase
+        .from('DadosLactacao')
+        .select(`
+          *,
+          bufalo:id_bufalo(
+            id_bufalo,
+            nome,
+            brinco,
+            grupo:id_grupo(nome_grupo),
+            raca:id_raca(nome_raca)
+          )
+        `)
+        .order('dt_ordenha', { ascending: false });
 
-    const { data, error } = await this.supabase
-      .from('DadosLactacao')
-      .select('*')
-      .eq('id_usuario', idUsuario)
-      .order('dt_ordenha', { ascending: false });
+      if (error) {
+        this.logger.error(`[ERRO] Falha na consulta: ${error.message}`);
+        throw new InternalServerErrorException(`Erro ao buscar dados de lactação: ${error.message}`);
+      }
 
-    if (error) {
-      throw new InternalServerErrorException('Falha ao buscar os dados de lactação.');
+      this.logger.log(`[SUCESSO] ${data.length} registros de lactação encontrados`);
+
+      return {
+        message: 'Dados de lactação recuperados com sucesso',
+        total: data.length,
+        dados: data
+      };
+    } catch (error) {
+      this.logger.error(`[ERRO_GERAL] ${error.message}`);
+      throw error;
     }
-    return data;
   }
 
   /**

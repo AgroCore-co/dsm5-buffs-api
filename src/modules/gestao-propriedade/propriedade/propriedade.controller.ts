@@ -38,11 +38,11 @@ export class PropriedadeController {
   @Get()
   @UseInterceptors(CacheInterceptor)
   @CacheTTL(3600)
-  @ApiOperation({ summary: 'Lista todas as propriedades' })
+  @ApiOperation({ summary: 'Lista todas as propriedades do usuário' })
   @ApiResponse({ status: 200, description: 'Lista de propriedades retornada com sucesso.' })
   @ApiResponse({ status: 401, description: 'Não autorizado.' })
-  findAll() {
-    return this.propriedadeService.findAll();
+  findAll(@User() user: any) {
+    return this.propriedadeService.findAll(user);
   }
 
   @Get(':id')

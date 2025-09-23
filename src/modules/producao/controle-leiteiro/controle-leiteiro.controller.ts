@@ -24,11 +24,11 @@ export class ControleLeiteiroController {
   }
 
   @Get()
-  @ApiOperation({ summary: 'Lista todos os registros de lactação do usuário logado' })
+  @ApiOperation({ summary: 'Lista todos os registros de lactação' })
   @ApiResponse({ status: 200, description: 'Lista de registros retornada com sucesso.' })
   @ApiResponse({ status: 401, description: 'Não autorizado.' })
-  findAll(@User() user: any) {
-    return this.service.findAll(user);
+  findAll() {
+    return this.service.findAll();
   }
 
   @Get(':id')

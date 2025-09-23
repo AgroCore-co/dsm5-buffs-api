@@ -1,10 +1,12 @@
-import { Injectable, InternalServerErrorException, NotFoundException } from '@nestjs/common';
+import { Injectable, InternalServerErrorException, NotFoundException, Logger } from '@nestjs/common';
 import { SupabaseService } from '../../../core/supabase/supabase.service';
 import { CreateMaterialGeneticoDto } from './dto/create-material-genetico.dto';
 import { UpdateMaterialGeneticoDto } from './dto/update-material-genetico.dto';
 
 @Injectable()
 export class MaterialGeneticoService {
+  private readonly logger = new Logger(MaterialGeneticoService.name);
+  
   constructor(private readonly supabase: SupabaseService) {}
 
   private readonly tableName = 'MaterialGenetico';
@@ -19,17 +21,37 @@ export class MaterialGeneticoService {
   }
 
   async findAll() {
-    // Adicionando um join para trazer o nome do búfalo de origem, se houver
-    const { data, error } = await this.supabase
-      .getClient()
-      .from(this.tableName)
-      .select('*, bufalo_origem:Bufalo(nome, brinco)')
-      .order('data_coleta', { ascending: false });
+    this.logger.log('[INICIO] Buscando todos os materiais genéticos');
+    
+    try {
+      const { data, error } = await this.supabase
+        .getClient()
+        .from(this.tableName)
+        .select(`
+          *,
+          raca:id_raca(
+            id_raca,
+            nome_raca
+          )
+        `)
+        .order('created_at', { ascending: false });
 
-    if (error) {
-      throw new InternalServerErrorException(`Falha ao buscar materiais genéticos: ${error.message}`);
+      if (error) {
+        this.logger.error(`[ERRO] Falha na consulta: ${error.message}`);
+        throw new InternalServerErrorException(`Erro ao buscar material genético: ${error.message}`);
+      }
+
+      this.logger.log(`[SUCESSO] ${data?.length || 0} materiais genéticos encontrados`);
+
+      return {
+        message: 'Material genético recuperado com sucesso',
+        total: data?.length || 0,
+        dados: data || []
+      };
+    } catch (error) {
+      this.logger.error(`[ERRO_GERAL] ${error.message}`);
+      throw new InternalServerErrorException(`Erro ao buscar material genético: ${error.message}`);
     }
-    return data;
   }
 
   async findOne(id_material: number) {

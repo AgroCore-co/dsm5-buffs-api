@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, InternalServerErrorException, BadRequestException } from '@nestjs/common';
+import { Injectable, NotFoundException, InternalServerErrorException, BadRequestException, Logger } from '@nestjs/common';
 import { SupabaseClient } from '@supabase/supabase-js';
 import { SupabaseService } from '../../../core/supabase/supabase.service';
 import { CreatePropriedadeDto } from './dto/create-propiedade.dto';
@@ -6,6 +6,7 @@ import { UpdatePropriedadeDto } from './dto/update-propriedade.dto';
 
 @Injectable()
 export class PropriedadeService {
+  private readonly logger = new Logger(PropriedadeService.name);
   private supabase: SupabaseClient;
 
   constructor(private readonly supabaseService: SupabaseService) {
@@ -47,16 +48,42 @@ export class PropriedadeService {
   }
 
   /**
-   * Lista todas as propriedades (para todos os usuários)
+   * Lista todas as propriedades vinculadas ao usuário (como dono OU funcionário)
    */
-  async findAll() {
-    const { data, error } = await this.supabase.from('Propriedade').select('*');
+  async findAll(user: any) {
+    const userId = await this.getUserId(user);
+    this.logger.log(`[INICIO] Buscando propriedades do usuário ${userId}`);
+    
+    try {
+      // Busca propriedades onde o usuário é DONO
+      const { data: propriedadesComoDono, error: errorDono } = await this.supabase
+        .from('Propriedade')
+        .select(`
+          *,
+          endereco:id_endereco(*),
+          lotes:Lote(id_lote, nome, area_hectares)
+        `)
+        .eq('id_dono', userId);
 
-    if (error) {
-      throw new InternalServerErrorException('Falha ao buscar as propriedades.');
+      // TODO: Buscar também propriedades onde o usuário é FUNCIONÁRIO (tabela UsuarioPropriedade)
+      // Por enquanto, apenas propriedades como dono
+
+      if (errorDono) {
+        this.logger.error(`[ERRO] Falha na consulta: ${errorDono.message}`);
+        throw new InternalServerErrorException(`Erro ao buscar propriedades: ${errorDono.message}`);
+      }
+
+      this.logger.log(`[SUCESSO] ${propriedadesComoDono?.length || 0} propriedades encontradas para o usuário ${userId}`);
+
+      return {
+        message: 'Propriedades recuperadas com sucesso',
+        total: propriedadesComoDono?.length || 0,
+        propriedades: propriedadesComoDono || []
+      };
+    } catch (error) {
+      this.logger.error(`[ERRO_GERAL] ${error.message}`);
+      throw error;
     }
-
-    return data;
   }
 
   /**
