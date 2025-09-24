@@ -26,8 +26,8 @@ export class UsuarioController {
   @ApiResponse({ status: 401, description: 'Token JWT inválido ou expirado.' })
   @ApiResponse({ status: 409, description: 'Usuário já possui perfil cadastrado.' })
   create(@Body() createUsuarioDto: CreateUsuarioDto, @User() user: any) {
-    // O user.id aqui é o auth_id (UUID) do Supabase
-    return this.usuarioService.create(createUsuarioDto, user.email, user.id);
+    console.log('--- DADOS DO USUÁRIO DO TOKEN JWT ---', user);
+    return this.usuarioService.create(createUsuarioDto, user.email, user.sub);
   }
 
   @Get('me')

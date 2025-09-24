@@ -48,11 +48,11 @@ model Raca {
 }
 
 model Grupo {
-  id_grupo         BigInt   @id @default(autoincrement())
-  nome_grupo       String   @db.VarChar(50)
-  nivel_maturidade String?  @db.VarChar(1)
-  created_at       DateTime @default(now())
-  updated_at       DateTime @updatedAt
+  id_grupo         BigInt         @id @default(autoincrement())
+  nome_grupo       String         @db.VarChar(50)
+  nivel_maturidade String?        @db.VarChar(1)
+  created_at       DateTime       @default(now())
+  updated_at       DateTime       @updatedAt
   Bufalo           Bufalo[]
   MovLote          MovLote[]
   AlimRegistro     AlimRegistro[]
@@ -79,56 +79,73 @@ model Industria {
 }
 
 model Usuario {
-  id_usuario       BigInt             @id @default(autoincrement())
-  nome             String             @db.VarChar(100)
-  telefone         String?            @db.VarChar(15)
-  email            String?            @db.VarChar(100)
-  cargo            String?            @db.VarChar(50)
-  id_endereco      BigInt?
-  created_at       DateTime           @default(now())
-  updated_at       DateTime           @updatedAt
-  Endereco         Endereco?          @relation(fields: [id_endereco], references: [id_endereco])
-  Propriedade      Propriedade[]      @relation("DonoPropriedade")
-  DadosZootecnicos DadosZootecnicos[]
-  DadosSanitarios  DadosSanitarios[]
-  AlimRegistro     AlimRegistro[]
-  Coleta           Coleta[]           @relation("FuncionarioColeta")
-  EstoqueLeite     EstoqueLeite[]
-  DadosLactacao    DadosLactacao[]
+  id_usuario                  BigInt               @id @default(autoincrement())
+  auth_id                     String               @unique @db.VarChar(100)
+  nome                        String               @db.VarChar(100)
+  telefone                    String?              @db.VarChar(15)
+  email                       String?              @db.VarChar(100)
+  cargo                       String?              @db.VarChar(50)
+  id_endereco                 BigInt?
+  created_at                  DateTime             @default(now())
+  updated_at                  DateTime             @updatedAt
+  Endereco                    Endereco?            @relation(fields: [id_endereco], references: [id_endereco])
+  Propriedade                 Propriedade[]        @relation("DonoPropriedade")
+  DadosZootecnicos            DadosZootecnicos[]
+  DadosSanitarios             DadosSanitarios[]
+  AlimRegistro                AlimRegistro[]
+  Coleta                      Coleta[]             @relation("FuncionarioColeta")
+  EstoqueLeite                EstoqueLeite[]
+  DadosLactacao               DadosLactacao[]
+  // Relação para propriedades onde o usuário é funcionário
+  PropriedadesComoFuncionario UsuarioPropriedade[]
 }
 
 model Propriedade {
-  id_propriedade BigInt         @id @default(autoincrement())
-  nome           String         @db.VarChar(100)
+  id_propriedade BigInt               @id @default(autoincrement())
+  nome           String               @db.VarChar(100)
   id_dono        BigInt?
   id_endereco    BigInt?
-  cnpj           String         @db.VarChar(18)
+  cnpj           String               @db.VarChar(18)
   p_abcb         Boolean?
-  tipo_manejo    String?        @db.VarChar(1)
-  created_at     DateTime       @default(now())
-  updated_at     DateTime       @updatedAt
-  Endereco       Endereco?      @relation(fields: [id_endereco], references: [id_endereco])
-  Usuario        Usuario?       @relation("DonoPropriedade", fields: [id_dono], references: [id_usuario])
+  tipo_manejo    String?              @db.VarChar(1)
+  created_at     DateTime             @default(now())
+  updated_at     DateTime             @updatedAt
+  Endereco       Endereco?            @relation(fields: [id_endereco], references: [id_endereco])
+  Usuario        Usuario?             @relation("DonoPropriedade", fields: [id_dono], references: [id_usuario])
   Lote           Lote[]
   Bufalo         Bufalo[]
   EstoqueLeite   EstoqueLeite[]
+  // Relação para os funcionários da propriedade
+  Funcionarios   UsuarioPropriedade[]
+}
+
+// Tabela de junção para a relação Muitos-para-Muitos entre Usuario e Propriedade (Funcionários)
+model UsuarioPropriedade {
+  id_usuario     BigInt
+  id_propriedade BigInt
+  created_at     DateTime @default(now())
+
+  Usuario     Usuario     @relation(fields: [id_usuario], references: [id_usuario])
+  Propriedade Propriedade @relation(fields: [id_propriedade], references: [id_propriedade])
+
+  @@id([id_usuario, id_propriedade])
 }
 
 model Lote {
-  id_lote         BigInt    @id @default(autoincrement())
-  tipo_lote       String?   @db.VarChar(100)
-  nome_lote       String    @db.VarChar(100)
+  id_lote         BigInt       @id @default(autoincrement())
+  tipo_lote       String?      @db.VarChar(100)
+  nome_lote       String       @db.VarChar(100)
   id_propriedade  BigInt?
-  status          String?   @db.VarChar(20)
-  descricao       String?   @db.VarChar(200)
+  status          String?      @db.VarChar(20)
+  descricao       String?      @db.VarChar(200)
   qtd_max         Int?
   geo_mapa        Bytes?
-  area_m2         Decimal?  @db.Decimal(12, 2)
-  created_at      DateTime  @default(now())
-  updated_at      DateTime  @updatedAt
+  area_m2         Decimal?     @db.Decimal(12, 2)
+  created_at      DateTime     @default(now())
+  updated_at      DateTime     @updatedAt
   Propriedade     Propriedade? @relation(fields: [id_propriedade], references: [id_propriedade])
-  MovLoteAnterior MovLote[] @relation("LoteAnterior")
-  MovLoteAtual    MovLote[] @relation("LoteAtual")
+  MovLoteAnterior MovLote[]    @relation("LoteAnterior")
+  MovLoteAtual    MovLote[]    @relation("LoteAtual")
 }
 
 model Bufalo {
@@ -169,7 +186,7 @@ model Bufalo {
   DadosReproducaoBufalo DadosReproducao[]  @relation("Bufalo")
   CicloLactacao         CicloLactacao[]
   DadosLactacao         DadosLactacao[]
-  Alertas               Alertas[] // Campo de relação adicionado
+  Alertas               Alertas[]
 }
 
 model MovLote {
@@ -281,30 +298,30 @@ model AlimRegistro {
 }
 
 model Coleta {
-  id_coleta       BigInt    @id @default(autoincrement())
+  id_coleta       BigInt     @id @default(autoincrement())
   id_industria    BigInt?
   resultado_teste Boolean?
-  observacao      String?   @db.VarChar(50)
-  quantidade      Decimal?  @db.Decimal(8, 3)
+  observacao      String?    @db.VarChar(50)
+  quantidade      Decimal?   @db.Decimal(8, 3)
   dt_coleta       DateTime?
   id_funcionario  BigInt?
-  created_at      DateTime  @default(now())
-  updated_at      DateTime  @updatedAt
+  created_at      DateTime   @default(now())
+  updated_at      DateTime   @updatedAt
   Industria       Industria? @relation(fields: [id_industria], references: [id_industria])
-  Funcionario     Usuario?  @relation("FuncionarioColeta", fields: [id_funcionario], references: [id_usuario])
+  Funcionario     Usuario?   @relation("FuncionarioColeta", fields: [id_funcionario], references: [id_usuario])
 }
 
 model EstoqueLeite {
-  id_estoque     BigInt      @id @default(autoincrement())
+  id_estoque     BigInt       @id @default(autoincrement())
   id_propriedade BigInt?
   id_usuario     BigInt?
-  quantidade     Decimal?    @db.Decimal(10, 3)
+  quantidade     Decimal?     @db.Decimal(10, 3)
   dt_registro    DateTime?
-  observacao     String?     @db.VarChar(50)
-  created_at     DateTime    @default(now())
-  updated_at     DateTime    @updatedAt
+  observacao     String?      @db.VarChar(50)
+  created_at     DateTime     @default(now())
+  updated_at     DateTime     @updatedAt
   Propriedade    Propriedade? @relation(fields: [id_propriedade], references: [id_propriedade])
-  Usuario        Usuario?    @relation(fields: [id_usuario], references: [id_usuario])
+  Usuario        Usuario?     @relation(fields: [id_usuario], references: [id_usuario])
 }
 
 model CicloLactacao {

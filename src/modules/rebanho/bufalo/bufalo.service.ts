@@ -29,17 +29,13 @@ export class BufaloService {
   constructor(
     private readonly supabaseService: SupabaseService,
     private readonly geminiRacaUtil: GeminiRacaUtil,
-    private readonly genealogiaService: GenealogiaService
+    private readonly genealogiaService: GenealogiaService,
   ) {
     this.supabase = this.supabaseService.getClient();
   }
 
   private async getUserId(user: any): Promise<number> {
-    const { data: perfilUsuario, error } = await this.supabase
-      .from('Usuario')
-      .select('id_usuario')
-      .eq('email', user.email)
-      .single();
+    const { data: perfilUsuario, error } = await this.supabase.from('Usuario').select('id_usuario').eq('email', user.email).single();
 
     if (error || !perfilUsuario) {
       throw new NotFoundException('Perfil de usuário não encontrado.');
@@ -52,10 +48,7 @@ export class BufaloService {
    */
   private async getUserPropriedades(userId: number): Promise<number[]> {
     // 1. Busca propriedades onde o usuário é DONO
-    const { data: propriedadesComoDono, error: errorDono } = await this.supabase
-      .from('Propriedade')
-      .select('id_propriedade')
-      .eq('id_dono', userId);
+    const { data: propriedadesComoDono, error: errorDono } = await this.supabase.from('Propriedade').select('id_propriedade').eq('id_dono', userId);
 
     // 2. Busca propriedades onde o usuário é FUNCIONÁRIO
     const { data: propriedadesComoFuncionario, error: errorFuncionario } = await this.supabase
@@ -63,26 +56,27 @@ export class BufaloService {
       .select('id_propriedade')
       .eq('id_usuario', userId);
 
-    if (errorDono || errorFuncionario) {
-      throw new InternalServerErrorException('Falha ao buscar propriedades do usuário.');
+    if (errorDono) {
+      this.logger.error('Erro ao buscar propriedades onde o usuário é DONO.', errorDono);
+      throw new InternalServerErrorException(`Falha ao buscar propriedades do usuário (como dono): ${errorDono.message}`);
+    }
+
+    if (errorFuncionario) {
+      this.logger.error('Erro ao buscar propriedades onde o usuário é FUNCIONÁRIO.', errorFuncionario);
+      throw new InternalServerErrorException(`Falha ao buscar propriedades do usuário (como funcionário): ${errorFuncionario.message}`);
     }
 
     // 3. Combina ambas as listas
-    const todasPropriedades = [
-      ...(propriedadesComoDono || []),
-      ...(propriedadesComoFuncionario || [])
-    ];
+    const todasPropriedades = [...(propriedadesComoDono || []), ...(propriedadesComoFuncionario || [])];
 
     // Remove duplicatas
-    const propriedadesUnicas = Array.from(
-      new Set(todasPropriedades.map(p => p.id_propriedade))
-    ).map(id => ({ id_propriedade: id }));
+    const propriedadesUnicas = Array.from(new Set(todasPropriedades.map((p) => p.id_propriedade))).map((id) => ({ id_propriedade: id }));
 
     if (propriedadesUnicas.length === 0) {
       throw new NotFoundException('Usuário não está associado a nenhuma propriedade.');
     }
 
-    return propriedadesUnicas.map(item => item.id_propriedade);
+    return propriedadesUnicas.map((item) => item.id_propriedade);
   }
 
   /**
@@ -139,10 +133,10 @@ export class BufaloService {
   async create(createDto: CreateBufaloDto, user: any) {
     console.log('BufaloService.create - Iniciando criação de búfalo:', createDto);
     console.log('BufaloService.create - User:', user);
-    
+
     const userId = await this.getUserId(user);
     console.log('BufaloService.create - UserId obtido:', userId);
-    
+
     await this.validateReferencesAndOwnership(createDto, userId);
     console.log('BufaloService.create - Validações passaram');
 
@@ -152,38 +146,30 @@ export class BufaloService {
 
     console.log('BufaloService.create - Inserindo no banco de dados...');
     console.log('BufaloService.create - DTO para inserção:', JSON.stringify(processedDto, null, 2));
-    
+
     // Remove qualquer id_bufalo que possa estar sendo enviado
     const { id_bufalo, ...insertDto } = processedDto;
     console.log('BufaloService.create - DTO final (sem id_bufalo):', JSON.stringify(insertDto, null, 2));
-    
+
     // Busca o próximo ID disponível para evitar conflitos
     let maxIdResult;
     try {
       console.log('BufaloService.create - Buscando próximo ID...');
-      maxIdResult = await this.supabase
-        .from(this.tableName)
-        .select('id_bufalo')
-        .order('id_bufalo', { ascending: false })
-        .limit(1)
-        .single();
+      maxIdResult = await this.supabase.from(this.tableName).select('id_bufalo').order('id_bufalo', { ascending: false }).limit(1).single();
     } catch (maxIdError) {
       console.log('BufaloService.create - Sem registros existentes, começando do ID 1');
     }
-    
+
     const nextId = maxIdResult?.data?.id_bufalo ? maxIdResult.data.id_bufalo + 1 : 1;
     const insertDtoWithId = { ...insertDto, id_bufalo: nextId };
     console.log('BufaloService.create - Próximo ID calculado:', nextId);
-    
-    const { data, error } = await this.supabase
-      .from(this.tableName)
-      .insert(insertDtoWithId)
-      .select()
-      .single();
+
+    const { data, error } = await this.supabase.from(this.tableName).insert(insertDtoWithId).select().single();
 
     if (error) {
       console.error('BufaloService.create - Erro ao inserir:', error);
-      if (error.code === '23503') { // Erro de chave estrangeira
+      if (error.code === '23503') {
+        // Erro de chave estrangeira
         throw new BadRequestException('Falha ao criar búfalo: uma das referências (raça, grupo, etc.) é inválida.');
       }
       throw new InternalServerErrorException(`Falha ao criar o búfalo: ${error.message}`);
@@ -212,10 +198,7 @@ export class BufaloService {
     const propriedadesUsuario = await this.getUserPropriedades(userId);
 
     // Busca búfalos de todas as propriedades vinculadas ao usuário
-    const { data, error } = await this.supabase
-      .from(this.tableName)
-      .select('*')
-      .in('id_propriedade', propriedadesUsuario);
+    const { data, error } = await this.supabase.from(this.tableName).select('*').in('id_propriedade', propriedadesUsuario);
 
     if (error) {
       throw new InternalServerErrorException('Falha ao buscar os búfalos.');
@@ -223,82 +206,71 @@ export class BufaloService {
 
     // Atualiza maturidade automaticamente para búfalos que precisam
     await this.updateMaturityIfNeeded(data || []);
-    
+
     return data || [];
   }
 
   async findOne(id: number, user: any) {
     const userId = await this.getUserId(user);
-    
+
     // Valida acesso antes de buscar os dados completos
     await this.validateBufaloAccess(id, userId);
 
-    const { data, error } = await this.supabase
-      .from(this.tableName)
-      .select('*')
-      .eq('id_bufalo', id)
-      .single();
+    const { data, error } = await this.supabase.from(this.tableName).select('*').eq('id_bufalo', id).single();
 
     if (error || !data) {
       throw new NotFoundException(`Búfalo com ID ${id} não encontrado.`);
     }
-    
+
     // Atualiza maturidade automaticamente se necessário
     await this.updateMaturityIfNeeded([data]);
-    
+
     return data;
   }
 
   async findByMicrochip(microchip: string) {
     const { data, error } = await this.supabase
       .from(this.tableName)
-      .select(`
+      .select(
+        `
         *,
         raca:id_raca(nome, origem),
         lote:id_lote(nome),
         propriedade:id_propriedade(nome)
-      `)
+      `,
+      )
       .eq('microchip', microchip)
       .single();
 
     if (error || !data) {
       throw new NotFoundException(`Búfalo com microchip ${microchip} não encontrado.`);
     }
-    
+
     // Atualiza maturidade automaticamente se necessário
     await this.updateMaturityIfNeeded([data]);
-    
+
     return data;
   }
 
   async update(id: number, updateDto: UpdateBufaloDto, user: any) {
     const userId = await this.getUserId(user);
-    
+
     // Valida acesso ao búfalo
     await this.validateBufaloAccess(id, userId);
-    
+
     // Busca dados existentes para processamento
-    const { data: existingBufalo, error: fetchError } = await this.supabase
-      .from(this.tableName)
-      .select('*')
-      .eq('id_bufalo', id)
-      .single();
+    const { data: existingBufalo, error: fetchError } = await this.supabase.from(this.tableName).select('*').eq('id_bufalo', id).single();
 
     if (fetchError || !existingBufalo) {
       throw new NotFoundException(`Búfalo com ID ${id} não encontrado.`);
     }
-    
+
     await this.validateReferencesAndOwnership(updateDto, userId);
 
     // Processa dados com lógica de maturidade
     const processedDto = await this.processMaturityData(updateDto, existingBufalo);
 
-    const { data, error } = await this.supabase
-      .from(this.tableName)
-      .update(processedDto)
-      .eq('id_bufalo', id)
-      .select()
-      .single();
+    const { data, error } = await this.supabase.from(this.tableName).update(processedDto).eq('id_bufalo', id).select().single();
 
     if (error) {
       throw new InternalServerErrorException(`Falha ao atualizar o búfalo: ${error.message}`);
@@ -323,10 +295,10 @@ export class BufaloService {
   async updateGrupo(dto: UpdateGrupoBufaloDto, user: any) {
     const { ids_bufalos, id_novo_grupo, motivo } = dto;
     const userId = await this.getUserId(user);
-    
+
     // Log inicial da operação
     this.logger.log(`[INICIO] Mudança de grupo iniciada - Usuario: ${userId}, Bufalos: [${ids_bufalos.join(', ')}], Novo Grupo: ${id_novo_grupo}`);
-    
+
     try {
       // Validação de duplicatas
       const uniqueIds = [...new Set(ids_bufalos)];
@@ -337,7 +309,7 @@ export class BufaloService {
 
       // Log de validação de acesso
       this.logger.debug(`[VALIDACAO] Verificando acesso do usuario ${userId} aos ${uniqueIds.length} bufalos`);
-      
+
       // Validação: Garante que o usuário tem acesso a TODOS os búfalos
       const validacaoPromises = uniqueIds.map(async (bufaloId) => {
         try {
@@ -351,16 +323,16 @@ export class BufaloService {
       });
 
       const resultadosValidacao = await Promise.all(validacaoPromises);
-      const semAcesso = resultadosValidacao.filter(r => !r.acesso);
-      
+      const semAcesso = resultadosValidacao.filter((r) => !r.acesso);
+
       if (semAcesso.length > 0) {
-        this.logger.error(`[ERRO_ACESSO] ${semAcesso.length} bufalos sem acesso: [${semAcesso.map(s => s.bufaloId).join(', ')}]`);
-        throw new BadRequestException(`Você não tem acesso aos búfalos: ${semAcesso.map(s => s.bufaloId).join(', ')}`);
+        this.logger.error(`[ERRO_ACESSO] ${semAcesso.length} bufalos sem acesso: [${semAcesso.map((s) => s.bufaloId).join(', ')}]`);
+        throw new BadRequestException(`Você não tem acesso aos búfalos: ${semAcesso.map((s) => s.bufaloId).join(', ')}`);
       }
 
       // Log de validação do grupo
       this.logger.debug(`[VALIDACAO] Verificando existencia do grupo ${id_novo_grupo}`);
-      
+
       // Validação: Garante que o grupo de destino existe
       const { data: grupoExiste, error: grupoError } = await this.supabase
         .from('Grupo')
@@ -377,7 +349,7 @@ export class BufaloService {
 
       // Buscar dados atuais dos búfalos
       this.logger.debug(`[CONSULTA] Buscando dados atuais dos bufalos para comparacao`);
-      
+
       const { data: bufalosAtuais, error: fetchError } = await this.supabase
         .from(this.tableName)
         .select('id_bufalo, nome, id_grupo, Grupo(nome_grupo)')
@@ -389,19 +361,21 @@ export class BufaloService {
       }
 
       // Log dos búfalos encontrados vs solicitados
-      const bufalosEncontrados = bufalosAtuais.map(b => b.id_bufalo);
-      const bufalosNaoEncontrados = uniqueIds.filter(id => !bufalosEncontrados.includes(id));
-      
+      const bufalosEncontrados = bufalosAtuais.map((b) => b.id_bufalo);
+      const bufalosNaoEncontrados = uniqueIds.filter((id) => !bufalosEncontrados.includes(id));
+
       if (bufalosNaoEncontrados.length > 0) {
         this.logger.warn(`[BUFALOS_NAO_ENCONTRADOS] ${bufalosNaoEncontrados.length} bufalos nao encontrados: [${bufalosNaoEncontrados.join(', ')}]`);
       }
 
       // Filtrar apenas búfalos que realmente precisam ser movidos
-      const bufalosParaMover = bufalosAtuais.filter(bufalo => bufalo.id_grupo !== id_novo_grupo);
-      const bufalosJaNoGrupo = bufalosAtuais.filter(bufalo => bufalo.id_grupo === id_novo_grupo);
-      
+      const bufalosParaMover = bufalosAtuais.filter((bufalo) => bufalo.id_grupo !== id_novo_grupo);
+      const bufalosJaNoGrupo = bufalosAtuais.filter((bufalo) => bufalo.id_grupo === id_novo_grupo);
+
       if (bufalosJaNoGrupo.length > 0) {
-        this.logger.log(`[JA_NO_GRUPO] ${bufalosJaNoGrupo.length} bufalos ja estao no grupo destino: [${bufalosJaNoGrupo.map(b => `${b.nome}(${b.id_bufalo})`).join(', ')}]`);
+        this.logger.log(
+          `[JA_NO_GRUPO] ${bufalosJaNoGrupo.length} bufalos ja estao no grupo destino: [${bufalosJaNoGrupo.map((b) => `${b.nome}(${b.id_bufalo})`).join(', ')}]`,
+        );
       }
 
       if (bufalosParaMover.length === 0) {
@@ -410,24 +384,26 @@ export class BufaloService {
           message: 'Todos os búfalos já estão no grupo de destino.',
           grupo_destino: grupoExiste.nome_grupo,
           total_processados: 0,
-          animais: []
+          animais: [],
         };
       }
 
       // Log da operação de movimentação
       this.logger.log(`[MOVIMENTACAO] Iniciando movimentacao de ${bufalosParaMover.length} bufalos para o grupo "${grupoExiste.nome_grupo}"`);
-      
-      bufalosParaMover.forEach(bufalo => {
-        this.logger.debug(`[DETALHE_MOVIMENTACAO] ${bufalo.nome}(${bufalo.id_bufalo}): "${(bufalo.Grupo as any)?.nome_grupo || 'N/A'}" -> "${grupoExiste.nome_grupo}"`);
+
+      bufalosParaMover.forEach((bufalo) => {
+        this.logger.debug(
+          `[DETALHE_MOVIMENTACAO] ${bufalo.nome}(${bufalo.id_bufalo}): "${(bufalo.Grupo as any)?.nome_grupo || 'N/A'}" -> "${grupoExiste.nome_grupo}"`,
+        );
       });
 
       // Executa a atualização
-      const idsParaMover = bufalosParaMover.map(b => b.id_bufalo);
+      const idsParaMover = bufalosParaMover.map((b) => b.id_bufalo);
       const { data: bufalosAtualizados, error: updateError } = await this.supabase
         .from(this.tableName)
-        .update({ 
+        .update({
           id_grupo: id_novo_grupo,
-          updated_at: new Date().toISOString()
+          updated_at: new Date().toISOString(),
         })
         .in('id_bufalo', idsParaMover)
         .select('id_bufalo, nome, id_grupo');
@@ -441,15 +417,17 @@ export class BufaloService {
       this.logger.log(`[SUCESSO] ${bufalosAtualizados.length} bufalos movidos com sucesso para o grupo "${grupoExiste.nome_grupo}"`);
 
       // Monta resposta detalhada
-      const resultado = bufalosParaMover.map(bufalo => ({
+      const resultado = bufalosParaMover.map((bufalo) => ({
         id_bufalo: bufalo.id_bufalo,
         nome: bufalo.nome,
         grupo_anterior: (bufalo.Grupo as any)?.nome_grupo || 'N/A',
-        grupo_novo: grupoExiste.nome_grupo
+        grupo_novo: grupoExiste.nome_grupo,
       }));
 
       // Log final da operação
-      this.logger.log(`[FINALIZACAO] Operacao concluida - Usuario: ${userId}, Bufalos movidos: ${bufalosAtualizados.length}, Grupo destino: "${grupoExiste.nome_grupo}"`);
+      this.logger.log(
+        `[FINALIZACAO] Operacao concluida - Usuario: ${userId}, Bufalos movidos: ${bufalosAtualizados.length}, Grupo destino: "${grupoExiste.nome_grupo}"`,
+      );
 
       return {
         message: `${bufalosAtualizados.length} búfalo(s) foram movidos para o grupo "${grupoExiste.nome_grupo}".`,
@@ -457,9 +435,8 @@ export class BufaloService {
         total_processados: bufalosAtualizados.length,
         motivo: motivo || null,
         animais: resultado,
-        processado_em: new Date().toISOString()
+        processado_em: new Date().toISOString(),
       };
-
     } catch (error) {
       this.logger.error(`[ERRO_GERAL] Falha na mudanca de grupo - Usuario: ${userId}, Erro: ${error.message}`, error.stack);
       throw error;
@@ -468,7 +445,7 @@ export class BufaloService {
 
   async remove(id: number, user: any) {
     const userId = await this.getUserId(user);
-    
+
     // Valida acesso ao búfalo
     await this.validateBufaloAccess(id, userId);
 
@@ -489,7 +466,7 @@ export class BufaloService {
     // Se há data de nascimento, processa a maturidade
     if (dto.dt_nascimento) {
       const birthDate = new Date(dto.dt_nascimento);
-      
+
       // Valida idade máxima
       if (!BufaloValidationUtils.validateMaxAge(birthDate)) {
         processedDto.status = false; // Define como inativo se idade > 50 anos
@@ -501,11 +478,7 @@ export class BufaloService {
         if (sexo) {
           // Verifica se o búfalo tem descendentes (para determinar se é vaca/touro)
           const hasOffspring = await this.checkIfHasOffspring(existingBufalo?.id_bufalo);
-          processedDto.nivel_maturidade = BufaloMaturityUtils.determineMaturityLevel(
-            birthDate, 
-            sexo, 
-            hasOffspring
-          );
+          processedDto.nivel_maturidade = BufaloMaturityUtils.determineMaturityLevel(birthDate, sexo, hasOffspring);
         }
       }
     }
@@ -526,41 +499,36 @@ export class BufaloService {
       if (bufalo.dt_nascimento && bufalo.sexo) {
         const birthDate = new Date(bufalo.dt_nascimento);
         const hasOffspring = await this.checkIfHasOffspring(bufalo.id_bufalo);
-        
-        const newMaturityLevel = BufaloMaturityUtils.determineMaturityLevel(
-          birthDate, 
-          bufalo.sexo, 
-          hasOffspring
-        );
-        
+
+        const newMaturityLevel = BufaloMaturityUtils.determineMaturityLevel(birthDate, bufalo.sexo, hasOffspring);
+
         const shouldBeInactive = BufaloValidationUtils.validateMaxAge(birthDate) === false;
-        
+
         // Só atualiza se houve mudança
-        if (newMaturityLevel !== bufalo.nivel_maturidade || 
-            (shouldBeInactive && bufalo.status !== false)) {
+        if (newMaturityLevel !== bufalo.nivel_maturidade || (shouldBeInactive && bufalo.status !== false)) {
           updates.push({
             id_bufalo: bufalo.id_bufalo,
             nivel_maturidade: newMaturityLevel,
-            status: shouldBeInactive ? false : bufalo.status
+            status: shouldBeInactive ? false : bufalo.status,
           });
         }
       }
     }
-    
+
     // Executa atualizações em lote se necessário
     if (updates.length > 0) {
       console.log(`Atualizando maturidade de ${updates.length} búfalo(s)...`);
-      
+
       for (const update of updates) {
         await this.supabase
           .from(this.tableName)
           .update({
             nivel_maturidade: update.nivel_maturidade,
-            status: update.status
+            status: update.status,
           })
           .eq('id_bufalo', update.id_bufalo);
       }
-      
+
       console.log(`Maturidade atualizada para ${updates.length} búfalo(s)`);
     }
   }
@@ -579,7 +547,7 @@ export class BufaloService {
   async processarCategoriaABCB(bufaloId: number): Promise<CategoriaABCB | null> {
     try {
       console.log(`Iniciando processamento da categoria ABCB para búfalo ${bufaloId}`);
-      
+
       const bufalo = await this.buscarBufaloCompleto(bufaloId);
       if (!bufalo) {
         console.warn(`Búfalo ${bufaloId} não encontrado para processamento de categoria`);
@@ -608,31 +576,24 @@ export class BufaloService {
       // Constrói árvore genealógica usando serviço compartilhado
       console.log(`Construindo árvore genealógica para ${bufalo.nome}...`);
       const arvore = await this.genealogiaService.construirArvoreParaCategoria(bufaloId, 1);
-      
+
       if (!arvore) {
         console.warn(`Não foi possível construir a árvore genealógica para ${bufalo.nome}`);
         return null;
       }
-      
+
       console.log(`Árvore genealógica construída com sucesso para ${bufalo.nome}`);
-      
+
       // Calcula categoria
       console.log(`Calculando categoria ABCB para ${bufalo.nome}...`);
       console.log(`Parâmetros: propriedadeABCB=${bufalo.Propriedade.p_abcb}, temRaca=${Boolean(bufalo.id_raca)}`);
-      
-      const categoria = CategoriaABCBUtil.calcularCategoria(
-        arvore,
-        bufalo.Propriedade.p_abcb,
-        Boolean(bufalo.id_raca)
-      );
+
+      const categoria = CategoriaABCBUtil.calcularCategoria(arvore, bufalo.Propriedade.p_abcb, Boolean(bufalo.id_raca));
 
       console.log(`Categoria calculada para ${bufalo.nome}: ${categoria}`);
 
       // Atualiza categoria no banco
-      const { error } = await this.supabase
-        .from(this.tableName)
-        .update({ categoria })
-        .eq('id_bufalo', bufaloId);
+      const { error } = await this.supabase.from(this.tableName).update({ categoria }).eq('id_bufalo', bufaloId);
 
       if (error) {
         console.error(`Erro ao salvar categoria ${categoria} para ${bufalo.nome}:`, error);
@@ -641,14 +602,13 @@ export class BufaloService {
 
       console.log(`Categoria ${categoria} salva com sucesso para ${bufalo.nome}`);
       return categoria;
-
     } catch (error) {
       console.error(`Erro no processamento da categoria ABCB para búfalo ${bufaloId}:`, error);
-      
+
       if (error instanceof InternalServerErrorException) {
         throw error; // Re-throw erros já tratados
       }
-      
+
       // Para outros erros, logga e retorna null
       return null;
     }
@@ -683,12 +643,9 @@ export class BufaloService {
 
       console.log(`Solicitando sugestão de raça para ${bufalo.nome} via Gemini...`);
       const idRacaSugerida = await this.geminiRacaUtil.sugerirRacaBufalo(caracteristicas, this.supabase);
-      
+
       if (idRacaSugerida) {
-        const { error: errorUpdate } = await this.supabase
-          .from(this.tableName)
-          .update({ id_raca: idRacaSugerida })
-          .eq('id_bufalo', bufalo.id_bufalo);
+        const { error: errorUpdate } = await this.supabase.from(this.tableName).update({ id_raca: idRacaSugerida }).eq('id_bufalo', bufalo.id_bufalo);
 
         if (errorUpdate) {
           console.error(`Erro ao atualizar raça sugerida para ${bufalo.nome}:`, errorUpdate);
@@ -699,7 +656,6 @@ export class BufaloService {
       } else {
         console.warn(`Gemini não conseguiu sugerir uma raça para ${bufalo.nome}`);
       }
-
     } catch (error) {
       console.error(`Erro ao tentar sugerir raça para ${bufalo.nome}:`, error);
       throw error; // Re-throw para que o caller possa tratar
@@ -713,13 +669,15 @@ export class BufaloService {
     try {
       const { data, error } = await this.supabase
         .from(this.tableName)
-        .select(`
+        .select(
+          `
           *,
           Propriedade!inner (
             p_abcb,
             Endereco (estado)
           )
-        `)
+        `,
+        )
         .eq('id_bufalo', bufaloId)
         .single();
 
@@ -729,14 +687,13 @@ export class BufaloService {
       }
 
       return data;
-
     } catch (error) {
       console.error(`Erro ao buscar búfalo completo ${bufaloId}:`, error);
-      
+
       if (error instanceof InternalServerErrorException) {
         throw error;
       }
-      
+
       return null;
     }
   }
@@ -752,11 +709,13 @@ export class BufaloService {
 
     const { data, error } = await this.supabase
       .from(this.tableName)
-      .select(`
+      .select(
+        `
         *,
         Raca (nome),
         Propriedade (nome)
-      `)
+      `,
+      )
       .in('id_propriedade', propriedadesUsuario)
       .eq('categoria', categoria)
       .eq('status', true);

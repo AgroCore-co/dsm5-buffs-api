@@ -1,3 +1,9 @@
+-- CreateEnum
+CREATE TYPE "public"."NichoAlerta" AS ENUM ('CLINICO', 'SANITARIO', 'REPRODUCAO', 'MANEJO');
+
+-- CreateEnum
+CREATE TYPE "public"."PrioridadeAlerta" AS ENUM ('BAIXA', 'MEDIA', 'ALTA');
+
 -- CreateTable
 CREATE TABLE "public"."Endereco" (
     "id_endereco" BIGSERIAL NOT NULL,
@@ -90,6 +96,15 @@ CREATE TABLE "public"."Propriedade" (
 );
 
 -- CreateTable
+CREATE TABLE "public"."UsuarioPropriedade" (
+    "id_usuario" BIGINT NOT NULL,
+    "id_propriedade" BIGINT NOT NULL,
+    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "UsuarioPropriedade_pkey" PRIMARY KEY ("id_usuario","id_propriedade")
+);
+
+-- CreateTable
 CREATE TABLE "public"."Lote" (
     "id_lote" BIGSERIAL NOT NULL,
     "tipo_lote" VARCHAR(100),
@@ -128,6 +143,7 @@ CREATE TABLE "public"."Bufalo" (
     "categoria" VARCHAR(2),
     "id_pai" BIGINT,
     "id_mae" BIGINT,
+    "id_pai_semen" BIGINT,
     "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updated_at" TIMESTAMP(3) NOT NULL,
 
@@ -305,6 +321,26 @@ CREATE TABLE "public"."DadosLactacao" (
     CONSTRAINT "DadosLactacao_pkey" PRIMARY KEY ("id_lact")
 );
 
+-- CreateTable
+CREATE TABLE "public"."Alertas" (
+    "id_alerta" BIGSERIAL NOT NULL,
+    "animal_id" BIGINT NOT NULL,
+    "grupo" VARCHAR(100) NOT NULL,
+    "localizacao" VARCHAR(100) NOT NULL,
+    "motivo" TEXT NOT NULL,
+    "nicho" "public"."NichoAlerta" NOT NULL,
+    "data_alerta" TIMESTAMP(3) NOT NULL,
+    "prioridade" "public"."PrioridadeAlerta" NOT NULL,
+    "observacao" TEXT,
+    "visto" BOOLEAN NOT NULL DEFAULT false,
+    "id_evento_origem" BIGINT,
+    "tipo_evento_origem" VARCHAR(50),
+    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updated_at" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "Alertas_pkey" PRIMARY KEY ("id_alerta")
+);
+
 -- AddForeignKey
 ALTER TABLE "public"."Usuario" ADD CONSTRAINT "Usuario_id_endereco_fkey" FOREIGN KEY ("id_endereco") REFERENCES "public"."Endereco"("id_endereco") ON DELETE SET NULL ON UPDATE CASCADE;
 
@@ -313,6 +349,12 @@ ALTER TABLE "public"."Propriedade" ADD CONSTRAINT "Propriedade_id_endereco_fkey"
 
 -- AddForeignKey
 ALTER TABLE "public"."Propriedade" ADD CONSTRAINT "Propriedade_id_dono_fkey" FOREIGN KEY ("id_dono") REFERENCES "public"."Usuario"("id_usuario") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "public"."UsuarioPropriedade" ADD CONSTRAINT "UsuarioPropriedade_id_usuario_fkey" FOREIGN KEY ("id_usuario") REFERENCES "public"."Usuario"("id_usuario") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "public"."UsuarioPropriedade" ADD CONSTRAINT "UsuarioPropriedade_id_propriedade_fkey" FOREIGN KEY ("id_propriedade") REFERENCES "public"."Propriedade"("id_propriedade") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "public"."Lote" ADD CONSTRAINT "Lote_id_propriedade_fkey" FOREIGN KEY ("id_propriedade") REFERENCES "public"."Propriedade"("id_propriedade") ON DELETE SET NULL ON UPDATE CASCADE;
@@ -327,10 +369,10 @@ ALTER TABLE "public"."Bufalo" ADD CONSTRAINT "Bufalo_id_propriedade_fkey" FOREIG
 ALTER TABLE "public"."Bufalo" ADD CONSTRAINT "Bufalo_id_grupo_fkey" FOREIGN KEY ("id_grupo") REFERENCES "public"."Grupo"("id_grupo") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "public"."Bufalo" ADD CONSTRAINT "Bufalo_id_pai_fkey" FOREIGN KEY ("id_pai") REFERENCES "public"."Bufalo"("id_bufalo") ON DELETE SET NULL ON UPDATE CASCADE;
+ALTER TABLE "public"."Bufalo" ADD CONSTRAINT "Bufalo_id_pai_fkey" FOREIGN KEY ("id_pai") REFERENCES "public"."Bufalo"("id_bufalo") ON DELETE NO ACTION ON UPDATE NO ACTION;
 
 -- AddForeignKey
-ALTER TABLE "public"."Bufalo" ADD CONSTRAINT "Bufalo_id_mae_fkey" FOREIGN KEY ("id_mae") REFERENCES "public"."Bufalo"("id_bufalo") ON DELETE SET NULL ON UPDATE CASCADE;
+ALTER TABLE "public"."Bufalo" ADD CONSTRAINT "Bufalo_id_mae_fkey" FOREIGN KEY ("id_mae") REFERENCES "public"."Bufalo"("id_bufalo") ON DELETE NO ACTION ON UPDATE NO ACTION;
 
 -- AddForeignKey
 ALTER TABLE "public"."MovLote" ADD CONSTRAINT "MovLote_id_grupo_fkey" FOREIGN KEY ("id_grupo") REFERENCES "public"."Grupo"("id_grupo") ON DELETE SET NULL ON UPDATE CASCADE;
@@ -403,3 +445,6 @@ ALTER TABLE "public"."DadosLactacao" ADD CONSTRAINT "DadosLactacao_id_usuario_fk
 
 -- AddForeignKey
 ALTER TABLE "public"."DadosLactacao" ADD CONSTRAINT "DadosLactacao_id_ciclo_lactacao_fkey" FOREIGN KEY ("id_ciclo_lactacao") REFERENCES "public"."CicloLactacao"("id_ciclo_lactacao") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "public"."Alertas" ADD CONSTRAINT "Alertas_animal_id_fkey" FOREIGN KEY ("animal_id") REFERENCES "public"."Bufalo"("id_bufalo") ON DELETE RESTRICT ON UPDATE CASCADE;
