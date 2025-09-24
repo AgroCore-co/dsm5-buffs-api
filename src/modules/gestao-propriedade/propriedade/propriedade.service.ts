@@ -61,7 +61,7 @@ export class PropriedadeService {
         .select(`
           *,
           endereco:id_endereco(*),
-          lotes:Lote(id_lote, nome, area_hectares)
+          lotes:Lote(id_lote, nome_lote, area_m2)
         `)
         .eq('id_dono', userId);
 
