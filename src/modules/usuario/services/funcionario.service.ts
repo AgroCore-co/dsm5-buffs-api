@@ -130,7 +130,7 @@ export class FuncionarioService {
       throw new ForbiddenException('Acesso negado: você não é proprietário desta propriedade.');
     }
 
-    const { data, error: funcionariosError } = await this.supabase
+    const { data, error: funcionariosError } = await this.adminSupabase
       .from('UsuarioPropriedade')
       .select(
         `
@@ -162,7 +162,7 @@ export class FuncionarioService {
     const proprietario = await this.usuarioService.findOneByEmail(proprietarioEmail);
     const propriedadesProprietario = await this.usuarioService.getUserPropriedades(proprietario.id_usuario);
 
-    const { data, error } = await this.supabase
+    const { data, error } = await this.adminSupabase
       .from('UsuarioPropriedade')
       .select(
         `
