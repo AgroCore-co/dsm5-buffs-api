@@ -1,14 +1,14 @@
 import { Module } from '@nestjs/common';
-import { UsuarioService } from './usuario.service';
-import { UsuarioController } from './usuario.controller';
-import { SupabaseModule } from '../../core/supabase/supabase.module';
+import { UsuarioService } from './services/usuario.service';
+import { FuncionarioService } from './services/funcionario.service';
+import { UsuarioController } from './controller/usuario.controller';
+import { FuncionarioController } from './controller/funcionario.controller';
 import { CoreModule } from 'src/core/core.module';
-import { RolesGuard } from '../auth/guards/roles.guard';
 
 @Module({
-  imports: [SupabaseModule, CoreModule],
-  controllers: [UsuarioController],
-  providers: [UsuarioService, RolesGuard],
-  exports: [UsuarioService]
+  imports: [CoreModule],
+  controllers: [UsuarioController, FuncionarioController],
+  providers: [UsuarioService, FuncionarioService],
+  exports: [UsuarioService, FuncionarioService],
 })
 export class UsuarioModule {}

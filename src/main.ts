@@ -7,15 +7,15 @@ import * as dotenv from 'dotenv';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule, {
-    logger: process.env.NODE_ENV === 'production' 
-      ? ['error', 'warn'] 
-      : ['log', 'debug', 'error', 'verbose', 'warn']
+    logger: process.env.NODE_ENV === 'production' ? ['error', 'warn'] : ['log', 'debug', 'error', 'verbose', 'warn'],
   });
   dotenv.config();
 
-  app.use(helmet({
-    crossOriginEmbedderPolicy: false, 
-  }));
+  app.use(
+    helmet({
+      crossOriginEmbedderPolicy: false,
+    }),
+  );
 
   const swaggerDescription = `
   Documentação da API para o sistema de gerenciamento de búfalos (BUFFS).
@@ -105,7 +105,7 @@ async function bootstrap() {
     .setDescription(swaggerDescription)
     .setVersion('1.0')
     .addTag('Autenticação', 'Endpoints de cadastro, login e gerenciamento de sessão')
-    .addTag('Usuários', 'Gerenciamento de perfis e funcionários')
+    .addTag('Usuários (Perfis)', 'Gerenciamento de perfis de usuários (proprietários e outros).')
     .addTag('Gestão de Propriedade - Propriedades', '🏠 Gerenciamento de propriedades (PROPRIETARIO apenas)')
     .addTag('Gestão de Propriedade - Lotes (Piquetes)', '🌾 Gerenciamento de lotes (PROPRIETARIO apenas)')
     .addTag('Gestão de Propriedade - Endereços', '📍 Gerenciamento de endereços (PROPRIETARIO apenas)')
@@ -139,11 +139,12 @@ async function bootstrap() {
 
   // 🌐 Configuração de CORS mais segura
   const corsOrigin = process.env.CORS_ORIGIN;
-  const allowedOrigins = corsOrigin === '*' 
-    ? [] // Array vazio quando * é usado
-    : corsOrigin 
-      ? corsOrigin.split(',').map(origin => origin.trim()) 
-      : ['http://localhost:3000', 'http://localhost:3001', 'http://0.0.0.0:3001'];
+  const allowedOrigins =
+    corsOrigin === '*'
+      ? [] // Array vazio quando * é usado
+      : corsOrigin
+        ? corsOrigin.split(',').map((origin) => origin.trim())
+        : ['http://localhost:3000', 'http://localhost:3001', 'http://0.0.0.0:3001'];
 
   app.enableCors({
     origin: (origin, callback) => {
