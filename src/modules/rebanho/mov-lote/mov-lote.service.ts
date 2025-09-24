@@ -1,16 +1,18 @@
-import { Injectable, NotFoundException, InternalServerErrorException, BadRequestException, Logger } from '@nestjs/common';
+import { Injectable, NotFoundException, InternalServerErrorException, BadRequestException } from '@nestjs/common';
 import { SupabaseClient } from '@supabase/supabase-js';
 import { SupabaseService } from '../../../core/supabase/supabase.service';
 import { CreateMovLoteDto } from './dto/create-mov-lote.dto';
 import { UpdateMovLoteDto } from './dto/update-mov-lote.dto';
+import { LoggerService } from '../../../core/logger/logger.service';
 
 @Injectable()
 export class MovLoteService {
-  private readonly logger = new Logger(MovLoteService.name);
+  private readonly logger: LoggerService;
   private supabase: SupabaseClient;
 
-  constructor(private readonly supabaseService: SupabaseService) {
+  constructor(private readonly supabaseService: SupabaseService, logger: LoggerService) {
     this.supabase = this.supabaseService.getClient();
+    this.logger = logger;
   }
 
   private async getUserId(user: any): Promise<number> {
@@ -73,7 +75,7 @@ export class MovLoteService {
         .from('MovLote')
         .select(`
           *,
-          lote_atual:id_lote_atual(nome),
+          lote_atual:id_lote_atual(nome_lote),
           grupo:id_grupo(nome_grupo)
         `)
         .eq('id_grupo', id_grupo)
@@ -137,7 +139,7 @@ export class MovLoteService {
         motivo: motivo || null,
       };
 
-      this.logger.debug(`[CRIANDO_REGISTRO] Inserindo novo registro de movimentacao`, JSON.stringify(dtoToInsert, null, 2));
+      this.logger.debug(`[CRIANDO_REGISTRO] Inserindo novo registro de movimentacao`, { dtoToInsert });
 
       const { data: novoRegistro, error: insertError } = await this.supabase
         .from('MovLote')
@@ -158,18 +160,18 @@ export class MovLoteService {
 
       // Log de sucesso detalhado
       this.logger.log(`[SUCESSO] Movimentacao registrada com sucesso - ID: ${novoRegistro.id_movimento}`);
-      this.logger.log(`[DETALHES_SUCESSO] Grupo: "${(novoRegistro.grupo as any).nome_grupo}" | De: "${(loteAnterior as any)?.nome || 'Primeira movimentação'}" | Para: "${(novoRegistro.lote_atual as any).nome}" | Responsavel: "${(novoRegistro.usuario as any).nome}"`);
+      this.logger.log(`[DETALHES_SUCESSO] Grupo: "${(novoRegistro.grupo as any).nome_grupo}" | De: "${(loteAnterior as any)?.nome_lote || 'Primeira movimentação'}" | Para: "${(novoRegistro.lote_atual as any).nome_lote}" | Responsavel: "${(novoRegistro.usuario as any).nome}"`);
 
       // Log final da operação
       this.logger.log(`[FINALIZACAO] Operacao de movimentacao fisica concluida - Usuario: ${id_usuario}, Grupo: ${id_grupo}, Novo lote: ${id_lote_atual}`);
 
       return {
-        message: `Grupo "${(novoRegistro.grupo as any).nome_grupo}" movido com sucesso para o lote "${(novoRegistro.lote_atual as any).nome}".`,
+        message: `Grupo "${(novoRegistro.grupo as any).nome_grupo}" movido com sucesso para o lote "${(novoRegistro.lote_atual as any).nome_lote}".`,
         movimentacao: {
           id: novoRegistro.id_movimento,
           grupo: (novoRegistro.grupo as any).nome_grupo,
-          lote_anterior: (loteAnterior as any)?.nome || 'Primeira movimentação',
-          lote_atual: (novoRegistro.lote_atual as any).nome,
+          lote_anterior: (loteAnterior as any)?.nome_lote || 'Primeira movimentação',
+          lote_atual: (novoRegistro.lote_atual as any).nome_lote,
           dt_entrada: novoRegistro.dt_entrada,
           motivo: novoRegistro.motivo,
           responsavel: (novoRegistro.usuario as any).nome,
@@ -188,17 +190,20 @@ export class MovLoteService {
       .from('MovLote')
       .select(`
         *,
-        grupo:id_grupo(nome),
-        lote_atual:id_lote_atual(nome),
-        lote_anterior:id_lote_anterior(nome),
+        grupo:id_grupo(nome_grupo),
+        lote_atual:id_lote_atual(nome_lote),
+        lote_anterior:id_lote_anterior(nome_lote),
         usuario:id_usuario(nome)
       `)
       .order('dt_entrada', { ascending: false });
 
     if (error) {
+      if (error.code === 'PGRST116') {
+        return [];
+      }
       throw new InternalServerErrorException('Falha ao buscar as movimentações de lote.');
     }
-    return data;
+    return data ?? [];
   }
 
   async findOne(id: number, user: any) {
@@ -251,8 +256,8 @@ export class MovLoteService {
       .select(`
         *,
         grupo:id_grupo(nome_grupo),
-        lote_atual:id_lote_atual(nome),
-        lote_anterior:id_lote_anterior(nome),
+        lote_atual:id_lote_atual(nome_lote),
+        lote_anterior:id_lote_anterior(nome_lote),
         usuario:id_usuario(nome)
       `)
       .eq('id_grupo', id_grupo)
@@ -268,8 +273,8 @@ export class MovLoteService {
       total_movimentacoes: data.length,
       historico: data.map(mov => ({
         id_movimento: mov.id_movimento,
-        lote_anterior: mov.lote_anterior?.nome || 'Primeira movimentação',
-        lote_atual: mov.lote_atual.nome,
+        lote_anterior: mov.lote_anterior?.nome_lote || 'Primeira movimentação',
+        lote_atual: mov.lote_atual.nome_lote,
         dt_entrada: mov.dt_entrada,
         dt_saida: mov.dt_saida,
         dias_permanencia: mov.dt_saida 
@@ -288,7 +293,7 @@ export class MovLoteService {
       .select(`
         *,
         grupo:id_grupo(nome_grupo),
-        lote_atual:id_lote_atual(nome),
+        lote_atual:id_lote_atual(nome_lote),
         usuario:id_usuario(nome)
       `)
       .eq('id_grupo', id_grupo)
@@ -310,7 +315,7 @@ export class MovLoteService {
         nome: data.grupo.nome_grupo
       },
       localizacao_atual: {
-        lote: data.lote_atual.nome,
+          lote: data.lote_atual.nome_lote,
         desde: data.dt_entrada,
         dias_no_local: diasNoLocal,
         motivo_chegada: data.motivo

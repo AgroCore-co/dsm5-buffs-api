@@ -17,8 +17,13 @@ export class RegistrosService {
 
   async findAll() {
     const { data, error } = await this.supabase.getClient().from(this.tableName).select('*').order('created_at', { ascending: false });
-    if (error) throw new InternalServerErrorException('Falha ao buscar registros de alimentação.');
-    return data;
+    if (error) {
+      if ((error as any).code === 'PGRST116') {
+        return [];
+      }
+      throw new InternalServerErrorException('Falha ao buscar registros de alimentação.');
+    }
+    return data ?? [];
   }
 
   async findByPropriedade(idPropriedade: number) {

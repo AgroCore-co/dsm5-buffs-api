@@ -3,12 +3,12 @@ import { SupabaseClient } from '@supabase/supabase-js';
 import { SupabaseService } from '../../../core/supabase/supabase.service';
 import { CreateAlimentacaoDefDto } from './dto/create-alimentacao-def.dto';
 import { UpdateAlimentacaoDefDto } from './dto/update-alimentacao-def.dto';
+import { LoggerService } from '../../../core/logger/logger.service';
 
 @Injectable()
 export class AlimentacaoDefService {
   private supabase: SupabaseClient;
-
-  constructor(private readonly supabaseService: SupabaseService) {
+  constructor(private readonly supabaseService: SupabaseService, private readonly logger: LoggerService) {
     this.supabase = this.supabaseService.getClient();
   }
 
@@ -16,7 +16,7 @@ export class AlimentacaoDefService {
     const { data, error } = await this.supabase.from('AlimentacaoDef').insert(createAlimentacaoDefDto).select().single();
 
     if (error) {
-      console.error('Erro ao criar alimentação definida:', error);
+      this.logger.logError(error, { module: 'AlimentacaoDef', method: 'create' });
       throw new InternalServerErrorException('Falha ao criar a alimentação definida.');
     }
 
@@ -27,11 +27,13 @@ export class AlimentacaoDefService {
     const { data, error } = await this.supabase.from('AlimentacaoDef').select('*').order('id_aliment_def', { ascending: true });
 
     if (error) {
-      console.error('Erro ao buscar alimentações definidas:', error);
+      if (error.code === 'PGRST116') {
+        return [];
+      }
+      this.logger.logError(error, { module: 'AlimentacaoDef', method: 'findAll' });
       throw new InternalServerErrorException('Falha ao buscar as alimentações definidas.');
     }
-
-    return data;
+    return data ?? [];
   }
 
   async findByPropriedade(idPropriedade: number) {
@@ -43,7 +45,7 @@ export class AlimentacaoDefService {
       .order('created_at', { ascending: false });
 
     if (error) {
-      console.error('Erro ao buscar alimentações definidas por propriedade:', error);
+      this.logger.logError(error, { module: 'AlimentacaoDef', method: 'findByPropriedade', idPropriedade: String(idPropriedade) });
       throw new InternalServerErrorException('Falha ao buscar as alimentações definidas da propriedade.');
     }
 
@@ -57,7 +59,7 @@ export class AlimentacaoDefService {
       if (error.code === 'PGRST116') {
         throw new NotFoundException('Alimentação definida não encontrada.');
       }
-      console.error('Erro ao buscar alimentação definida:', error);
+      this.logger.logError(error, { module: 'AlimentacaoDef', method: 'findOne', id: String(id) });
       throw new InternalServerErrorException('Falha ao buscar a alimentação definida.');
     }
 
@@ -71,7 +73,7 @@ export class AlimentacaoDefService {
     const { data, error } = await this.supabase.from('AlimentacaoDef').update(updateAlimentacaoDefDto).eq('id_aliment_def', id).select().single();
 
     if (error) {
-      console.error('Erro ao atualizar alimentação definida:', error);
+      this.logger.logError(error, { module: 'AlimentacaoDef', method: 'update', id: String(id) });
       throw new InternalServerErrorException('Falha ao atualizar a alimentação definida.');
     }
 
@@ -85,7 +87,7 @@ export class AlimentacaoDefService {
     const { error } = await this.supabase.from('AlimentacaoDef').delete().eq('id_aliment_def', id);
 
     if (error) {
-      console.error('Erro ao deletar alimentação definida:', error);
+      this.logger.logError(error, { module: 'AlimentacaoDef', method: 'remove', id: String(id) });
       throw new InternalServerErrorException('Falha ao deletar a alimentação definida.');
     }
 
