@@ -1,6 +1,7 @@
 import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, ParseIntPipe, UseInterceptors } from '@nestjs/common';
 import { CacheInterceptor, CacheTTL } from '@nestjs/cache-manager';
 import { UsuarioService } from '../services/usuario.service';
+import { CreateFuncionarioDto } from '../dto/create-funcionario.dto';
 import { CreateUsuarioDto } from '../dto/create-usuario.dto';
 import { UpdateUsuarioDto } from '../dto/update-usuario.dto';
 import { SupabaseAuthGuard } from '../../auth/guards/auth.guard';
@@ -91,5 +92,18 @@ export class UsuarioController {
   @ApiResponse({ status: 403, description: 'Acesso negado.' })
   remove(@Param('id', ParseIntPipe) id: number) {
     return this.usuarioService.remove(id);
+  }
+
+  @Post('/funcionarios')
+  @Roles(Cargo.PROPRIETARIO, Cargo.GERENTE)
+  @UseGuards(RolesGuard)
+  @ApiOperation({
+    summary: 'Criar funcionário/gerente/veterinário',
+    description: 'Cria um usuário (GERENTE, FUNCIONARIO ou VETERINARIO) usando o client admin e vincula à propriedade informada ou às propriedades do solicitante.',
+  })
+  @ApiResponse({ status: 201, description: 'Funcionário criado com sucesso.' })
+  @ApiResponse({ status: 403, description: 'Acesso negado.' })
+  createFuncionario(@Body() dto: CreateFuncionarioDto, @User() user: any) {
+    return this.usuarioService.createFuncionario(dto, { id_usuario: user.id_usuario, cargo: user.cargo });
   }
 }

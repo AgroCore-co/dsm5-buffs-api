@@ -9,6 +9,7 @@ import { SupabaseClient } from '@supabase/supabase-js';
 @Injectable()
 export class FuncionarioService {
   private readonly supabase: SupabaseClient;
+  private readonly adminSupabase: SupabaseClient;
 
   constructor(
     private readonly supabaseService: SupabaseService,
@@ -16,6 +17,7 @@ export class FuncionarioService {
     private readonly logger: LoggerService,
   ) {
     this.supabase = this.supabaseService.getClient();
+    this.adminSupabase = this.supabaseService.getAdminClient();
   }
 
   /**
@@ -37,8 +39,7 @@ export class FuncionarioService {
       throw new ForbiddenException('Você só pode criar funcionários para suas próprias propriedades.');
     }
 
-    const adminSupabase = this.supabaseService.getAdminClient();
-    const { data: authUser, error: authError } = await adminSupabase.auth.admin.createUser({
+    const { data: authUser, error: authError } = await this.adminSupabase.auth.admin.createUser({
       email: createFuncionarioDto.email,
       password: createFuncionarioDto.password,
       email_confirm: true,
@@ -63,7 +64,7 @@ export class FuncionarioService {
         throw new ConflictException('Já existe um perfil de usuário com este email.');
       }
 
-      const { data: novoFuncionario, error: insertError } = await this.supabase
+      const { data: novoFuncionario, error: insertError } = await this.adminSupabase
         .from('Usuario')
         .insert([
           {
@@ -89,7 +90,7 @@ export class FuncionarioService {
         id_propriedade: idPropriedade,
       }));
 
-      const { error: vinculoError } = await this.supabase.from('UsuarioPropriedade').insert(vinculos);
+      const { error: vinculoError } = await this.adminSupabase.from('UsuarioPropriedade').insert(vinculos);
 
       if (vinculoError) {
         throw new InternalServerErrorException(`Falha ao vincular funcionário às propriedades: ${vinculoError.message}`);
@@ -105,7 +106,7 @@ export class FuncionarioService {
       };
     } catch (error) {
       this.logger.logError(error as Error, { message: 'Erro na transação, realizando rollback do Auth User...', authUserId: authUser.user.id });
-      await adminSupabase.auth.admin.deleteUser(authUser.user.id);
+      await this.adminSupabase.auth.admin.deleteUser(authUser.user.id);
       throw error;
     }
   }

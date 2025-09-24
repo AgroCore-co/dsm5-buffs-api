@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, ConflictException, InternalServerErrorException } from '@nestjs/common';
+import { Injectable, NotFoundException, ConflictException, InternalServerErrorException, ForbiddenException } from '@nestjs/common';
 import { SupabaseClient } from '@supabase/supabase-js';
 import { SupabaseService } from 'src/core/supabase/supabase.service';
 import { CreateUsuarioDto } from '../dto/create-usuario.dto';
@@ -162,5 +162,91 @@ export class UsuarioService {
     }
 
     return data.map((item) => item.id_propriedade);
+  }
+
+  /**
+   * Cria um funcionário/gerente/veterinário usando o client admin (service role),
+   * e vincula à propriedade informada ou às propriedades do solicitante.
+   */
+  async createFuncionario(
+    dto: {
+      nome: string;
+      email: string;
+      password: string;
+      telefone?: string;
+      cargo: Cargo;
+      id_endereco?: number;
+      id_propriedade?: number;
+    },
+    solicitante: { id_usuario?: number; cargo?: Cargo },
+  ) {
+    this.logger.log('[UsuarioService] createFuncionario chamado', { dtoEmail: dto.email, solicitante: String(solicitante?.id_usuario) });
+
+    if (!solicitante?.id_usuario) {
+      throw new ForbiddenException('Solicitante inválido.');
+    }
+
+    if (solicitante.cargo !== Cargo.PROPRIETARIO && solicitante.cargo !== Cargo.GERENTE) {
+      throw new ForbiddenException('Apenas PROPRIETARIO ou GERENTE podem criar funcionários.');
+    }
+
+    if (dto.cargo === Cargo.PROPRIETARIO) {
+      throw new ForbiddenException('Não é permitido criar usuário com cargo PROPRIETARIO por este endpoint.');
+    }
+
+    const admin = this.supabaseService.getAdminClient();
+
+    // 1) Criar o usuário no Auth
+    const { data: created, error: authErr } = await admin.auth.admin.createUser({
+      email: dto.email,
+      password: dto.password,
+      email_confirm: true,
+      user_metadata: { nome: dto.nome, telefone: dto.telefone },
+    });
+    if (authErr) {
+      this.logger.logError(authErr, { method: 'createFuncionario.auth', email: dto.email });
+      throw new InternalServerErrorException(`Erro Auth: ${authErr.message}`);
+    }
+
+    const authId = created.user?.id as string;
+
+    // 2) Inserir o perfil na tabela Usuario
+    const { data: perfil, error: perfilErr } = await admin
+      .from('Usuario')
+      .insert([
+        {
+          auth_id: authId,
+          nome: dto.nome,
+          telefone: dto.telefone ?? null,
+          email: dto.email,
+          cargo: dto.cargo,
+          id_endereco: dto.id_endereco ?? null,
+        },
+      ])
+      .select()
+      .single();
+
+    if (perfilErr) {
+      this.logger.logError(perfilErr, { method: 'createFuncionario.perfil', email: dto.email });
+      throw new InternalServerErrorException(`Erro DB: ${perfilErr.message}`);
+    }
+
+    // 3) Vincular à propriedade
+    const propriedadesParaVincular: number[] = [];
+    if (dto.id_propriedade) {
+      propriedadesParaVincular.push(dto.id_propriedade);
+    } else {
+      const doSolicitante = await this.getUserPropriedades(solicitante.id_usuario);
+      propriedadesParaVincular.push(...doSolicitante);
+    }
+
+    const rows = propriedadesParaVincular.map((id_propriedade) => ({ id_usuario: perfil.id_usuario, id_propriedade }));
+    const { error: vincErr } = await admin.from('UsuarioPropriedade').insert(rows);
+    if (vincErr) {
+      this.logger.logError(vincErr, { method: 'createFuncionario.vincular', perfil: String(perfil.id_usuario) });
+      throw new InternalServerErrorException('Erro ao vincular funcionário à propriedade.');
+    }
+
+    return perfil;
   }
 }
