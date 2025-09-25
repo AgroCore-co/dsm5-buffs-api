@@ -34,6 +34,22 @@ export class ControleLeiteiroController {
     return this.service.findAll(Number(page), Number(limit));
   }
 
+  @Get('bufala/:id_bufala')
+  @ApiOperation({ summary: 'Busca todos os registros de lactação de uma búfala específica (paginado)' })
+  @ApiResponse({ status: 200, description: 'Lista de registros da búfala retornada com sucesso.' })
+  @ApiResponse({ status: 401, description: 'Não autorizado.' })
+  @ApiResponse({ status: 404, description: 'Búfala não encontrada.' })
+  @ApiQuery({ name: 'page', required: false, type: Number, description: 'Número da página (default: 1)' })
+  @ApiQuery({ name: 'limit', required: false, type: Number, description: 'Quantidade de registros por página (default: 20)' })
+  findAllByBufala(
+    @Param('id_bufala', ParseIntPipe) id_bufala: number,
+    @Query('page') page: number = 1,
+    @Query('limit') limit: number = 20,
+    @User() user: any,
+  ) {
+    return this.service.findAllByBufala(id_bufala, Number(page), Number(limit), user);
+  }
+
   @Get(':id')
   @ApiOperation({ summary: 'Busca um registro de lactação específico pelo ID' })
   @ApiResponse({ status: 200, description: 'Dados do registro retornados.' })
