@@ -1,11 +1,15 @@
 import { Injectable, InternalServerErrorException, NotFoundException } from '@nestjs/common';
 import { SupabaseService } from '../../../core/supabase/supabase.service';
+import { LoggerService } from '../../../core/logger/logger.service';
 import { CreateCicloLactacaoDto } from './dto/create-ciclo-lactacao.dto';
 import { UpdateCicloLactacaoDto } from './dto/update-ciclo-lactacao.dto';
 
 @Injectable()
 export class CicloLactacaoService {
-  constructor(private readonly supabase: SupabaseService) {}
+  constructor(
+    private readonly supabase: SupabaseService,
+    private readonly logger: LoggerService,
+  ) {}
 
   private readonly tableName = 'CicloLactacao';
 
@@ -21,8 +25,22 @@ export class CicloLactacaoService {
   }
 
   async create(dto: CreateCicloLactacaoDto) {
+    this.logger.log('Iniciando criação de ciclo de lactação', { 
+      module: 'CicloLactacaoService', 
+      method: 'create',
+      bufalaId: dto.id_bufala,
+      dtParto: dto.dt_parto
+    });
+    
     const dt_secagem_prevista = this.computeSecagemPrevista(dto.dt_parto, dto.padrao_dias);
     const status = this.computeStatus(dto.dt_secagem_real);
+
+    this.logger.log('Calculando datas e status do ciclo', { 
+      module: 'CicloLactacaoService', 
+      method: 'create',
+      dtSecagemPrevista: dt_secagem_prevista,
+      status
+    });
 
     const { data, error } = await this.supabase
       .getClient()
@@ -36,12 +54,29 @@ export class CicloLactacaoService {
       .single();
 
     if (error) {
+      this.logger.logError(error, { 
+        module: 'CicloLactacaoService', 
+        method: 'create',
+        bufalaId: dto.id_bufala
+      });
       throw new InternalServerErrorException(`Falha ao criar ciclo de lactação: ${error.message}`);
     }
+    
+    this.logger.log('Ciclo de lactação criado com sucesso', { 
+      module: 'CicloLactacaoService', 
+      method: 'create',
+      cicloId: data.id_ciclo_lactacao,
+      bufalaId: dto.id_bufala
+    });
     return data;
   }
 
   async findAll() {
+    this.logger.log('Iniciando busca de todos os ciclos de lactação', { 
+      module: 'CicloLactacaoService', 
+      method: 'findAll'
+    });
+    
     const { data, error } = await this.supabase
       .getClient()
       .from(this.tableName)
@@ -49,12 +84,27 @@ export class CicloLactacaoService {
       .order('dt_parto', { ascending: false });
 
     if (error) {
+      this.logger.logError(error, { 
+        module: 'CicloLactacaoService', 
+        method: 'findAll'
+      });
       throw new InternalServerErrorException(`Falha ao buscar ciclos de lactação: ${error.message}`);
     }
+    
+    this.logger.log(`Busca de ciclos de lactação concluída - ${data.length} ciclos encontrados`, { 
+      module: 'CicloLactacaoService', 
+      method: 'findAll'
+    });
     return data;
   }
 
   async findOne(id_ciclo_lactacao: number) {
+    this.logger.log('Iniciando busca de ciclo de lactação por ID', { 
+      module: 'CicloLactacaoService', 
+      method: 'findOne',
+      cicloId: id_ciclo_lactacao
+    });
+    
     const { data, error } = await this.supabase
       .getClient()
       .from(this.tableName)
@@ -63,18 +113,43 @@ export class CicloLactacaoService {
       .single();
 
     if (error || !data) {
+      this.logger.warn('Ciclo de lactação não encontrado', { 
+        module: 'CicloLactacaoService', 
+        method: 'findOne',
+        cicloId: id_ciclo_lactacao
+      });
       throw new NotFoundException(`Ciclo de lactação com ID ${id_ciclo_lactacao} não encontrado.`);
     }
+    
+    this.logger.log('Ciclo de lactação encontrado com sucesso', { 
+      module: 'CicloLactacaoService', 
+      method: 'findOne',
+      cicloId: id_ciclo_lactacao
+    });
     return data;
   }
 
   async update(id_ciclo_lactacao: number, dto: UpdateCicloLactacaoDto) {
+    this.logger.log('Iniciando atualização de ciclo de lactação', { 
+      module: 'CicloLactacaoService', 
+      method: 'update',
+      cicloId: id_ciclo_lactacao
+    });
+    
     const current = await this.findOne(id_ciclo_lactacao);
 
     const dt_parto = dto.dt_parto ?? current.dt_parto;
     const padrao_dias = dto.padrao_dias ?? current.padrao_dias;
     const dt_secagem_prevista = this.computeSecagemPrevista(dt_parto, padrao_dias);
     const status = this.computeStatus(dto.dt_secagem_real ?? current.dt_secagem_real);
+
+    this.logger.log('Recalculando datas e status do ciclo', { 
+      module: 'CicloLactacaoService', 
+      method: 'update',
+      cicloId: id_ciclo_lactacao,
+      dtSecagemPrevista: dt_secagem_prevista,
+      status
+    });
 
     const { data, error } = await this.supabase
       .getClient()
@@ -89,12 +164,29 @@ export class CicloLactacaoService {
       .single();
 
     if (error) {
+      this.logger.logError(error, { 
+        module: 'CicloLactacaoService', 
+        method: 'update',
+        cicloId: id_ciclo_lactacao
+      });
       throw new InternalServerErrorException(`Falha ao atualizar ciclo de lactação: ${error.message}`);
     }
+    
+    this.logger.log('Ciclo de lactação atualizado com sucesso', { 
+      module: 'CicloLactacaoService', 
+      method: 'update',
+      cicloId: id_ciclo_lactacao
+    });
     return data;
   }
 
   async remove(id_ciclo_lactacao: number) {
+    this.logger.log('Iniciando remoção de ciclo de lactação', { 
+      module: 'CicloLactacaoService', 
+      method: 'remove',
+      cicloId: id_ciclo_lactacao
+    });
+    
     await this.findOne(id_ciclo_lactacao);
 
     const { error } = await this.supabase
@@ -104,8 +196,19 @@ export class CicloLactacaoService {
       .eq('id_ciclo_lactacao', id_ciclo_lactacao);
 
     if (error) {
+      this.logger.logError(error, { 
+        module: 'CicloLactacaoService', 
+        method: 'remove',
+        cicloId: id_ciclo_lactacao
+      });
       throw new InternalServerErrorException(`Falha ao remover ciclo de lactação: ${error.message}`);
     }
+    
+    this.logger.log('Ciclo de lactação removido com sucesso', { 
+      module: 'CicloLactacaoService', 
+      method: 'remove',
+      cicloId: id_ciclo_lactacao
+    });
     return { message: 'Ciclo removido com sucesso' };
   }
 }
