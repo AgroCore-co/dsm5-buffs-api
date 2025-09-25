@@ -139,7 +139,7 @@ model Lote {
   status          String?      @db.VarChar(20)
   descricao       String?      @db.VarChar(200)
   qtd_max         Int?
-  geo_mapa        Bytes?
+  geo_mapa        Json?
   area_m2         Decimal?     @db.Decimal(12, 2)
   created_at      DateTime     @default(now())
   updated_at      DateTime     @updatedAt

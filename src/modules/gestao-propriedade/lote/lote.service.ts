@@ -25,16 +25,8 @@ export class LoteService {
     return perfilUsuario.id_usuario;
   }
 
-  // Função helper para converter a string GeoJSON em objeto
+  // Com geo_mapa em JSON no banco, não é necessário parse/stringify
   private parseGeoMapa(lote: any): any {
-    if (lote && typeof lote.geo_mapa === 'string') {
-      try {
-        lote.geo_mapa = JSON.parse(lote.geo_mapa);
-      } catch (e) {
-        // Se falhar, deixa como está para não quebrar a aplicação
-        console.error('Falha ao parsear GeoJSON:', e);
-      }
-    }
     return lote;
   }
   
@@ -55,10 +47,9 @@ export class LoteService {
     const userId = await this.getUserId(user);
     await this.validateOwnership(createLoteDto.id_propriedade, userId);
     
-    // Prepara o objeto para inserção, stringificando o geo_mapa
+    // Inserção direta; geo_mapa já é objeto JSON
     const loteToInsert = {
-        ...createLoteDto,
-        geo_mapa: JSON.stringify(createLoteDto.geo_mapa)
+        ...createLoteDto
     };
 
     const { data, error } = await this.supabase
@@ -118,11 +109,8 @@ export class LoteService {
   async update(id: number, updateLoteDto: UpdateLoteDto, user: any) {
     await this.findOne(id, user); // Valida a posse do lote que será atualizado
 
-    // Se o DTO de update contiver um novo geo_mapa, ele precisa ser stringificado
+    // Atualização direta; geo_mapa já é objeto JSON
     const loteToUpdate: any = { ...updateLoteDto };
-    if (loteToUpdate.geo_mapa) {
-        loteToUpdate.geo_mapa = JSON.stringify(loteToUpdate.geo_mapa);
-    }
     
     // Se a propriedade estiver sendo alterada, valida a posse da nova propriedade
     if(loteToUpdate.id_propriedade){
