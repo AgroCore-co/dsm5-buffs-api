@@ -1,5 +1,5 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, ParseIntPipe, UseGuards, HttpCode } from '@nestjs/common';
-import { ApiBearerAuth, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { Controller, Get, Post, Body, Patch, Param, Delete, ParseIntPipe, UseGuards, HttpCode, Query } from '@nestjs/common';
+import { ApiBearerAuth, ApiOperation, ApiResponse, ApiTags, ApiQuery } from '@nestjs/swagger';
 import { SupabaseAuthGuard } from '../../auth/guards/auth.guard';
 import { User } from '../../auth/decorators/user.decorator';
 import { ControleLeiteiroService } from './controle-leiteiro.service';
@@ -24,11 +24,14 @@ export class ControleLeiteiroController {
   }
 
   @Get()
-  @ApiOperation({ summary: 'Lista todos os registros de lactação' })
+  @ApiOperation({ summary: 'Lista todos os registros de lactação (paginado)' })
   @ApiResponse({ status: 200, description: 'Lista de registros retornada com sucesso.' })
   @ApiResponse({ status: 401, description: 'Não autorizado.' })
-  findAll() {
-    return this.service.findAll();
+  @ApiResponse({ status: 400, description: 'Parâmetros de paginação inválidos.' })
+  @ApiQuery({ name: 'page', required: false, type: Number, description: 'Número da página (default: 1)' })
+  @ApiQuery({ name: 'limit', required: false, type: Number, description: 'Quantidade de registros por página (default: 20)' })
+  findAll(@Query('page') page: number = 1, @Query('limit') limit: number = 20) {
+    return this.service.findAll(Number(page), Number(limit));
   }
 
   @Get(':id')
