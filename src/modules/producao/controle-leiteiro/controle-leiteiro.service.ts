@@ -50,7 +50,7 @@ export class ControleLeiteiroService {
     this.customLogger.log('ID do usuário obtido com sucesso', { 
       module: 'ControleLeiteiroService', 
       method: 'create',
-      userId: idUsuario
+      userId: String(idUsuario)
     });
 
     const dtoToInsert = { ...createDto, id_usuario: idUsuario };
@@ -75,9 +75,10 @@ export class ControleLeiteiroService {
     }
 
     if (!lactacaoData) {
-      this.customLogger.error('Falha ao obter dados do registro criado', { 
-        module: 'ControleLeiteiroService', 
-        method: 'create'
+      this.customLogger.error('Falha ao obter dados do registro criado', undefined, {
+        module: 'ControleLeiteiroService',
+        method: 'create',
+        userId: String(idUsuario)
       });
       throw new InternalServerErrorException('Falha ao obter dados do registro de lactação criado.');
     }
@@ -306,7 +307,7 @@ export class ControleLeiteiroService {
         module: 'ControleLeiteiroService', 
         method: 'findAllByBufala',
         bufalaId: id_bufala,
-        userId: idUsuario,
+        userId: String(idUsuario),
         idDonoPropriedade
       });
       throw new UnauthorizedException(`Você não tem permissão para acessar os dados desta búfala.`);
@@ -396,7 +397,7 @@ export class ControleLeiteiroService {
         module: 'ControleLeiteiroService', 
         method: 'findOne',
         lactacaoId: id,
-        userId: idUsuario
+  userId: String(idUsuario)
       });
       throw new NotFoundException(`Registro de lactação com ID ${id} não encontrado ou não pertence a este usuário.`);
     }
@@ -405,7 +406,7 @@ export class ControleLeiteiroService {
       module: 'ControleLeiteiroService', 
       method: 'findOne',
       lactacaoId: id,
-      userId: idUsuario
+  userId: String(idUsuario)
     });
     return data;
   }
