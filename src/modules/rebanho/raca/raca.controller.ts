@@ -1,6 +1,7 @@
 import { Controller, Get, Post, Body, UseGuards, Param, Patch, Delete, ParseIntPipe, UseInterceptors } from '@nestjs/common';
 import { CacheInterceptor, CacheTTL } from '@nestjs/cache-manager';
 import { RacaService } from './raca.service';
+import { LoggerService } from '../../../core/logger/logger.service';
 import { CreateRacaDto } from './dto/create-raca.dto';
 import { UpdateRacaDto } from './dto/update-raca.dto';
 import { ApiTags, ApiBearerAuth, ApiOperation, ApiResponse, ApiParam } from '@nestjs/swagger';
@@ -11,7 +12,10 @@ import { SupabaseAuthGuard } from '../../auth/guards/auth.guard';
 @ApiTags('Rebanho - Raças')
 @Controller('racas')
 export class RacaController {
-  constructor(private readonly racaService: RacaService) {}
+  constructor(
+    private readonly racaService: RacaService,
+    private readonly logger: LoggerService,
+  ) {}
 
   @Get()
   @UseInterceptors(CacheInterceptor)
@@ -23,6 +27,7 @@ export class RacaController {
   @ApiResponse({ status: 200, description: 'Lista de raças retornada com sucesso.' })
   @ApiResponse({ status: 401, description: 'Não autorizado.' })
   findAll() {
+    this.logger.logApiRequest('GET', '/racas', undefined, { module: 'RacaController', method: 'findAll' });
     return this.racaService.findAll();
   }
 
@@ -38,6 +43,7 @@ export class RacaController {
   @ApiResponse({ status: 401, description: 'Não autorizado.' })
   @ApiResponse({ status: 404, description: 'Raça não encontrada.' })
   findOne(@Param('id', ParseIntPipe) id: number) {
+    this.logger.logApiRequest('GET', `/racas/${id}`, undefined, { module: 'RacaController', method: 'findOne', racaId: id });
     return this.racaService.findOne(id);
   }
 
@@ -50,6 +56,7 @@ export class RacaController {
   @ApiResponse({ status: 400, description: 'Dados inválidos.' })
   @ApiResponse({ status: 401, description: 'Não autorizado.' })
   create(@Body() createRacaDto: CreateRacaDto) {
+    this.logger.logApiRequest('POST', '/racas', undefined, { module: 'RacaController', method: 'create' });
     return this.racaService.create(createRacaDto);
   }
 
@@ -64,6 +71,7 @@ export class RacaController {
   @ApiResponse({ status: 401, description: 'Não autorizado.' })
   @ApiResponse({ status: 404, description: 'Raça não encontrada.' })
   update(@Param('id', ParseIntPipe) id: number, @Body() updateRacaDto: UpdateRacaDto) {
+    this.logger.logApiRequest('PATCH', `/racas/${id}`, undefined, { module: 'RacaController', method: 'update', racaId: id });
     return this.racaService.update(id, updateRacaDto);
   }
 
@@ -77,6 +85,7 @@ export class RacaController {
   @ApiResponse({ status: 401, description: 'Não autorizado.' })
   @ApiResponse({ status: 404, description: 'Raça não encontrada.' })
   remove(@Param('id', ParseIntPipe) id: number) {
+    this.logger.logApiRequest('DELETE', `/racas/${id}`, undefined, { module: 'RacaController', method: 'remove', racaId: id });
     return this.racaService.remove(id);
   }
 }

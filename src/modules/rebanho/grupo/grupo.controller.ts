@@ -1,6 +1,7 @@
 import { Controller, Get, Post, Body, UseGuards, Param, Patch, Delete, ParseIntPipe, UseInterceptors } from '@nestjs/common';
 import { CacheInterceptor, CacheTTL } from '@nestjs/cache-manager';
 import { GrupoService } from './grupo.service';
+import { LoggerService } from '../../../core/logger/logger.service';
 import { CreateGrupoDto } from './dto/create-grupo.dto';
 import { UpdateGrupoDto } from './dto/update-grupo.dto';
 import { ApiTags, ApiBearerAuth, ApiOperation, ApiResponse, ApiParam } from '@nestjs/swagger';
@@ -11,7 +12,10 @@ import { SupabaseAuthGuard } from '../../auth/guards/auth.guard';
 @ApiTags('Rebanho - Grupos')
 @Controller('grupos')
 export class GrupoController {
-  constructor(private readonly grupoService: GrupoService) {}
+  constructor(
+    private readonly grupoService: GrupoService,
+    private readonly logger: LoggerService,
+  ) {}
 
   @Get()
   @UseInterceptors(CacheInterceptor)
@@ -23,6 +27,7 @@ export class GrupoController {
   @ApiResponse({ status: 200, description: 'Lista de grupos retornada com sucesso.' })
   @ApiResponse({ status: 401, description: 'Não autorizado.' })
   findAll() {
+    this.logger.logApiRequest('GET', '/grupos', undefined, { module: 'GrupoController', method: 'findAll' });
     return this.grupoService.findAll();
   }
 
@@ -38,6 +43,7 @@ export class GrupoController {
   @ApiResponse({ status: 401, description: 'Não autorizado.' })
   @ApiResponse({ status: 404, description: 'Grupo não encontrado.' })
   findOne(@Param('id', ParseIntPipe) id: number) {
+    this.logger.logApiRequest('GET', `/grupos/${id}`, undefined, { module: 'GrupoController', method: 'findOne', grupoId: id });
     return this.grupoService.findOne(id);
   }
 
@@ -50,6 +56,7 @@ export class GrupoController {
   @ApiResponse({ status: 400, description: 'Dados inválidos.' })
   @ApiResponse({ status: 401, description: 'Não autorizado.' })
   create(@Body() createGrupoDto: CreateGrupoDto) {
+    this.logger.logApiRequest('POST', '/grupos', undefined, { module: 'GrupoController', method: 'create' });
     return this.grupoService.create(createGrupoDto);
   }
 
@@ -64,6 +71,7 @@ export class GrupoController {
   @ApiResponse({ status: 401, description: 'Não autorizado.' })
   @ApiResponse({ status: 404, description: 'Grupo não encontrado.' })
   update(@Param('id', ParseIntPipe) id: number, @Body() updateGrupoDto: UpdateGrupoDto) {
+    this.logger.logApiRequest('PATCH', `/grupos/${id}`, undefined, { module: 'GrupoController', method: 'update', grupoId: id });
     return this.grupoService.update(id, updateGrupoDto);
   }
 
@@ -77,6 +85,7 @@ export class GrupoController {
   @ApiResponse({ status: 401, description: 'Não autorizado.' })
   @ApiResponse({ status: 404, description: 'Grupo não encontrado.' })
   remove(@Param('id', ParseIntPipe) id: number) {
+    this.logger.logApiRequest('DELETE', `/grupos/${id}`, undefined, { module: 'GrupoController', method: 'remove', grupoId: id });
     return this.grupoService.remove(id);
   }
 }
