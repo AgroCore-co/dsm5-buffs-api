@@ -37,6 +37,8 @@ model Endereco {
   updated_at       DateTime      @updatedAt
   Usuario          Usuario[]
   Propriedade      Propriedade[]
+
+  @@map("enderecos")
 }
 
 model Raca {
@@ -45,31 +47,37 @@ model Raca {
   created_at DateTime @default(now())
   updated_at DateTime @updatedAt
   Bufalo     Bufalo[]
+
+  @@map("racas")
 }
 
 model Grupo {
   id_grupo         BigInt         @id @default(autoincrement())
   nome_grupo       String         @db.VarChar(50)
   nivel_maturidade String?        @db.VarChar(1)
-  color            String?        @db.VarChar(7) // Adicionado
-  id_propriedade   BigInt?        // Adicionado
+  color            String?        @db.VarChar(7)
+  id_propriedade   BigInt?
   created_at       DateTime       @default(now())
   updated_at       DateTime       @updatedAt
-  Propriedade      Propriedade?   @relation(fields: [id_propriedade], references: [id_propriedade]) // Adicionado
+  Propriedade      Propriedade?   @relation(fields: [id_propriedade], references: [id_propriedade])
   Bufalo           Bufalo[]
   MovLote          MovLote[]
   AlimRegistro     AlimRegistro[]
+
+  @@map("grupos")
 }
 
 model AlimentacaoDef {
   id_aliment_def   BigInt         @id @default(autoincrement())
   tipo_alimentacao String         @db.VarChar(50)
   descricao        String?        @db.VarChar(200)
-  id_propriedade   BigInt?        // Adicionado
+  id_propriedade   BigInt?
   created_at       DateTime       @default(now())
   updated_at       DateTime       @updatedAt
-  Propriedade      Propriedade?   @relation(fields: [id_propriedade], references: [id_propriedade]) // Adicionado
+  Propriedade      Propriedade?   @relation(fields: [id_propriedade], references: [id_propriedade])
   AlimRegistro     AlimRegistro[]
+
+  @@map("alimentacao_defs")
 }
 
 model Industria {
@@ -78,11 +86,13 @@ model Industria {
   representante  String?      @db.VarChar(20)
   contato        String?      @db.VarChar(20)
   observacao     String?      @db.VarChar(50)
-  id_propriedade BigInt?      // Adicionado
+  id_propriedade BigInt?
   created_at     DateTime     @default(now())
   updated_at     DateTime     @updatedAt
-  Propriedade    Propriedade? @relation(fields: [id_propriedade], references: [id_propriedade]) // Adicionado
+  Propriedade    Propriedade? @relation(fields: [id_propriedade], references: [id_propriedade])
   Coleta         Coleta[]
+
+  @@map("industrias")
 }
 
 model Usuario {
@@ -103,8 +113,9 @@ model Usuario {
   Coleta                      Coleta[]             @relation("FuncionarioColeta")
   EstoqueLeite                EstoqueLeite[]
   DadosLactacao               DadosLactacao[]
-  // Relação para propriedades onde o usuário é funcionário
   PropriedadesComoFuncionario UsuarioPropriedade[]
+
+  @@map("usuarios")
 }
 
 model Propriedade {
@@ -122,22 +133,21 @@ model Propriedade {
   Lote             Lote[]
   Bufalo           Bufalo[]
   EstoqueLeite     EstoqueLeite[]
-  // Relação para os funcionários da propriedade
   Funcionarios     UsuarioPropriedade[]
-  // Relações adicionadas
-  Grupo            Grupo[] // Adicionado
-  Alertas          Alertas[] // Adicionado
-  AlimentacaoDef   AlimentacaoDef[] // Adicionado
-  CicloLactacao    CicloLactacao[] // Adicionado
-  Coleta           Coleta[] // Adicionado
-  DadosLactacao    DadosLactacao[] // Adicionado
-  DadosReproducao  DadosReproducao[] // Adicionado
-  Industria        Industria[] // Adicionado
-  MaterialGenetico MaterialGenetico[] // Adicionado
-  Medicacoes       Medicacoes[] // Adicionado
+  Grupo            Grupo[]
+  Alertas          Alertas[]
+  AlimentacaoDef   AlimentacaoDef[]
+  CicloLactacao    CicloLactacao[]
+  Coleta           Coleta[]
+  DadosLactacao    DadosLactacao[]
+  DadosReproducao  DadosReproducao[]
+  Industria        Industria[]
+  MaterialGenetico MaterialGenetico[]
+  Medicacoes       Medicacoes[]
+
+  @@map("propriedades")
 }
 
-// Tabela de junção para a relação Muitos-para-Muitos entre Usuario e Propriedade (Funcionários)
 model UsuarioPropriedade {
   id_usuario     BigInt
   id_propriedade BigInt
@@ -147,6 +157,7 @@ model UsuarioPropriedade {
   Propriedade Propriedade @relation(fields: [id_propriedade], references: [id_propriedade])
 
   @@id([id_usuario, id_propriedade])
+  @@map("usuario_propriedade")
 }
 
 model Lote {
@@ -164,6 +175,8 @@ model Lote {
   Propriedade     Propriedade? @relation(fields: [id_propriedade], references: [id_propriedade])
   MovLoteAnterior MovLote[]    @relation("LoteAnterior")
   MovLoteAtual    MovLote[]    @relation("LoteAtual")
+
+  @@map("lotes")
 }
 
 model Bufalo {
@@ -205,6 +218,8 @@ model Bufalo {
   CicloLactacao         CicloLactacao[]
   DadosLactacao         DadosLactacao[]
   Alertas               Alertas[]
+
+  @@map("bufalos")
 }
 
 model MovLote {
@@ -219,6 +234,8 @@ model MovLote {
   Grupo            Grupo?    @relation(fields: [id_grupo], references: [id_grupo])
   LoteAnterior     Lote?     @relation("LoteAnterior", fields: [id_lote_anterior], references: [id_lote])
   LoteAtual        Lote?     @relation("LoteAtual", fields: [id_lote_atual], references: [id_lote])
+
+  @@map("mov_lotes")
 }
 
 model DadosZootecnicos {
@@ -236,6 +253,8 @@ model DadosZootecnicos {
   updated_at        DateTime @updatedAt
   Bufalo            Bufalo?  @relation(fields: [id_bufalo], references: [id_bufalo])
   Usuario           Usuario? @relation(fields: [id_usuario], references: [id_usuario])
+
+  @@map("dados_zootecnicos")
 }
 
 model Medicacoes {
@@ -243,11 +262,13 @@ model Medicacoes {
   tipo_tratamento String?           @db.VarChar(30)
   medicacao       String?           @db.VarChar(30)
   descricao       String?           @db.VarChar(100)
-  id_propriedade  BigInt?           // Adicionado
+  id_propriedade  BigInt?
   created_at      DateTime          @default(now())
   updated_at      DateTime          @updatedAt
-  Propriedade     Propriedade?      @relation(fields: [id_propriedade], references: [id_propriedade]) // Adicionado
+  Propriedade     Propriedade?      @relation(fields: [id_propriedade], references: [id_propriedade])
   DadosSanitarios DadosSanitarios[]
+
+  @@map("medicacoes")
 }
 
 model DadosSanitarios {
@@ -266,6 +287,8 @@ model DadosSanitarios {
   Bufalo            Bufalo?     @relation(fields: [id_bufalo], references: [id_bufalo])
   Usuario           Usuario?    @relation(fields: [id_usuario], references: [id_usuario])
   Medicacoes        Medicacoes? @relation(fields: [id_medicao], references: [id_medicacao])
+
+  @@map("dados_sanitarios")
 }
 
 model MaterialGenetico {
@@ -275,13 +298,15 @@ model MaterialGenetico {
   id_bufalo_origem     BigInt?
   fornecedor           String?           @db.VarChar(100)
   data_coleta          DateTime?
-  id_propriedade       BigInt?           // Adicionado
+  id_propriedade       BigInt?
   created_at           DateTime          @default(now())
   updated_at           DateTime          @updatedAt
-  Propriedade          Propriedade?      @relation(fields: [id_propriedade], references: [id_propriedade]) // Adicionado
+  Propriedade          Propriedade?      @relation(fields: [id_propriedade], references: [id_propriedade])
   BufaloOrigem         Bufalo?           @relation("BufaloOrigem", fields: [id_bufalo_origem], references: [id_bufalo])
   DadosReproducaoOvulo DadosReproducao[] @relation("Ovulo")
   DadosReproducaoSemen DadosReproducao[] @relation("Semen")
+
+  @@map("material_genetico")
 }
 
 model DadosReproducao {
@@ -295,14 +320,16 @@ model DadosReproducao {
   tipo_parto       String?           @db.VarChar(20)
   dt_evento        DateTime
   ocorrencia       String?           @db.VarChar(50)
-  id_propriedade   BigInt?           // Adicionado
+  id_propriedade   BigInt?
   created_at       DateTime          @default(now())
   updated_at       DateTime          @updatedAt
-  Propriedade      Propriedade?      @relation(fields: [id_propriedade], references: [id_propriedade]) // Adicionado
+  Propriedade      Propriedade?      @relation(fields: [id_propriedade], references: [id_propriedade])
   Ovulo            MaterialGenetico? @relation("Ovulo", fields: [id_ovulo], references: [id_material])
   Semen            MaterialGenetico? @relation("Semen", fields: [id_semen], references: [id_material])
   Bufala           Bufalo?           @relation("Bufala", fields: [id_bufala], references: [id_bufalo])
   Bufalo           Bufalo?           @relation("Bufalo", fields: [id_bufalo], references: [id_bufalo])
+
+  @@map("dados_reproducao")
 }
 
 model AlimRegistro {
@@ -319,6 +346,8 @@ model AlimRegistro {
   Grupo          Grupo?          @relation(fields: [id_grupo], references: [id_grupo])
   AlimentacaoDef AlimentacaoDef? @relation(fields: [id_aliment_def], references: [id_aliment_def])
   Usuario        Usuario?        @relation(fields: [id_usuario], references: [id_usuario])
+
+  @@map("alim_registros")
 }
 
 model Coleta {
@@ -329,12 +358,14 @@ model Coleta {
   quantidade      Decimal?     @db.Decimal(8, 3)
   dt_coleta       DateTime?
   id_funcionario  BigInt?
-  id_propriedade  BigInt?      // Adicionado
+  id_propriedade  BigInt?
   created_at      DateTime     @default(now())
   updated_at      DateTime     @updatedAt
-  Propriedade     Propriedade? @relation(fields: [id_propriedade], references: [id_propriedade]) // Adicionado
+  Propriedade     Propriedade? @relation(fields: [id_propriedade], references: [id_propriedade])
   Industria       Industria?   @relation(fields: [id_industria], references: [id_industria])
   Funcionario     Usuario?     @relation("FuncionarioColeta", fields: [id_funcionario], references: [id_usuario])
+
+  @@map("coletas")
 }
 
 model EstoqueLeite {
@@ -348,6 +379,8 @@ model EstoqueLeite {
   updated_at     DateTime     @updatedAt
   Propriedade    Propriedade? @relation(fields: [id_propriedade], references: [id_propriedade])
   Usuario        Usuario?     @relation(fields: [id_usuario], references: [id_usuario])
+
+  @@map("estoque_leite")
 }
 
 model CicloLactacao {
@@ -359,12 +392,14 @@ model CicloLactacao {
   dt_secagem_real     DateTime?
   status              String          @default("Em Lactação") @db.VarChar(20)
   observacao          String?
-  id_propriedade      BigInt?         // Adicionado
+  id_propriedade      BigInt?
   created_at          DateTime        @default(now())
   updated_at          DateTime        @updatedAt
-  Propriedade         Propriedade?    @relation(fields: [id_propriedade], references: [id_propriedade]) // Adicionado
+  Propriedade         Propriedade?    @relation(fields: [id_propriedade], references: [id_propriedade])
   Bufala              Bufalo          @relation(fields: [id_bufala], references: [id_bufalo])
   DadosLactacao       DadosLactacao[]
+
+  @@map("ciclos_lactacao")
 }
 
 model DadosLactacao {
@@ -376,13 +411,15 @@ model DadosLactacao {
   periodo           String?        @db.VarChar(1)
   ocorrencia        String?        @db.VarChar(50)
   dt_ordenha        DateTime
-  id_propriedade    BigInt?        // Adicionado
+  id_propriedade    BigInt?
   created_at        DateTime       @default(now())
   updated_at        DateTime       @updatedAt
-  Propriedade       Propriedade?   @relation(fields: [id_propriedade], references: [id_propriedade]) // Adicionado
+  Propriedade       Propriedade?   @relation(fields: [id_propriedade], references: [id_propriedade])
   Bufala            Bufalo?        @relation(fields: [id_bufala], references: [id_bufalo])
   Usuario           Usuario?       @relation(fields: [id_usuario], references: [id_usuario])
   CicloLactacao     CicloLactacao? @relation(fields: [id_ciclo_lactacao], references: [id_ciclo_lactacao])
+
+  @@map("dados_lactacao")
 }
 
 model Alertas {
@@ -398,9 +435,12 @@ model Alertas {
   visto              Boolean          @default(false)
   id_evento_origem   BigInt?
   tipo_evento_origem String?          @db.VarChar(50)
-  id_propriedade     BigInt?          // Adicionado
+  id_propriedade     BigInt?
   created_at         DateTime         @default(now())
   updated_at         DateTime         @updatedAt
-  Propriedade        Propriedade?     @relation(fields: [id_propriedade], references: [id_propriedade]) // Adicionado
+  Propriedade        Propriedade?     @relation(fields: [id_propriedade], references: [id_propriedade])
   Bufalo             Bufalo           @relation(fields: [animal_id], references: [id_bufalo])
+
+  @@map("alertas")
 }
+
