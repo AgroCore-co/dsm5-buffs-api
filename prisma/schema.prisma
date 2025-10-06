@@ -51,8 +51,11 @@ model Grupo {
   id_grupo         BigInt         @id @default(autoincrement())
   nome_grupo       String         @db.VarChar(50)
   nivel_maturidade String?        @db.VarChar(1)
+  color            String?        @db.VarChar(7) // Adicionado
+  id_propriedade   BigInt?        // Adicionado
   created_at       DateTime       @default(now())
   updated_at       DateTime       @updatedAt
+  Propriedade      Propriedade?   @relation(fields: [id_propriedade], references: [id_propriedade]) // Adicionado
   Bufalo           Bufalo[]
   MovLote          MovLote[]
   AlimRegistro     AlimRegistro[]
@@ -62,20 +65,24 @@ model AlimentacaoDef {
   id_aliment_def   BigInt         @id @default(autoincrement())
   tipo_alimentacao String         @db.VarChar(50)
   descricao        String?        @db.VarChar(200)
+  id_propriedade   BigInt?        // Adicionado
   created_at       DateTime       @default(now())
   updated_at       DateTime       @updatedAt
+  Propriedade      Propriedade?   @relation(fields: [id_propriedade], references: [id_propriedade]) // Adicionado
   AlimRegistro     AlimRegistro[]
 }
 
 model Industria {
-  id_industria  BigInt   @id @default(autoincrement())
-  nome          String?  @db.VarChar(20)
-  representante String?  @db.VarChar(20)
-  contato       String?  @db.VarChar(20)
-  observacao    String?  @db.VarChar(50)
-  created_at    DateTime @default(now())
-  updated_at    DateTime @updatedAt
-  Coleta        Coleta[]
+  id_industria   BigInt       @id @default(autoincrement())
+  nome           String?      @db.VarChar(20)
+  representante  String?      @db.VarChar(20)
+  contato        String?      @db.VarChar(20)
+  observacao     String?      @db.VarChar(50)
+  id_propriedade BigInt?      // Adicionado
+  created_at     DateTime     @default(now())
+  updated_at     DateTime     @updatedAt
+  Propriedade    Propriedade? @relation(fields: [id_propriedade], references: [id_propriedade]) // Adicionado
+  Coleta         Coleta[]
 }
 
 model Usuario {
@@ -101,22 +108,33 @@ model Usuario {
 }
 
 model Propriedade {
-  id_propriedade BigInt               @id @default(autoincrement())
-  nome           String               @db.VarChar(100)
-  id_dono        BigInt?
-  id_endereco    BigInt?
-  cnpj           String               @db.VarChar(18)
-  p_abcb         Boolean?
-  tipo_manejo    String?              @db.VarChar(1)
-  created_at     DateTime             @default(now())
-  updated_at     DateTime             @updatedAt
-  Endereco       Endereco?            @relation(fields: [id_endereco], references: [id_endereco])
-  Usuario        Usuario?             @relation("DonoPropriedade", fields: [id_dono], references: [id_usuario])
-  Lote           Lote[]
-  Bufalo         Bufalo[]
-  EstoqueLeite   EstoqueLeite[]
+  id_propriedade   BigInt               @id @default(autoincrement())
+  nome             String               @db.VarChar(100)
+  id_dono          BigInt?
+  id_endereco      BigInt?
+  cnpj             String               @db.VarChar(18)
+  p_abcb           Boolean?
+  tipo_manejo      String?              @db.VarChar(1)
+  created_at       DateTime             @default(now())
+  updated_at       DateTime             @updatedAt
+  Endereco         Endereco?            @relation(fields: [id_endereco], references: [id_endereco])
+  Usuario          Usuario?             @relation("DonoPropriedade", fields: [id_dono], references: [id_usuario])
+  Lote             Lote[]
+  Bufalo           Bufalo[]
+  EstoqueLeite     EstoqueLeite[]
   // Relação para os funcionários da propriedade
-  Funcionarios   UsuarioPropriedade[]
+  Funcionarios     UsuarioPropriedade[]
+  // Relações adicionadas
+  Grupo            Grupo[] // Adicionado
+  Alertas          Alertas[] // Adicionado
+  AlimentacaoDef   AlimentacaoDef[] // Adicionado
+  CicloLactacao    CicloLactacao[] // Adicionado
+  Coleta           Coleta[] // Adicionado
+  DadosLactacao    DadosLactacao[] // Adicionado
+  DadosReproducao  DadosReproducao[] // Adicionado
+  Industria        Industria[] // Adicionado
+  MaterialGenetico MaterialGenetico[] // Adicionado
+  Medicacoes       Medicacoes[] // Adicionado
 }
 
 // Tabela de junção para a relação Muitos-para-Muitos entre Usuario e Propriedade (Funcionários)
@@ -139,7 +157,7 @@ model Lote {
   status          String?      @db.VarChar(20)
   descricao       String?      @db.VarChar(200)
   qtd_max         Int?
-  geo_mapa        Json?
+  geo_mapa        Json?        @db.JsonB
   area_m2         Decimal?     @db.Decimal(12, 2)
   created_at      DateTime     @default(now())
   updated_at      DateTime     @updatedAt
@@ -225,8 +243,10 @@ model Medicacoes {
   tipo_tratamento String?           @db.VarChar(30)
   medicacao       String?           @db.VarChar(30)
   descricao       String?           @db.VarChar(100)
+  id_propriedade  BigInt?           // Adicionado
   created_at      DateTime          @default(now())
   updated_at      DateTime          @updatedAt
+  Propriedade     Propriedade?      @relation(fields: [id_propriedade], references: [id_propriedade]) // Adicionado
   DadosSanitarios DadosSanitarios[]
 }
 
@@ -255,8 +275,10 @@ model MaterialGenetico {
   id_bufalo_origem     BigInt?
   fornecedor           String?           @db.VarChar(100)
   data_coleta          DateTime?
+  id_propriedade       BigInt?           // Adicionado
   created_at           DateTime          @default(now())
   updated_at           DateTime          @updatedAt
+  Propriedade          Propriedade?      @relation(fields: [id_propriedade], references: [id_propriedade]) // Adicionado
   BufaloOrigem         Bufalo?           @relation("BufaloOrigem", fields: [id_bufalo_origem], references: [id_bufalo])
   DadosReproducaoOvulo DadosReproducao[] @relation("Ovulo")
   DadosReproducaoSemen DadosReproducao[] @relation("Semen")
@@ -273,8 +295,10 @@ model DadosReproducao {
   tipo_parto       String?           @db.VarChar(20)
   dt_evento        DateTime
   ocorrencia       String?           @db.VarChar(50)
+  id_propriedade   BigInt?           // Adicionado
   created_at       DateTime          @default(now())
   updated_at       DateTime          @updatedAt
+  Propriedade      Propriedade?      @relation(fields: [id_propriedade], references: [id_propriedade]) // Adicionado
   Ovulo            MaterialGenetico? @relation("Ovulo", fields: [id_ovulo], references: [id_material])
   Semen            MaterialGenetico? @relation("Semen", fields: [id_semen], references: [id_material])
   Bufala           Bufalo?           @relation("Bufala", fields: [id_bufala], references: [id_bufalo])
@@ -298,17 +322,19 @@ model AlimRegistro {
 }
 
 model Coleta {
-  id_coleta       BigInt     @id @default(autoincrement())
+  id_coleta       BigInt       @id @default(autoincrement())
   id_industria    BigInt?
   resultado_teste Boolean?
-  observacao      String?    @db.VarChar(50)
-  quantidade      Decimal?   @db.Decimal(8, 3)
+  observacao      String?      @db.VarChar(50)
+  quantidade      Decimal?     @db.Decimal(8, 3)
   dt_coleta       DateTime?
   id_funcionario  BigInt?
-  created_at      DateTime   @default(now())
-  updated_at      DateTime   @updatedAt
-  Industria       Industria? @relation(fields: [id_industria], references: [id_industria])
-  Funcionario     Usuario?   @relation("FuncionarioColeta", fields: [id_funcionario], references: [id_usuario])
+  id_propriedade  BigInt?      // Adicionado
+  created_at      DateTime     @default(now())
+  updated_at      DateTime     @updatedAt
+  Propriedade     Propriedade? @relation(fields: [id_propriedade], references: [id_propriedade]) // Adicionado
+  Industria       Industria?   @relation(fields: [id_industria], references: [id_industria])
+  Funcionario     Usuario?     @relation("FuncionarioColeta", fields: [id_funcionario], references: [id_usuario])
 }
 
 model EstoqueLeite {
@@ -333,8 +359,10 @@ model CicloLactacao {
   dt_secagem_real     DateTime?
   status              String          @default("Em Lactação") @db.VarChar(20)
   observacao          String?
+  id_propriedade      BigInt?         // Adicionado
   created_at          DateTime        @default(now())
   updated_at          DateTime        @updatedAt
+  Propriedade         Propriedade?    @relation(fields: [id_propriedade], references: [id_propriedade]) // Adicionado
   Bufala              Bufalo          @relation(fields: [id_bufala], references: [id_bufalo])
   DadosLactacao       DadosLactacao[]
 }
@@ -348,8 +376,10 @@ model DadosLactacao {
   periodo           String?        @db.VarChar(1)
   ocorrencia        String?        @db.VarChar(50)
   dt_ordenha        DateTime
+  id_propriedade    BigInt?        // Adicionado
   created_at        DateTime       @default(now())
   updated_at        DateTime       @updatedAt
+  Propriedade       Propriedade?   @relation(fields: [id_propriedade], references: [id_propriedade]) // Adicionado
   Bufala            Bufalo?        @relation(fields: [id_bufala], references: [id_bufalo])
   Usuario           Usuario?       @relation(fields: [id_usuario], references: [id_usuario])
   CicloLactacao     CicloLactacao? @relation(fields: [id_ciclo_lactacao], references: [id_ciclo_lactacao])
@@ -368,7 +398,9 @@ model Alertas {
   visto              Boolean          @default(false)
   id_evento_origem   BigInt?
   tipo_evento_origem String?          @db.VarChar(50)
+  id_propriedade     BigInt?          // Adicionado
   created_at         DateTime         @default(now())
   updated_at         DateTime         @updatedAt
+  Propriedade        Propriedade?     @relation(fields: [id_propriedade], references: [id_propriedade]) // Adicionado
   Bufalo             Bufalo           @relation(fields: [animal_id], references: [id_bufalo])
 }
