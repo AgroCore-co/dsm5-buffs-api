@@ -24,7 +24,7 @@ enum PrioridadeAlerta {
 
 // Models
 model Endereco {
-  id_endereco      BigInt        @id @default(autoincrement())
+  id_endereco      String        @id @default(uuid()) @db.Uuid
   pais             String        @db.VarChar(50)
   estado           String        @db.VarChar(50)
   cidade           String        @db.VarChar(50)
@@ -42,7 +42,7 @@ model Endereco {
 }
 
 model Raca {
-  id_raca    BigInt   @id @default(autoincrement())
+  id_raca    String   @id @default(uuid()) @db.Uuid
   nome       String   @db.VarChar(50)
   created_at DateTime @default(now())
   updated_at DateTime @updatedAt
@@ -52,11 +52,11 @@ model Raca {
 }
 
 model Grupo {
-  id_grupo         BigInt         @id @default(autoincrement())
+  id_grupo         String         @id @default(uuid()) @db.Uuid
   nome_grupo       String         @db.VarChar(50)
   nivel_maturidade String?        @db.VarChar(1)
   color            String?        @db.VarChar(7)
-  id_propriedade   BigInt?
+  id_propriedade   String?        @db.Uuid
   created_at       DateTime       @default(now())
   updated_at       DateTime       @updatedAt
   Propriedade      Propriedade?   @relation(fields: [id_propriedade], references: [id_propriedade])
@@ -68,10 +68,10 @@ model Grupo {
 }
 
 model AlimentacaoDef {
-  id_aliment_def   BigInt         @id @default(autoincrement())
+  id_aliment_def   String         @id @default(uuid()) @db.Uuid
   tipo_alimentacao String         @db.VarChar(50)
   descricao        String?        @db.VarChar(200)
-  id_propriedade   BigInt?
+  id_propriedade   String?        @db.Uuid
   created_at       DateTime       @default(now())
   updated_at       DateTime       @updatedAt
   Propriedade      Propriedade?   @relation(fields: [id_propriedade], references: [id_propriedade])
@@ -81,12 +81,12 @@ model AlimentacaoDef {
 }
 
 model Industria {
-  id_industria   BigInt       @id @default(autoincrement())
+  id_industria   String       @id @default(uuid()) @db.Uuid
   nome           String?      @db.VarChar(20)
   representante  String?      @db.VarChar(20)
   contato        String?      @db.VarChar(20)
   observacao     String?      @db.VarChar(50)
-  id_propriedade BigInt?
+  id_propriedade String?      @db.Uuid
   created_at     DateTime     @default(now())
   updated_at     DateTime     @updatedAt
   Propriedade    Propriedade? @relation(fields: [id_propriedade], references: [id_propriedade])
@@ -96,13 +96,13 @@ model Industria {
 }
 
 model Usuario {
-  id_usuario                  BigInt               @id @default(autoincrement())
-  auth_id                     String               @unique @db.VarChar(100)
+  id_usuario                  String               @id @default(uuid()) @db.Uuid
+  auth_id                     String               @unique @db.Uuid
   nome                        String               @db.VarChar(100)
   telefone                    String?              @db.VarChar(15)
   email                       String?              @db.VarChar(100)
   cargo                       String?              @db.VarChar(50)
-  id_endereco                 BigInt?
+  id_endereco                 String?              @db.Uuid
   created_at                  DateTime             @default(now())
   updated_at                  DateTime             @updatedAt
   Endereco                    Endereco?            @relation(fields: [id_endereco], references: [id_endereco])
@@ -119,10 +119,10 @@ model Usuario {
 }
 
 model Propriedade {
-  id_propriedade   BigInt               @id @default(autoincrement())
+  id_propriedade   String               @id @default(uuid()) @db.Uuid
   nome             String               @db.VarChar(100)
-  id_dono          BigInt?
-  id_endereco      BigInt?
+  id_dono          String?              @db.Uuid
+  id_endereco      String?              @db.Uuid
   cnpj             String               @db.VarChar(18)
   p_abcb           Boolean?
   tipo_manejo      String?              @db.VarChar(1)
@@ -149,8 +149,8 @@ model Propriedade {
 }
 
 model UsuarioPropriedade {
-  id_usuario     BigInt
-  id_propriedade BigInt
+  id_usuario     String   @db.Uuid
+  id_propriedade String   @db.Uuid
   created_at     DateTime @default(now())
 
   Usuario     Usuario     @relation(fields: [id_usuario], references: [id_usuario])
@@ -161,10 +161,10 @@ model UsuarioPropriedade {
 }
 
 model Lote {
-  id_lote         BigInt       @id @default(autoincrement())
+  id_lote         String       @id @default(uuid()) @db.Uuid
   tipo_lote       String?      @db.VarChar(100)
   nome_lote       String       @db.VarChar(100)
-  id_propriedade  BigInt?
+  id_propriedade  String?      @db.Uuid
   status          String?      @db.VarChar(20)
   descricao       String?      @db.VarChar(200)
   qtd_max         Int?
@@ -180,7 +180,7 @@ model Lote {
 }
 
 model Bufalo {
-  id_bufalo             BigInt             @id @default(autoincrement())
+  id_bufalo             String             @id @default(uuid()) @db.Uuid
   nome                  String?            @db.VarChar(20)
   brinco                String?            @db.VarChar(10)
   microchip             String?
@@ -190,17 +190,17 @@ model Bufalo {
   data_baixa            DateTime?
   status                Boolean?
   motivo_inativo        String?            @db.VarChar(100)
-  id_raca               BigInt?
-  id_propriedade        BigInt?
-  id_grupo              BigInt?
+  id_raca               String?            @db.Uuid
+  id_propriedade        String?            @db.Uuid
+  id_grupo              String?            @db.Uuid
   origem                String?            @db.VarChar(10)
   brinco_original       String?            @db.VarChar(10)
   registro_prov         String?            @db.VarChar(10)
   registro_def          String?            @db.VarChar(10)
   categoria             String?            @db.VarChar(2)
-  id_pai                BigInt?
-  id_mae                BigInt?
-  id_pai_semen          BigInt?
+  id_pai                String?            @db.Uuid
+  id_mae                String?            @db.Uuid
+  id_pai_semen          String?            @db.Uuid
   created_at            DateTime           @default(now())
   updated_at            DateTime           @updatedAt
   Raca                  Raca?              @relation(fields: [id_raca], references: [id_raca])
@@ -223,10 +223,10 @@ model Bufalo {
 }
 
 model MovLote {
-  id_movimento     BigInt    @id @default(autoincrement())
-  id_grupo         BigInt?
-  id_lote_anterior BigInt?
-  id_lote_atual    BigInt?
+  id_movimento     String    @id @default(uuid()) @db.Uuid
+  id_grupo         String?   @db.Uuid
+  id_lote_anterior String?   @db.Uuid
+  id_lote_atual    String?   @db.Uuid
   dt_entrada       DateTime
   dt_saida         DateTime?
   created_at       DateTime  @default(now())
@@ -239,9 +239,9 @@ model MovLote {
 }
 
 model DadosZootecnicos {
-  id_zootec         BigInt   @id @default(autoincrement())
-  id_bufalo         BigInt?
-  id_usuario        BigInt?
+  id_zootec         String   @id @default(uuid()) @db.Uuid
+  id_bufalo         String?  @db.Uuid
+  id_usuario        String?  @db.Uuid
   peso              Decimal? @db.Decimal(7, 2)
   condicao_corporal Decimal? @db.Decimal(4, 2)
   cor_pelagem       String?  @db.VarChar(30)
@@ -258,11 +258,11 @@ model DadosZootecnicos {
 }
 
 model Medicacoes {
-  id_medicacao    BigInt            @id @default(autoincrement())
+  id_medicacao    String            @id @default(uuid()) @db.Uuid
   tipo_tratamento String?           @db.VarChar(30)
   medicacao       String?           @db.VarChar(30)
   descricao       String?           @db.VarChar(100)
-  id_propriedade  BigInt?
+  id_propriedade  String?           @db.Uuid
   created_at      DateTime          @default(now())
   updated_at      DateTime          @updatedAt
   Propriedade     Propriedade?      @relation(fields: [id_propriedade], references: [id_propriedade])
@@ -272,10 +272,10 @@ model Medicacoes {
 }
 
 model DadosSanitarios {
-  id_sanit          BigInt      @id @default(autoincrement())
-  id_bufalo         BigInt?
-  id_usuario        BigInt?
-  id_medicao        BigInt?
+  id_sanit          String      @id @default(uuid()) @db.Uuid
+  id_bufalo         String?     @db.Uuid
+  id_usuario        String?     @db.Uuid
+  id_medicao        String?     @db.Uuid
   dt_aplicacao      DateTime
   dosagem           Decimal?    @db.Decimal(8, 2)
   unidade_medida    String?     @db.VarChar(20)
@@ -292,13 +292,13 @@ model DadosSanitarios {
 }
 
 model MaterialGenetico {
-  id_material          BigInt            @id @default(autoincrement())
+  id_material          String            @id @default(uuid()) @db.Uuid
   tipo                 String?           @db.VarChar(20)
   origem               String?           @db.VarChar(20)
-  id_bufalo_origem     BigInt?
+  id_bufalo_origem     String?           @db.Uuid
   fornecedor           String?           @db.VarChar(100)
   data_coleta          DateTime?
-  id_propriedade       BigInt?
+  id_propriedade       String?           @db.Uuid
   created_at           DateTime          @default(now())
   updated_at           DateTime          @updatedAt
   Propriedade          Propriedade?      @relation(fields: [id_propriedade], references: [id_propriedade])
@@ -310,17 +310,17 @@ model MaterialGenetico {
 }
 
 model DadosReproducao {
-  id_reproducao    BigInt            @id @default(autoincrement())
-  id_ovulo         BigInt?
-  id_semen         BigInt?
-  id_bufala        BigInt?
-  id_bufalo        BigInt?
+  id_reproducao    String            @id @default(uuid()) @db.Uuid
+  id_ovulo         String?           @db.Uuid
+  id_semen         String?           @db.Uuid
+  id_bufala        String?           @db.Uuid
+  id_bufalo        String?           @db.Uuid
   tipo_inseminacao String?           @db.VarChar(50)
   status           String?           @db.VarChar(20)
   tipo_parto       String?           @db.VarChar(20)
   dt_evento        DateTime
   ocorrencia       String?           @db.VarChar(50)
-  id_propriedade   BigInt?
+  id_propriedade   String?           @db.Uuid
   created_at       DateTime          @default(now())
   updated_at       DateTime          @updatedAt
   Propriedade      Propriedade?      @relation(fields: [id_propriedade], references: [id_propriedade])
@@ -333,10 +333,10 @@ model DadosReproducao {
 }
 
 model AlimRegistro {
-  id_registro    BigInt          @id @default(autoincrement())
-  id_grupo       BigInt?
-  id_aliment_def BigInt?
-  id_usuario     BigInt?
+  id_registro    String          @id @default(uuid()) @db.Uuid
+  id_grupo       String?         @db.Uuid
+  id_aliment_def String?         @db.Uuid
+  id_usuario     String?         @db.Uuid
   quantidade     Decimal?        @db.Decimal(8, 2)
   unidade_medida String?         @db.VarChar(20)
   freq_dia       Int?
@@ -351,14 +351,14 @@ model AlimRegistro {
 }
 
 model Coleta {
-  id_coleta       BigInt       @id @default(autoincrement())
-  id_industria    BigInt?
+  id_coleta       String       @id @default(uuid()) @db.Uuid
+  id_industria    String?      @db.Uuid
   resultado_teste Boolean?
   observacao      String?      @db.VarChar(50)
   quantidade      Decimal?     @db.Decimal(8, 3)
   dt_coleta       DateTime?
-  id_funcionario  BigInt?
-  id_propriedade  BigInt?
+  id_funcionario  String?      @db.Uuid
+  id_propriedade  String?      @db.Uuid
   created_at      DateTime     @default(now())
   updated_at      DateTime     @updatedAt
   Propriedade     Propriedade? @relation(fields: [id_propriedade], references: [id_propriedade])
@@ -369,9 +369,9 @@ model Coleta {
 }
 
 model EstoqueLeite {
-  id_estoque     BigInt       @id @default(autoincrement())
-  id_propriedade BigInt?
-  id_usuario     BigInt?
+  id_estoque     String       @id @default(uuid()) @db.Uuid
+  id_propriedade String?      @db.Uuid
+  id_usuario     String?      @db.Uuid
   quantidade     Decimal?     @db.Decimal(10, 3)
   dt_registro    DateTime?
   observacao     String?      @db.VarChar(50)
@@ -384,15 +384,15 @@ model EstoqueLeite {
 }
 
 model CicloLactacao {
-  id_ciclo_lactacao   BigInt          @id @default(autoincrement())
-  id_bufala           BigInt
+  id_ciclo_lactacao   String          @id @default(uuid()) @db.Uuid
+  id_bufala           String          @db.Uuid
   dt_parto            DateTime
   padrao_dias         Int
   dt_secagem_prevista DateTime?
   dt_secagem_real     DateTime?
   status              String          @default("Em Lactação") @db.VarChar(20)
   observacao          String?
-  id_propriedade      BigInt?
+  id_propriedade      String?         @db.Uuid
   created_at          DateTime        @default(now())
   updated_at          DateTime        @updatedAt
   Propriedade         Propriedade?    @relation(fields: [id_propriedade], references: [id_propriedade])
@@ -403,15 +403,15 @@ model CicloLactacao {
 }
 
 model DadosLactacao {
-  id_lact           BigInt         @id @default(autoincrement())
-  id_bufala         BigInt?
-  id_usuario        BigInt?
-  id_ciclo_lactacao BigInt?
+  id_lact           String         @id @default(uuid()) @db.Uuid
+  id_bufala         String?        @db.Uuid
+  id_usuario        String?        @db.Uuid
+  id_ciclo_lactacao String?        @db.Uuid
   qt_ordenha        Decimal?       @db.Decimal(8, 3)
   periodo           String?        @db.VarChar(1)
   ocorrencia        String?        @db.VarChar(50)
   dt_ordenha        DateTime
-  id_propriedade    BigInt?
+  id_propriedade    String?        @db.Uuid
   created_at        DateTime       @default(now())
   updated_at        DateTime       @updatedAt
   Propriedade       Propriedade?   @relation(fields: [id_propriedade], references: [id_propriedade])
@@ -423,8 +423,8 @@ model DadosLactacao {
 }
 
 model Alertas {
-  id_alerta          BigInt           @id @default(autoincrement())
-  animal_id          BigInt
+  id_alerta          String           @id @default(uuid()) @db.Uuid
+  animal_id          String           @db.Uuid
   grupo              String           @db.VarChar(100)
   localizacao        String           @db.VarChar(100)
   motivo             String           @db.Text
@@ -433,9 +433,9 @@ model Alertas {
   prioridade         PrioridadeAlerta
   observacao         String?          @db.Text
   visto              Boolean          @default(false)
-  id_evento_origem   BigInt?
+  id_evento_origem   String?          @db.Uuid
   tipo_evento_origem String?          @db.VarChar(50)
-  id_propriedade     BigInt?
+  id_propriedade     String?          @db.Uuid
   created_at         DateTime         @default(now())
   updated_at         DateTime         @updatedAt
   Propriedade        Propriedade?     @relation(fields: [id_propriedade], references: [id_propriedade])
