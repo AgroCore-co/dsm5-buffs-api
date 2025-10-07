@@ -4,8 +4,6 @@ import { LoggerModule } from './logger/logger.module';
 import { SupabaseModule } from './supabase/supabase.module';
 import { CacheConfigModule } from './cache/cache.module';
 import { CacheService } from './cache/cache.service';
-import { PrismaModule } from './prisma/prisma.module';
-import { PrismaService } from './prisma/prisma.service';
 
 @Module({
   imports: [
@@ -13,14 +11,12 @@ import { PrismaService } from './prisma/prisma.service';
     LoggerModule,
     SupabaseModule,
     CacheConfigModule,
-    PrismaModule
   ],
-  providers: [CacheService, PrismaService],
+  providers: [CacheService],
   exports: [
     GeminiModule,
     LoggerModule,
     SupabaseModule,
-    PrismaService,
     CacheConfigModule,
     CacheService,
   ],
