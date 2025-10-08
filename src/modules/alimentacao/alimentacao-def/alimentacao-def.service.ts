@@ -8,7 +8,10 @@ import { LoggerService } from '../../../core/logger/logger.service';
 @Injectable()
 export class AlimentacaoDefService {
   private supabase: SupabaseClient;
-  constructor(private readonly supabaseService: SupabaseService, private readonly logger: LoggerService) {
+  constructor(
+    private readonly supabaseService: SupabaseService,
+    private readonly logger: LoggerService,
+  ) {
     this.supabase = this.supabaseService.getClient();
   }
 
@@ -36,7 +39,7 @@ export class AlimentacaoDefService {
     return data ?? [];
   }
 
-  async findByPropriedade(idPropriedade: number) {
+  async findByPropriedade(idPropriedade: string) {
     const { data, error } = await this.supabase
       .from('AlimentacaoDef')
       .select('*')
@@ -52,21 +55,13 @@ export class AlimentacaoDefService {
     return data;
   }
 
-  async findOne(id: number) {
-    const { data, error } = await this.supabase.from('AlimentacaoDef').select('*').eq('id_aliment_def', id).single();
-
-    if (error) {
-      if (error.code === 'PGRST116') {
-        throw new NotFoundException('Alimentação definida não encontrada.');
-      }
-      this.logger.logError(error, { module: 'AlimentacaoDef', method: 'findOne', id: String(id) });
-      throw new InternalServerErrorException('Falha ao buscar a alimentação definida.');
-    }
-
+  async findOne(id_aliment_def: string) {
+    const { data, error } = await this.supabase.from('AlimentacaoDef').select('*').eq('id_aliment_def', id_aliment_def).single();
+    if (error) throw new NotFoundException('Definição de alimentação não encontrada.');
     return data;
   }
 
-  async update(id: number, updateAlimentacaoDefDto: UpdateAlimentacaoDefDto) {
+  async update(id: string, updateAlimentacaoDefDto: UpdateAlimentacaoDefDto) {
     // Primeiro verifica se a alimentação definida existe
     await this.findOne(id);
 
@@ -80,7 +75,7 @@ export class AlimentacaoDefService {
     return data;
   }
 
-  async remove(id: number) {
+  async remove(id: string) {
     // Primeiro verifica se a alimentação definida existe
     await this.findOne(id);
 

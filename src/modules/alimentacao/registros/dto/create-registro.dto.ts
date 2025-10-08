@@ -1,18 +1,18 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsInt, IsNumber, IsOptional, IsString } from 'class-validator';
+import { IsInt, IsNumber, IsOptional, IsString, IsUUID } from 'class-validator';
 
 export class CreateRegistroAlimentacaoDto {
   @ApiProperty()
-  @IsInt()
-  id_grupo: number;
+  @IsUUID()
+  id_grupo: string;
 
   @ApiProperty()
-  @IsInt()
-  id_aliment_def: number;
+  @IsUUID()
+  id_aliment_def: string;
 
   @ApiProperty()
-  @IsInt()
-  id_usuario: number;
+  @IsUUID()
+  id_usuario: string;
 
   @ApiProperty()
   @IsNumber()

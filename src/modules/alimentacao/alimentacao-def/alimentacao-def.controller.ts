@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, UseGuards, Param, Patch, Delete, ParseIntPipe, UseInterceptors } from '@nestjs/common';
+import { Controller, Get, Post, Body, UseGuards, Param, Patch, Delete, ParseUUIDPipe, UseInterceptors } from '@nestjs/common';
 import { CacheInterceptor, CacheTTL } from '@nestjs/cache-manager';
 import { AlimentacaoDefService } from './alimentacao-def.service';
 import { CreateAlimentacaoDefDto } from './dto/create-alimentacao-def.dto';
@@ -33,10 +33,10 @@ export class AlimentacaoDefController {
     summary: 'Lista todas as definições de alimentação de uma propriedade',
     description: 'Retorna uma lista de todas as definições de alimentação cadastradas para uma propriedade específica.',
   })
-  @ApiParam({ name: 'id_propriedade', description: 'ID da propriedade', type: 'number' })
+  @ApiParam({ name: 'id_propriedade', description: 'ID da propriedade', type: 'string' })
   @ApiResponse({ status: 200, description: 'Lista de definições de alimentação da propriedade retornada com sucesso.' })
   @ApiResponse({ status: 401, description: 'Não autorizado.' })
-  findByPropriedade(@Param('id_propriedade', ParseIntPipe) idPropriedade: number) {
+  findByPropriedade(@Param('id_propriedade', ParseUUIDPipe) idPropriedade: string) {
     return this.alimentacaoDefService.findByPropriedade(idPropriedade);
   }
 
@@ -47,11 +47,11 @@ export class AlimentacaoDefController {
     summary: 'Busca uma alimentação definida específica',
     description: 'Retorna os dados de uma alimentação definida específica pelo ID.',
   })
-  @ApiParam({ name: 'id', description: 'ID da alimentação definida', type: 'number' })
+  @ApiParam({ name: 'id', description: 'ID da alimentação definida', type: 'string' })
   @ApiResponse({ status: 200, description: 'Alimentação definida encontrada com sucesso.' })
   @ApiResponse({ status: 401, description: 'Não autorizado.' })
   @ApiResponse({ status: 404, description: 'Alimentação definida não encontrada.' })
-  findOne(@Param('id', ParseIntPipe) id: number) {
+  findOne(@Param('id', ParseUUIDPipe) id: string) {
     return this.alimentacaoDefService.findOne(id);
   }
 
@@ -72,12 +72,12 @@ export class AlimentacaoDefController {
     summary: 'Atualiza uma alimentação definida',
     description: 'Atualiza os dados de uma alimentação definida específica pelo ID.',
   })
-  @ApiParam({ name: 'id', description: 'ID da alimentação definida', type: 'number' })
+  @ApiParam({ name: 'id', description: 'ID da alimentação definida', type: 'string' })
   @ApiResponse({ status: 200, description: 'Alimentação definida atualizada com sucesso.' })
   @ApiResponse({ status: 400, description: 'Dados inválidos.' })
   @ApiResponse({ status: 401, description: 'Não autorizado.' })
   @ApiResponse({ status: 404, description: 'Alimentação definida não encontrada.' })
-  update(@Param('id', ParseIntPipe) id: number, @Body() updateAlimentacaoDefDto: UpdateAlimentacaoDefDto) {
+  update(@Param('id', ParseUUIDPipe) id: string, @Body() updateAlimentacaoDefDto: UpdateAlimentacaoDefDto) {
     return this.alimentacaoDefService.update(id, updateAlimentacaoDefDto);
   }
 
@@ -86,11 +86,11 @@ export class AlimentacaoDefController {
     summary: 'Remove uma alimentação definida',
     description: 'Remove uma alimentação definida específica do sistema pelo ID.',
   })
-  @ApiParam({ name: 'id', description: 'ID da alimentação definida', type: 'number' })
+  @ApiParam({ name: 'id', description: 'ID da alimentação definida', type: 'string' })
   @ApiResponse({ status: 200, description: 'Alimentação definida removida com sucesso.' })
   @ApiResponse({ status: 401, description: 'Não autorizado.' })
   @ApiResponse({ status: 404, description: 'Alimentação definida não encontrada.' })
-  remove(@Param('id', ParseIntPipe) id: number) {
+  remove(@Param('id', ParseUUIDPipe) id: string) {
     return this.alimentacaoDefService.remove(id);
   }
 }
