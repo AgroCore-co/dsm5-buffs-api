@@ -14,7 +14,7 @@ export class CicloLactacaoService {
     private readonly logger: LoggerService,
   ) {}
 
-  private readonly tableName = 'CicloLactacao';
+  private readonly tableName = 'ciclolactacao';
 
   private computeSecagemPrevista(dt_parto: string, padrao_dias: number): string {
     const baseDate = new Date(dt_parto);

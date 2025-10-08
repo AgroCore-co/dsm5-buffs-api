@@ -10,7 +10,7 @@ import { createPaginatedResponse, calculatePaginationParams } from '../../../cor
 export class DadosZootecnicosService {
   constructor(private readonly supabase: SupabaseService) {}
 
-  private readonly tableName = 'DadosZootecnicos';
+  private readonly tableName = 'dadoszootecnicos';
 
   /**
    * Função auxiliar CORRIGIDA.
@@ -20,7 +20,7 @@ export class DadosZootecnicosService {
   private async getInternalUserId(authUuid: string): Promise<number> {
     const { data, error } = await this.supabase
       .getClient()
-      .from('Usuario') // <-- NOME CORRETO (Singular, com U maiúsculo)
+      .from('usuario')
       .select('id_usuario') // <-- COLUNA CORRETA (O bigint PK que queremos)
       .eq('auth_id', authUuid) // <-- COLUNA CORRETA (Confirmada por você)
       .single();

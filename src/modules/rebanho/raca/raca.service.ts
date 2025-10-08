@@ -19,7 +19,7 @@ export class RacaService {
   async create(createRacaDto: CreateRacaDto) {
     this.logger.log('Iniciando criação de raça', { module: 'RacaService', method: 'create' });
 
-    const { data, error } = await this.supabase.from('Raca').insert(createRacaDto).select().single();
+    const { data, error } = await this.supabase.from('raca').insert(createRacaDto).select().single();
 
     if (error) {
       this.logger.logError(error, { module: 'RacaService', method: 'create' });
@@ -33,7 +33,7 @@ export class RacaService {
   async findAll() {
     this.logger.log('Iniciando busca de todas as raças', { module: 'RacaService', method: 'findAll' });
 
-    const { data, error } = await this.supabase.from('Raca').select('*').order('nome', { ascending: true });
+    const { data, error } = await this.supabase.from('raca').select('*').order('nome', { ascending: true });
 
     if (error) {
       this.logger.logError(error, { module: 'RacaService', method: 'findAll' });
@@ -47,7 +47,7 @@ export class RacaService {
   async findOne(id: string) {
     this.logger.log('Iniciando busca de raça por ID', { module: 'RacaService', method: 'findOne', racaId: id });
 
-    const { data, error } = await this.supabase.from('Raca').select('*').eq('id_raca', id).single();
+    const { data, error } = await this.supabase.from('raca').select('*').eq('id_raca', id).single();
 
     if (error) {
       if (error.code === 'PGRST116') {
@@ -68,7 +68,7 @@ export class RacaService {
     // Primeiro verifica se a raça existe
     await this.findOne(id);
 
-    const { data, error } = await this.supabase.from('Raca').update(updateRacaDto).eq('id_raca', id).select().single();
+    const { data, error } = await this.supabase.from('raca').update(updateRacaDto).eq('id_raca', id).select().single();
 
     if (error) {
       this.logger.logError(error, { module: 'RacaService', method: 'update', racaId: id });
@@ -85,7 +85,7 @@ export class RacaService {
     // Primeiro verifica se a raça existe
     await this.findOne(id);
 
-    const { error } = await this.supabase.from('Raca').delete().eq('id_raca', id);
+    const { error } = await this.supabase.from('raca').delete().eq('id_raca', id);
 
     if (error) {
       this.logger.logError(error, { module: 'RacaService', method: 'remove', racaId: id });

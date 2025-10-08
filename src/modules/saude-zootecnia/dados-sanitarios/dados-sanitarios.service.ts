@@ -9,15 +9,15 @@ import { createPaginatedResponse, calculatePaginationParams } from '../../../cor
 export class DadosSanitariosService {
   constructor(private readonly supabase: SupabaseService) {}
 
-  private readonly tableName = 'DadosSanitarios';
-  private readonly tableMedicacoes = 'Medicacoes';
+  private readonly tableName = 'dadossanitarios';
+  private readonly tableMedicacoes = 'medicacoes';
 
   /**
    * Função auxiliar para encontrar o ID numérico interno (bigint) do utilizador
    * a partir do UUID de autenticação do Supabase (o 'sub' do JWT).
    */
   private async getInternalUserId(authUuid: string): Promise<number> {
-    const { data, error } = await this.supabase.getClient().from('Usuario').select('id_usuario').eq('auth_id', authUuid).single();
+    const { data, error } = await this.supabase.getClient().from('usuario').select('id_usuario').eq('auth_id', authUuid).single();
 
     if (error || !data) {
       throw new UnauthorizedException(

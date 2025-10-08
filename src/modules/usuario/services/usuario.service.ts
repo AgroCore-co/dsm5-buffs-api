@@ -14,7 +14,7 @@ export class UsuarioService {
     private readonly supabaseService: SupabaseService,
     private readonly logger: LoggerService,
   ) {
-    this.supabase = this.supabaseService.getClient();
+    this.supabase = this.supabaseService.getAdminClient();
   }
 
   /**
@@ -27,7 +27,7 @@ export class UsuarioService {
   async create(createUsuarioDto: CreateUsuarioDto, email: string, authId: string) {
     this.logger.log(`[UsuarioService] create chamado`, { email, authId });
 
-    const { data: existingProfile } = await this.supabase.from('Usuario').select('id_usuario').or(`email.eq.${email},auth_id.eq.${authId}`).single();
+    const { data: existingProfile } = await this.supabase.from('usuario').select('id_usuario').or(`email.eq.${email},auth_id.eq.${authId}`).single();
 
     if (existingProfile) {
       this.logger.warn(`[UsuarioService] Tentativa de criar perfil duplicado`, { email });
@@ -35,7 +35,7 @@ export class UsuarioService {
     }
 
     const { data, error } = await this.supabase
-      .from('Usuario')
+      .from('usuario')
       .insert([
         {
           ...createUsuarioDto,
@@ -60,9 +60,9 @@ export class UsuarioService {
    */
   async findAll() {
     this.logger.log(`[UsuarioService] findAll chamado`);
-    const { data, error } = await this.supabase.from('Usuario').select(`
+    const { data, error } = await this.supabase.from('usuario').select(`
         *,
-        endereco:Endereco(*)
+        endereco:endereco(*)
       `);
 
     if (error) {
@@ -79,11 +79,11 @@ export class UsuarioService {
   async findOneByEmail(email: string) {
     this.logger.log(`[UsuarioService] findOneByEmail chamado`, { email });
     const { data, error } = await this.supabase
-      .from('Usuario')
+      .from('usuario')
       .select(
         `
         *,
-        endereco:Endereco(*)
+        endereco:endereco(*)
       `,
       )
       .eq('email', email)
@@ -106,11 +106,11 @@ export class UsuarioService {
   async findOne(id: string) {
     this.logger.log(`[UsuarioService] findOne chamado`, { id });
     const { data, error } = await this.supabase
-      .from('Usuario')
+      .from('usuario')
       .select(
         `
         *,
-        endereco:Endereco(*)
+        endereco:endereco(*)
       `,
       )
       .eq('id_usuario', id)
@@ -134,7 +134,7 @@ export class UsuarioService {
   async update(id: string, updateUsuarioDto: UpdateUsuarioDto) {
     this.logger.log(`[UsuarioService] update chamado`, { id, updateUsuarioDto });
     const { data, error } = await this.supabase
-      .from('Usuario')
+      .from('usuario')
       .update({
         ...updateUsuarioDto,
         updated_at: new Date().toISOString(),
@@ -159,7 +159,7 @@ export class UsuarioService {
    */
   async remove(id: string) {
     this.logger.log(`[UsuarioService] remove chamado`, { id });
-    const { error, count } = await this.supabase.from('Usuario').delete({ count: 'exact' }).eq('id_usuario', id);
+    const { error, count } = await this.supabase.from('usuario').delete({ count: 'exact' }).eq('id_usuario', id);
 
     if (count === 0) {
       throw new NotFoundException(`Usuário com ID ${id} não encontrado para remoção.`);
@@ -178,7 +178,7 @@ export class UsuarioService {
    */
   async getUserPropriedades(userId: string): Promise<string[]> {
     this.logger.log(`[UsuarioService] getUserPropriedades chamado`, { userId });
-    const { data, error } = await this.supabase.from('Propriedade').select('id_propriedade').eq('id_dono', userId);
+    const { data, error } = await this.supabase.from('propriedade').select('id_propriedade').eq('id_dono', userId);
 
     if (error) {
       this.logger.logError(error, { method: 'getUserPropriedades', userId });
@@ -244,7 +244,7 @@ export class UsuarioService {
 
     // 2) Inserir o perfil na tabela Usuario
     const { data: perfil, error: perfilErr } = await admin
-      .from('Usuario')
+      .from('usuario')
       .insert([
         {
           auth_id: authId,
@@ -276,7 +276,7 @@ export class UsuarioService {
       id_usuario: perfil.id_usuario,
       id_propriedade,
     }));
-    const { error: vincErr } = await admin.from('UsuarioPropriedade').insert(rows);
+    const { error: vincErr } = await admin.from('usuariopropriedade').insert(rows);
     if (vincErr) {
       this.logger.logError(vincErr, { method: 'createFuncionario.vincular', perfil: perfil.id_usuario });
       throw new InternalServerErrorException('Erro ao vincular funcionário à propriedade.');

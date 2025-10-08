@@ -10,7 +10,7 @@ import { createPaginatedResponse, calculatePaginationParams } from '../../../cor
 export class CoberturaService {
   constructor(private readonly supabase: SupabaseService) {}
 
-  private readonly tableName = 'DadosReproducao';
+  private readonly tableName = 'dadosreproducao';
 
   async create(dto: CreateCoberturaDto) {
     const dtoComStatus = {

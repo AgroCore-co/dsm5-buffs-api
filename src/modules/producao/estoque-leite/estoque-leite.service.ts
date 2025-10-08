@@ -14,7 +14,7 @@ export class EstoqueLeiteService {
     private readonly logger: LoggerService,
   ) {}
 
-  private readonly tableName = 'EstoqueLeite';
+  private readonly tableName = 'estoqueleite';
 
   async create(dto: CreateEstoqueLeiteDto, id_usuario: string) {
     this.logger.log('Iniciando criação de registro de estoque de leite', {

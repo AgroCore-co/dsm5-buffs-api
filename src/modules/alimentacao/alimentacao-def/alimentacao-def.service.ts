@@ -16,7 +16,7 @@ export class AlimentacaoDefService {
   }
 
   async create(createAlimentacaoDefDto: CreateAlimentacaoDefDto) {
-    const { data, error } = await this.supabase.from('AlimentacaoDef').insert(createAlimentacaoDefDto).select().single();
+    const { data, error } = await this.supabase.from('alimentacaodef').insert(createAlimentacaoDefDto).select().single();
 
     if (error) {
       this.logger.logError(error, { module: 'AlimentacaoDef', method: 'create' });
@@ -27,7 +27,7 @@ export class AlimentacaoDefService {
   }
 
   async findAll() {
-    const { data, error } = await this.supabase.from('AlimentacaoDef').select('*').order('id_aliment_def', { ascending: true });
+    const { data, error } = await this.supabase.from('alimentacaodef').select('*').order('id_aliment_def', { ascending: true });
 
     if (error) {
       if (error.code === 'PGRST116') {
@@ -41,7 +41,7 @@ export class AlimentacaoDefService {
 
   async findByPropriedade(idPropriedade: string) {
     const { data, error } = await this.supabase
-      .from('AlimentacaoDef')
+      .from('alimentacaodef')
       .select('*')
       .eq('id_propriedade', idPropriedade)
       .order('tipo_alimentacao', { ascending: true })
@@ -56,7 +56,7 @@ export class AlimentacaoDefService {
   }
 
   async findOne(id_aliment_def: string) {
-    const { data, error } = await this.supabase.from('AlimentacaoDef').select('*').eq('id_aliment_def', id_aliment_def).single();
+    const { data, error } = await this.supabase.from('alimentacaodef').select('*').eq('id_aliment_def', id_aliment_def).single();
     if (error) throw new NotFoundException('Definição de alimentação não encontrada.');
     return data;
   }
@@ -65,7 +65,7 @@ export class AlimentacaoDefService {
     // Primeiro verifica se a alimentação definida existe
     await this.findOne(id);
 
-    const { data, error } = await this.supabase.from('AlimentacaoDef').update(updateAlimentacaoDefDto).eq('id_aliment_def', id).select().single();
+    const { data, error } = await this.supabase.from('alimentacaodef').update(updateAlimentacaoDefDto).eq('id_aliment_def', id).select().single();
 
     if (error) {
       this.logger.logError(error, { module: 'AlimentacaoDef', method: 'update', id: String(id) });
@@ -79,7 +79,7 @@ export class AlimentacaoDefService {
     // Primeiro verifica se a alimentação definida existe
     await this.findOne(id);
 
-    const { error } = await this.supabase.from('AlimentacaoDef').delete().eq('id_aliment_def', id);
+    const { error } = await this.supabase.from('alimentacaodef').delete().eq('id_aliment_def', id);
 
     if (error) {
       this.logger.logError(error, { module: 'AlimentacaoDef', method: 'remove', id: String(id) });

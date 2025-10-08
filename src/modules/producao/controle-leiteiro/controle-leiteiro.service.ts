@@ -26,7 +26,7 @@ export class ControleLeiteiroService {
    * Método privado para obter o ID numérico do usuário a partir do token.
    */
   private async getUserId(user: any): Promise<number> {
-    const { data: perfilUsuario, error } = await this.supabase.from('Usuario').select('id_usuario').eq('email', user.email).single();
+    const { data: perfilUsuario, error } = await this.supabase.from('usuario').select('id_usuario').eq('email', user.email).single();
 
     if (error || !perfilUsuario) {
       throw new NotFoundException('Perfil de usuário não encontrado.');
@@ -55,7 +55,7 @@ export class ControleLeiteiroService {
 
     const dtoToInsert = { ...createDto, id_usuario: idUsuario };
 
-    const { data: lactacaoData, error } = await this.supabase.from('DadosLactacao').insert(dtoToInsert).select().single();
+    const { data: lactacaoData, error } = await this.supabase.from('dadoslactacao').insert(dtoToInsert).select().single();
 
     if (error) {
       if (error.code === '23503') {
@@ -123,7 +123,7 @@ export class ControleLeiteiroService {
       });
 
       const { data: bufaloInfo, error: bufaloError } = await this.supabase
-        .from('Bufalo')
+        .from('bufalo')
         .select(
           `
           grupo:Grupo ( nome_grupo ),
@@ -214,7 +214,7 @@ export class ControleLeiteiroService {
 
     try {
       const { data, error, count } = await this.supabase
-        .from('DadosLactacao')
+        .from('dadoslactacao')
         .select(
           `
           *,
@@ -284,7 +284,7 @@ export class ControleLeiteiroService {
     // Etapa 1: Verificar se a búfala existe e se o usuário tem permissão para vê-la.
     // Buscamos a búfala e a propriedade associada para verificar o dono (id_dono).
     const { data: bufalaData, error: bufalaError } = await this.supabase
-      .from('Bufalo')
+      .from('bufalo')
       .select('id_bufalo, propriedade:Propriedade(id_dono)')
       .eq('id_bufalo', id_bufala)
       .single();
@@ -320,7 +320,7 @@ export class ControleLeiteiroService {
 
     try {
       const { data, error, count } = await this.supabase
-        .from('DadosLactacao')
+        .from('dadoslactacao')
         .select(
           `
           *,
@@ -391,7 +391,7 @@ export class ControleLeiteiroService {
 
     const idUsuario = await this.getUserId(user);
 
-    const { data, error } = await this.supabase.from('DadosLactacao').select('*').eq('id_lact', id).eq('id_usuario', idUsuario).single();
+    const { data, error } = await this.supabase.from('dadoslactacao').select('*').eq('id_lact', id).eq('id_usuario', idUsuario).single();
 
     if (error || !data) {
       this.customLogger.warn('Registro de lactação não encontrado ou não pertence ao usuário', {
@@ -424,7 +424,7 @@ export class ControleLeiteiroService {
 
     await this.findOne(id, user);
 
-    const { data, error } = await this.supabase.from('DadosLactacao').update(updateDto).eq('id_lact', id).select().single();
+    const { data, error } = await this.supabase.from('dadoslactacao').update(updateDto).eq('id_lact', id).select().single();
 
     if (error) {
       this.customLogger.logError(error, {
@@ -455,7 +455,7 @@ export class ControleLeiteiroService {
 
     await this.findOne(id, user);
 
-    const { error } = await this.supabase.from('DadosLactacao').delete().eq('id_lact', id);
+    const { error } = await this.supabase.from('dadoslactacao').delete().eq('id_lact', id);
 
     if (error) {
       this.customLogger.logError(error, {

@@ -19,7 +19,7 @@ export class MovLoteService {
   }
 
   private async getUserId(user: any): Promise<number> {
-    const { data: perfilUsuario, error } = await this.supabase.from('Usuario').select('id_usuario').eq('email', user.email).single();
+    const { data: perfilUsuario, error } = await this.supabase.from('usuario').select('id_usuario').eq('email', user.email).single();
 
     if (error || !perfilUsuario) {
       throw new NotFoundException('Perfil de usuário não encontrado.');
@@ -40,9 +40,9 @@ export class MovLoteService {
       if (error || !data) throw new NotFoundException(`${tableName} com ID ${id} não encontrado.`);
     };
 
-    if (dto.id_grupo) await checkIfExists('Grupo', 'id_grupo', dto.id_grupo);
-    if (dto.id_lote_atual) await checkIfExists('Lote', 'id_lote', dto.id_lote_atual);
-    if (dto.id_lote_anterior) await checkIfExists('Lote', 'id_lote', dto.id_lote_anterior);
+    if (dto.id_grupo) await checkIfExists('grupo', 'id_grupo', dto.id_grupo);
+    if (dto.id_lote_atual) await checkIfExists('lote', 'id_lote', dto.id_lote_atual);
+    if (dto.id_lote_anterior) await checkIfExists('lote', 'id_lote', dto.id_lote_anterior);
   }
 
   async create(createDto: CreateMovLoteDto, user: any) {
@@ -71,7 +71,7 @@ export class MovLoteService {
       this.logger.debug(`[BUSCA_REGISTRO] Procurando registro ativo atual para o grupo ${id_grupo}`);
 
       const { data: registroAtual, error: findError } = await this.supabase
-        .from('MovLote')
+        .from('movlote')
         .select(
           `
           *,
@@ -109,7 +109,7 @@ export class MovLoteService {
         this.logger.debug(`[FINALIZANDO_REGISTRO] Fechando registro ${registroAtual.id_movimento} com data de saida: ${dt_entrada}`);
 
         const { error: updateError } = await this.supabase
-          .from('MovLote')
+          .from('movlote')
           .update({ dt_saida: dt_entrada })
           .eq('id_movimento', registroAtual.id_movimento);
 
@@ -145,7 +145,7 @@ export class MovLoteService {
       this.logger.debug(`[CRIANDO_REGISTRO] Inserindo novo registro de movimentacao`, { dtoToInsert });
 
       const { data: novoRegistro, error: insertError } = await this.supabase
-        .from('MovLote')
+        .from('movlote')
         .insert(dtoToInsert)
         .select(
           `
@@ -200,7 +200,7 @@ export class MovLoteService {
 
   async findAll() {
     const { data, error } = await this.supabase
-      .from('MovLote')
+      .from('movlote')
       .select(
         `
         *,
@@ -225,7 +225,7 @@ export class MovLoteService {
     const userId = await this.getUserId(user);
 
     const { data, error } = await this.supabase
-      .from('MovLote')
+      .from('movlote')
       .select('*')
       .eq('id_movimento', id)
       .eq('id_usuario', userId) // Checagem de posse direta
@@ -242,7 +242,7 @@ export class MovLoteService {
     await this.findOne(id, user); // Garante que a movimentação existe e pertence ao usuário
     await this.validateReferences(updateDto); // Valida as novas referências no DTO
 
-    const { data, error } = await this.supabase.from('MovLote').update(updateDto).eq('id_movimento', id).select().single();
+    const { data, error } = await this.supabase.from('movlote').update(updateDto).eq('id_movimento', id).select().single();
 
     if (error) {
       throw new InternalServerErrorException('Falha ao atualizar a movimentação.');
@@ -253,7 +253,7 @@ export class MovLoteService {
   async remove(id: string, user: any) {
     await this.findOne(id, user); // Garante que a movimentação existe e pertence ao usuário
 
-    const { error } = await this.supabase.from('MovLote').delete().eq('id_movimento', id);
+    const { error } = await this.supabase.from('movlote').delete().eq('id_movimento', id);
 
     if (error) {
       throw new InternalServerErrorException('Falha ao remover a movimentação.');

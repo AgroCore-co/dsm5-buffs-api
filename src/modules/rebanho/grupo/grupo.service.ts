@@ -19,7 +19,7 @@ export class GrupoService {
   async create(createGrupoDto: CreateGrupoDto) {
     this.logger.log('Iniciando criação de grupo', { module: 'GrupoService', method: 'create' });
 
-    const { data, error } = await this.supabase.from('Grupo').insert(createGrupoDto).select().single();
+    const { data, error } = await this.supabase.from('grupo').insert(createGrupoDto).select().single();
 
     if (error) {
       this.logger.logError(error, { module: 'GrupoService', method: 'create' });
@@ -33,7 +33,7 @@ export class GrupoService {
   async findAll() {
     this.logger.log('Iniciando busca de todos os grupos', { module: 'GrupoService', method: 'findAll' });
 
-    const { data, error } = await this.supabase.from('Grupo').select('*').order('nome_grupo', { ascending: true });
+    const { data, error } = await this.supabase.from('grupo').select('*').order('nome_grupo', { ascending: true });
 
     if (error) {
       this.logger.logError(error, { module: 'GrupoService', method: 'findAll' });
@@ -47,7 +47,7 @@ export class GrupoService {
   async findOne(id: string) {
     this.logger.log('Iniciando busca de grupo por ID', { module: 'GrupoService', method: 'findOne', grupoId: id });
 
-    const { data, error } = await this.supabase.from('Grupo').select('*').eq('id_grupo', id).single();
+    const { data, error } = await this.supabase.from('grupo').select('*').eq('id_grupo', id).single();
 
     if (error) {
       if (error.code === 'PGRST116') {
@@ -68,7 +68,7 @@ export class GrupoService {
     // Primeiro verifica se o grupo existe
     await this.findOne(id);
 
-    const { data, error } = await this.supabase.from('Grupo').update(updateGrupoDto).eq('id_grupo', id).select().single();
+    const { data, error } = await this.supabase.from('grupo').update(updateGrupoDto).eq('id_grupo', id).select().single();
 
     if (error) {
       this.logger.logError(error, { module: 'GrupoService', method: 'update', grupoId: id });
@@ -85,7 +85,7 @@ export class GrupoService {
     // Primeiro verifica se o grupo existe
     await this.findOne(id);
 
-    const { error } = await this.supabase.from('Grupo').delete().eq('id_grupo', id);
+    const { error } = await this.supabase.from('grupo').delete().eq('id_grupo', id);
 
     if (error) {
       this.logger.logError(error, { module: 'GrupoService', method: 'remove', grupoId: id });

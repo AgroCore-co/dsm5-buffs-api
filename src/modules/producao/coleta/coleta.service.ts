@@ -14,7 +14,7 @@ export class ColetaService {
     private readonly logger: LoggerService,
   ) {}
 
-  private readonly tableName = 'Coleta';
+  private readonly tableName = 'coleta';
 
   async create(dto: CreateColetaDto, id_funcionario: string) {
     this.logger.log('Iniciando criação de coleta', {

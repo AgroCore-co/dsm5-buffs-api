@@ -7,7 +7,7 @@ import { UpdateMedicacaoDto } from './dto/update-medicacao.dto';
 export class MedicamentosService {
   constructor(private readonly supabase: SupabaseService) {}
 
-  private readonly tableName = 'Medicacoes';
+  private readonly tableName = 'medicacoes';
 
   async create(dto: CreateMedicacaoDto) {
     const { data, error } = await this.supabase.getClient().from(this.tableName).insert(dto).select().single();

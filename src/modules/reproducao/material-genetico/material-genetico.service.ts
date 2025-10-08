@@ -12,7 +12,7 @@ export class MaterialGeneticoService {
 
   constructor(private readonly supabase: SupabaseService) {}
 
-  private readonly tableName = 'MaterialGenetico';
+  private readonly tableName = 'materialgenetico';
 
   async create(createMaterialGeneticoDto: CreateMaterialGeneticoDto) {
     this.logger.log('[INICIO] Criando novo material genético');

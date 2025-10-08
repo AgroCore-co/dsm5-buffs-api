@@ -7,7 +7,7 @@ import { UpdateVacinacaoDto } from './dto/update-vacinacao.dto';
 export class VacinacaoService {
   constructor(private readonly supabase: SupabaseService) {}
 
-  private readonly tableName = 'DadosSanitarios'; // Usando tabela DadosSanitarios existente
+  private readonly tableName = 'dadossanitarios'; // Usando tabela DadosSanitarios existente
 
   /**
    * Função auxiliar para encontrar o ID numérico interno (bigint) do utilizador
@@ -19,7 +19,7 @@ export class VacinacaoService {
     // 1. Tentar encontrar usuário por auth_id
     const { data, error } = await this.supabase
       .getClient()
-      .from('Usuario')
+      .from('usuario')
       .select('id_usuario, nome, email, auth_id')
       .eq('auth_id', authUuid)
       .single();
@@ -42,7 +42,7 @@ export class VacinacaoService {
     if (userEmail) {
       const { data: emailUser, error: emailError } = await this.supabase
         .getClient()
-        .from('Usuario')
+        .from('usuario')
         .select('id_usuario, nome, email, auth_id')
         .eq('email', userEmail)
         .single();
@@ -53,7 +53,7 @@ export class VacinacaoService {
         // 3. Sincronizar auth_id automaticamente
         console.log(`🔄 Sincronizando auth_id para usuário ${emailUser.nome}...`);
 
-        await this.supabase.getClient().from('Usuario').update({ auth_id: authUuid }).eq('id_usuario', emailUser.id_usuario);
+        await this.supabase.getClient().from('usuario').update({ auth_id: authUuid }).eq('id_usuario', emailUser.id_usuario);
 
         console.log(`✅ Usuário encontrado por email e sincronizado: ${emailUser.nome} (ID: ${emailUser.id_usuario})`);
         return emailUser.id_usuario;
@@ -109,9 +109,9 @@ export class VacinacaoService {
         doenca,
         necessita_retorno,
         dt_retorno,
-        Bufalo!inner(id_bufalo, nome, brinco),
-        Usuario!inner(id_usuario, nome),
-        Medicacoes!inner(id_medicacao, medicacao, tipo_tratamento, descricao)
+        bufalo!inner(id_bufalo, nome, brinco),
+        usuario!inner(id_usuario, nome),
+        medicacoes!inner(id_medicacao, medicacao, tipo_tratamento, descricao)
       `,
       )
       .eq('id_bufalo', id_bufalo)
@@ -137,9 +137,9 @@ export class VacinacaoService {
         doenca,
         necessita_retorno,
         dt_retorno,
-        Bufalo!inner(id_bufalo, nome, brinco),
-        Usuario!inner(id_usuario, nome),
-        Medicacoes!inner(id_medicacao, medicacao, tipo_tratamento, descricao)
+        bufalo!inner(id_bufalo, nome, brinco),
+        usuario!inner(id_usuario, nome),
+        medicacoes!inner(id_medicacao, medicacao, tipo_tratamento, descricao)
       `,
       )
       .eq('id_sanit', id_sanit)
@@ -205,9 +205,9 @@ export class VacinacaoService {
         doenca,
         necessita_retorno,
         dt_retorno,
-        Bufalo!inner(id_bufalo, nome, brinco),
-        Usuario!inner(id_usuario, nome),
-        Medicacoes!inner(id_medicacao, medicacao, descricao)
+        bufalo!inner(id_bufalo, nome, brinco),
+        usuario!inner(id_usuario, nome),
+        medicacoes!inner(id_medicacao, medicacao, descricao)
       `,
       )
       .eq('id_bufalo', id_bufalo)

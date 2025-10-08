@@ -11,7 +11,7 @@ export class IndustriaService {
     private readonly logger: LoggerService,
   ) {}
 
-  private readonly tableName = 'Industria';
+  private readonly tableName = 'industria';
 
   async create(dto: CreateIndustriaDto) {
     this.logger.log('Iniciando criação de indústria', {

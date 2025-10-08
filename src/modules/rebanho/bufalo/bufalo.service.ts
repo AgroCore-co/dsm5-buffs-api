@@ -26,7 +26,7 @@ interface MaturityUpdate {
 export class BufaloService {
   private readonly logger = new Logger(BufaloService.name);
   private supabase: SupabaseClient;
-  private readonly tableName = 'Bufalo';
+  private readonly tableName = 'bufalo';
 
   constructor(
     private readonly supabaseService: SupabaseService,
@@ -37,7 +37,7 @@ export class BufaloService {
   }
 
   private async getUserId(user: any): Promise<number> {
-    const { data: perfilUsuario, error } = await this.supabase.from('Usuario').select('id_usuario').eq('email', user.email).single();
+    const { data: perfilUsuario, error } = await this.supabase.from('usuario').select('id_usuario').eq('email', user.email).single();
 
     if (error || !perfilUsuario) {
       throw new NotFoundException('Perfil de usuário não encontrado.');
@@ -50,11 +50,11 @@ export class BufaloService {
    */
   private async getUserPropriedades(userId: number): Promise<string[]> {
     // 1. Busca propriedades onde o usuário é DONO
-    const { data: propriedadesComoDono, error: errorDono } = await this.supabase.from('Propriedade').select('id_propriedade').eq('id_dono', userId);
+    const { data: propriedadesComoDono, error: errorDono } = await this.supabase.from('propriedade').select('id_propriedade').eq('id_dono', userId);
 
     // 2. Busca propriedades onde o usuário é FUNCIONÁRIO
     const { data: propriedadesComoFuncionario, error: errorFuncionario } = await this.supabase
-      .from('UsuarioPropriedade')
+      .from('usuariopropriedade')
       .select('id_propriedade')
       .eq('id_usuario', userId);
 
@@ -657,7 +657,7 @@ export class BufaloService {
     try {
       // Busca dados zootécnicos mais recentes
       const { data: dadosZootecnicos, error: errorZootec } = await this.supabase
-        .from('DadosZootecnicos')
+        .from('dadoszootecnicos')
         .select('*')
         .eq('id_bufalo', bufalo.id_bufalo)
         .order('dt_registro', { ascending: false })

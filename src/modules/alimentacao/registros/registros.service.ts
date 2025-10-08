@@ -7,7 +7,7 @@ import { UpdateRegistroAlimentacaoDto } from './dto/update-registro.dto';
 export class RegistrosService {
   constructor(private readonly supabase: SupabaseService) {}
 
-  private readonly tableName = 'AlimRegistro';
+  private readonly tableName = 'alimregistro';
 
   async create(dto: CreateRegistroAlimentacaoDto) {
     const { data, error } = await this.supabase.getClient().from(this.tableName).insert(dto).select().single();

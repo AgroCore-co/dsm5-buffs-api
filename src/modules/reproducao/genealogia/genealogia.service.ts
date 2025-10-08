@@ -47,7 +47,7 @@ export class GenealogiaService {
   private async verificarAcessoBufalo(bufaloId: string, user: any): Promise<void> {
     const userId = await this.getUserId(user);
 
-    const { data, error } = await this.supabase.from('Bufalo').select('*, Propriedade(id_dono)').eq('id_bufalo', bufaloId).single();
+    const { data, error } = await this.supabase.from('bufalo').select('*, Propriedade(id_dono)').eq('id_bufalo', bufaloId).single();
 
     if (error || !data) {
       throw new NotFoundException(`Búfalo com ID ${bufaloId} não encontrado.`);
@@ -62,7 +62,7 @@ export class GenealogiaService {
    * Obter ID do usuário baseado no email
    */
   private async getUserId(user: any): Promise<number> {
-    const { data: perfilUsuario, error } = await this.supabase.from('Usuario').select('id_usuario').eq('email', user.email).single();
+    const { data: perfilUsuario, error } = await this.supabase.from('usuario').select('id_usuario').eq('email', user.email).single();
 
     if (error || !perfilUsuario) {
       throw new NotFoundException('Perfil de usuário não encontrado.');
@@ -76,7 +76,7 @@ export class GenealogiaService {
    */
   async construirArvoreCompleta(bufaloId: string, geracoes: number = 4): Promise<any> {
     const { data: bufalo, error } = await this.supabase
-      .from('Bufalo')
+      .from('bufalo')
       .select(
         `
         id_bufalo, nome, brinco, sexo, dt_nascimento,
@@ -121,7 +121,7 @@ export class GenealogiaService {
    */
   async construirArvoreParaCategoria(bufaloId: string, geracao: number = 1): Promise<ArvoreGenealogicaNode | null> {
     const { data: bufalo } = await this.supabase
-      .from('Bufalo')
+      .from('bufalo')
       .select('id_bufalo, id_pai, id_mae, id_raca, categoria')
       .eq('id_bufalo', bufaloId)
       .single();
@@ -154,7 +154,7 @@ export class GenealogiaService {
    * Verifica se um búfalo tem descendentes
    */
   async verificarSeTemDescendentes(bufaloId: number): Promise<boolean> {
-    const { data, error } = await this.supabase.from('Bufalo').select('id_bufalo').or(`id_pai.eq.${bufaloId},id_mae.eq.${bufaloId}`).limit(1);
+    const { data, error } = await this.supabase.from('bufalo').select('id_bufalo').or(`id_pai.eq.${bufaloId},id_mae.eq.${bufaloId}`).limit(1);
 
     return !error && data && data.length > 0;
   }

@@ -13,7 +13,7 @@ export class LoteService {
   }
 
   private async getUserId(user: any): Promise<string> {
-    const { data: perfilUsuario, error } = await this.supabase.from('Usuario').select('id_usuario').eq('email', user.email).single();
+    const { data: perfilUsuario, error } = await this.supabase.from('usuario').select('id_usuario').eq('email', user.email).single();
 
     if (error || !perfilUsuario) {
       throw new NotFoundException('Perfil de usuário não encontrado.');
@@ -29,7 +29,7 @@ export class LoteService {
   private async validateOwnership(propriedadeId: string, userId: string) {
     // Verifica se o usuário é dono da propriedade
     const { data: propriedadeComoDono } = await this.supabase
-      .from('Propriedade')
+      .from('propriedade')
       .select('id_propriedade')
       .eq('id_propriedade', propriedadeId)
       .eq('id_dono', userId)
@@ -41,7 +41,7 @@ export class LoteService {
 
     // Se não é dono, verifica se é funcionário vinculado à propriedade
     const { data: propriedadeComoFuncionario } = await this.supabase
-      .from('UsuarioPropriedade')
+      .from('usuariopropriedade')
       .select('id_propriedade')
       .eq('id_propriedade', propriedadeId)
       .eq('id_usuario', userId)
@@ -79,7 +79,7 @@ export class LoteService {
     await this.validateOwnership(id_propriedade, userId);
 
     const { data, error } = await this.supabase
-      .from('Lote')
+      .from('lote')
       .select('*')
       .eq('id_propriedade', id_propriedade)
       .order('created_at', { ascending: false });
@@ -95,7 +95,7 @@ export class LoteService {
     const userId = await this.getUserId(user);
 
     const { data, error } = await this.supabase
-      .from('Lote')
+      .from('lote')
       .select(
         `
         *,
@@ -117,7 +117,7 @@ export class LoteService {
 
     // Se não é dono, verifica se é funcionário
     const { data: funcionarioData } = await this.supabase
-      .from('UsuarioPropriedade')
+      .from('usuariopropriedade')
       .select('id_propriedade')
       .eq('id_propriedade', data.id_propriedade)
       .eq('id_usuario', userId)
@@ -144,7 +144,7 @@ export class LoteService {
     }
 
     const { data, error } = await this.supabase
-      .from('Lote')
+      .from('lote')
       .update({
         ...loteToUpdate,
         updated_at: new Date().toISOString(),
@@ -162,7 +162,7 @@ export class LoteService {
   async remove(id: string, user: any) {
     await this.findOne(id, user); // Valida posse
 
-    const { error } = await this.supabase.from('Lote').delete().eq('id_lote', id);
+    const { error } = await this.supabase.from('lote').delete().eq('id_lote', id);
 
     if (error) {
       throw new InternalServerErrorException('Falha ao deletar o lote.');

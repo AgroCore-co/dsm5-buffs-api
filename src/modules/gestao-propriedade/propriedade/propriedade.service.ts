@@ -18,7 +18,7 @@ export class PropriedadeService {
    * Reutilizado em vários métodos para evitar repetição de código.
    */
   private async getUserId(user: any): Promise<string> {
-    const { data: perfilUsuario, error } = await this.supabase.from('Usuario').select('id_usuario').eq('email', user.email).single();
+    const { data: perfilUsuario, error } = await this.supabase.from('usuario').select('id_usuario').eq('email', user.email).single();
 
     if (error || !perfilUsuario) {
       throw new NotFoundException('Perfil de usuário não encontrado.');
@@ -30,7 +30,7 @@ export class PropriedadeService {
     const idDono = await this.getUserId(user);
 
     const { data: novaPropriedade, error: propriedadeError } = await this.supabase
-      .from('Propriedade')
+      .from('propriedade')
       .insert([{ ...createPropriedadeDto, id_dono: idDono }])
       .select()
       .single();
@@ -56,7 +56,7 @@ export class PropriedadeService {
     try {
       // Busca propriedades onde o usuário é DONO
       const { data: propriedadesComoDono, error: errorDono } = await this.supabase
-        .from('Propriedade')
+        .from('propriedade')
         .select(
           `
           *,
@@ -68,7 +68,7 @@ export class PropriedadeService {
 
       // Busca propriedades onde o usuário é FUNCIONÁRIO (tabela UsuarioPropriedade)
       const { data: propriedadesComoFuncionario, error: errorFuncionario } = await this.supabase
-        .from('UsuarioPropriedade')
+        .from('usuariopropriedade')
         .select(
           `
           Propriedade(
@@ -118,7 +118,7 @@ export class PropriedadeService {
 
     // Verifica se o usuário é dono da propriedade
     const { data: propriedadeComoDono, error: erroDono } = await this.supabase
-      .from('Propriedade')
+      .from('propriedade')
       .select(
         `
         *,
@@ -136,7 +136,7 @@ export class PropriedadeService {
 
     // Se não é dono, verifica se é funcionário
     const { data: propriedadeComoFuncionario, error: erroFuncionario } = await this.supabase
-      .from('UsuarioPropriedade')
+      .from('usuariopropriedade')
       .select(
         `
         Propriedade(
@@ -166,7 +166,7 @@ export class PropriedadeService {
 
     // Verifica se o usuário é DONO da propriedade (apenas donos podem atualizar)
     const { data: propriedade, error } = await this.supabase
-      .from('Propriedade')
+      .from('propriedade')
       .select('id_propriedade')
       .eq('id_propriedade', id)
       .eq('id_dono', userId)
@@ -177,7 +177,7 @@ export class PropriedadeService {
     }
 
     const { data, error: updateError } = await this.supabase
-      .from('Propriedade')
+      .from('propriedade')
       .update({
         ...updatePropriedadeDto,
         updated_at: new Date().toISOString(),
@@ -202,7 +202,7 @@ export class PropriedadeService {
 
     // Verifica se o usuário é DONO da propriedade (apenas donos podem deletar)
     const { data: propriedade, error } = await this.supabase
-      .from('Propriedade')
+      .from('propriedade')
       .select('id_propriedade')
       .eq('id_propriedade', id)
       .eq('id_dono', userId)
