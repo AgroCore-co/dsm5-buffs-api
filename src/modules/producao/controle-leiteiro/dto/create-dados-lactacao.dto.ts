@@ -1,5 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsDateString, IsInt, IsNumber, IsPositive, IsOptional, IsString, MaxLength, IsEnum } from 'class-validator';
+import { IsDateString, IsUUID, IsNumber, IsPositive, IsOptional, IsString, MaxLength, IsEnum } from 'class-validator';
 
 export enum PeriodoOrdenha {
   MANHA = 'M',
@@ -9,10 +9,8 @@ export enum PeriodoOrdenha {
 
 export class CreateDadosLactacaoDto {
   @ApiProperty({ description: 'ID da búfala', example: 5 })
-  @IsInt()
-  @IsPositive()
-  id_bufala: number;
-
+  @IsUUID()
+  id_bufala: string;
 
   @ApiProperty({ description: 'Quantidade ordenhada (L)', example: 8.75 })
   @IsNumber()

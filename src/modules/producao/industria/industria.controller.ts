@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, ParseIntPipe, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, ParseUUIDPipe, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiResponse, ApiTags, ApiParam, ApiBody } from '@nestjs/swagger';
 import { SupabaseAuthGuard } from '../../auth/guards/auth.guard';
 import { LoggerService } from '../../../core/logger/logger.service';
@@ -36,31 +36,31 @@ export class IndustriaController {
 
   @Get(':id')
   @ApiOperation({ summary: 'Busca uma indústria pelo ID' })
-  @ApiParam({ name: 'id', description: 'ID da indústria' })
+  @ApiParam({ name: 'id', description: 'ID da indústria', type: 'string' })
   @ApiResponse({ status: 200, description: 'Indústria encontrada.' })
   @ApiResponse({ status: 404, description: 'Indústria não encontrada.' })
-  findOne(@Param('id', ParseIntPipe) id: number) {
+  findOne(@Param('id', ParseUUIDPipe) id: string) {
     this.logger.logApiRequest('GET', `/industrias/${id}`, undefined, { module: 'IndustriaController', method: 'findOne', industriaId: id });
     return this.service.findOne(id);
   }
 
   @Patch(':id')
   @ApiOperation({ summary: 'Atualiza os dados de uma indústria' })
-  @ApiParam({ name: 'id', description: 'ID da indústria a ser atualizada' })
+  @ApiParam({ name: 'id', description: 'ID da indústria a ser atualizada', type: 'string' })
   @ApiBody({ type: UpdateIndustriaDto })
   @ApiResponse({ status: 200, description: 'Indústria atualizada com sucesso.' })
   @ApiResponse({ status: 404, description: 'Indústria não encontrada.' })
-  update(@Param('id', ParseIntPipe) id: number, @Body() dto: UpdateIndustriaDto) {
+  update(@Param('id', ParseUUIDPipe) id: string, @Body() dto: UpdateIndustriaDto) {
     this.logger.logApiRequest('PATCH', `/industrias/${id}`, undefined, { module: 'IndustriaController', method: 'update', industriaId: id });
     return this.service.update(id, dto);
   }
 
   @Delete(':id')
   @ApiOperation({ summary: 'Remove uma indústria' })
-  @ApiParam({ name: 'id', description: 'ID da indústria a ser removida' })
+  @ApiParam({ name: 'id', description: 'ID da indústria a ser removida', type: 'string' })
   @ApiResponse({ status: 200, description: 'Indústria removida com sucesso.' })
   @ApiResponse({ status: 404, description: 'Indústria não encontrada.' })
-  remove(@Param('id', ParseIntPipe) id: number) {
+  remove(@Param('id', ParseUUIDPipe) id: string) {
     this.logger.logApiRequest('DELETE', `/industrias/${id}`, undefined, { module: 'IndustriaController', method: 'remove', industriaId: id });
     return this.service.remove(id);
   }

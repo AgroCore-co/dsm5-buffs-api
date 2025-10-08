@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, ParseIntPipe, UseGuards, UseInterceptors } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, ParseUUIDPipe, UseGuards, UseInterceptors } from '@nestjs/common';
 import { CacheInterceptor, CacheTTL } from '@nestjs/cache-manager';
 import { ApiBearerAuth, ApiBody, ApiOperation, ApiParam, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { SupabaseAuthGuard } from '../../auth/guards/auth.guard';
@@ -23,7 +23,11 @@ export class CicloLactacaoController {
   @ApiResponse({ status: 201, description: 'Ciclo criado com sucesso.' })
   @ApiResponse({ status: 400, description: 'Dados inválidos.' })
   create(@Body() dto: CreateCicloLactacaoDto) {
-    this.logger.logApiRequest('POST', '/ciclos-lactacao', undefined, { module: 'CicloLactacaoController', method: 'create', bufalaId: dto.id_bufala });
+    this.logger.logApiRequest('POST', '/ciclos-lactacao', undefined, {
+      module: 'CicloLactacaoController',
+      method: 'create',
+      bufalaId: dto.id_bufala,
+    });
     return this.service.create(dto);
   }
 
@@ -41,34 +45,32 @@ export class CicloLactacaoController {
   @UseInterceptors(CacheInterceptor)
   @CacheTTL(900)
   @ApiOperation({ summary: 'Busca um ciclo de lactação pelo ID' })
-  @ApiParam({ name: 'id', description: 'ID do ciclo' })
+  @ApiParam({ name: 'id', description: 'ID do ciclo', type: 'string' })
   @ApiResponse({ status: 200, description: 'Ciclo encontrado.' })
   @ApiResponse({ status: 404, description: 'Ciclo não encontrado.' })
-  findOne(@Param('id', ParseIntPipe) id: number) {
+  findOne(@Param('id', ParseUUIDPipe) id: string) {
     this.logger.logApiRequest('GET', `/ciclos-lactacao/${id}`, undefined, { module: 'CicloLactacaoController', method: 'findOne', cicloId: id });
     return this.service.findOne(id);
   }
 
   @Patch(':id')
   @ApiOperation({ summary: 'Atualiza um ciclo de lactação' })
-  @ApiParam({ name: 'id', description: 'ID do ciclo a ser atualizado' })
+  @ApiParam({ name: 'id', description: 'ID do ciclo a ser atualizado', type: 'string' })
   @ApiBody({ type: UpdateCicloLactacaoDto })
   @ApiResponse({ status: 200, description: 'Ciclo atualizado com sucesso.' })
   @ApiResponse({ status: 404, description: 'Ciclo não encontrado.' })
-  update(@Param('id', ParseIntPipe) id: number, @Body() dto: UpdateCicloLactacaoDto) {
+  update(@Param('id', ParseUUIDPipe) id: string, @Body() dto: UpdateCicloLactacaoDto) {
     this.logger.logApiRequest('PATCH', `/ciclos-lactacao/${id}`, undefined, { module: 'CicloLactacaoController', method: 'update', cicloId: id });
     return this.service.update(id, dto);
   }
 
   @Delete(':id')
   @ApiOperation({ summary: 'Remove um ciclo de lactação' })
-  @ApiParam({ name: 'id', description: 'ID do ciclo a ser removido' })
+  @ApiParam({ name: 'id', description: 'ID do ciclo a ser removido', type: 'string' })
   @ApiResponse({ status: 200, description: 'Ciclo removido com sucesso.' })
   @ApiResponse({ status: 404, description: 'Ciclo não encontrado.' })
-  remove(@Param('id', ParseIntPipe) id: number) {
+  remove(@Param('id', ParseUUIDPipe) id: string) {
     this.logger.logApiRequest('DELETE', `/ciclos-lactacao/${id}`, undefined, { module: 'CicloLactacaoController', method: 'remove', cicloId: id });
     return this.service.remove(id);
   }
 }
-
-

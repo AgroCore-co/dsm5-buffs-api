@@ -1,11 +1,11 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsInt, IsNotEmpty, IsOptional, IsDateString, IsBoolean, IsString, IsNumber, MaxLength, IsPositive } from 'class-validator';
+import { IsUUID, IsNotEmpty, IsOptional, IsDateString, IsBoolean, IsString, IsNumber, MaxLength, IsPositive } from 'class-validator';
 
 export class CreateColetaDto {
   @ApiProperty({ example: 1, description: 'ID da indústria que realizou a coleta' })
-  @IsInt()
+  @IsUUID()
   @IsNotEmpty()
-  id_industria: number;
+  id_industria: string;
 
   @ApiProperty({ example: true, description: 'Resultado do teste de qualidade do leite (aprovado/reprovado)', required: false })
   @IsBoolean()

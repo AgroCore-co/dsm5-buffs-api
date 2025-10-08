@@ -1,11 +1,11 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsInt, IsNotEmpty, IsOptional, IsDateString, IsNumber, IsPositive, MaxLength, IsString } from 'class-validator';
+import { IsUUID, IsNotEmpty, IsOptional, IsDateString, IsNumber, IsPositive, MaxLength, IsString } from 'class-validator';
 
 export class CreateEstoqueLeiteDto {
   @ApiProperty({ example: 1, description: 'ID da propriedade onde o estoque está localizado' })
-  @IsInt()
+  @IsUUID()
   @IsNotEmpty()
-  id_propriedade: number;
+  id_propriedade: string;
 
   @ApiProperty({ example: 1200.75, description: 'Quantidade de leite em estoque (em litros)' })
   @IsNumber()

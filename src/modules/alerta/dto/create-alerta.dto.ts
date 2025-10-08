@@ -1,5 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsString, IsNotEmpty, IsDateString, IsEnum, IsOptional, IsInt, IsPositive, IsBoolean } from 'class-validator';
+import { IsString, IsNotEmpty, IsDateString, IsEnum, IsOptional, IsUUID, IsBoolean } from 'class-validator';
 import { PartialType } from '@nestjs/swagger';
 
 export enum NichoAlerta {
@@ -17,9 +17,8 @@ export enum PrioridadeAlerta {
 
 export class CreateAlertaDto {
   @ApiProperty({ description: 'ID do búfalo relacionado ao alerta', example: 12 })
-  @IsInt()
-  @IsPositive()
-  animal_id: number;
+  @IsUUID()
+  animal_id: string;
 
   @ApiProperty({ description: 'Nome do grupo/lote do animal', example: 'Lote A-01' })
   @IsString()
@@ -62,10 +61,9 @@ export class CreateAlertaDto {
   visto?: boolean;
 
   @ApiProperty({ description: 'ID do evento que originou o alerta', required: false, example: 123 })
-  @IsInt()
-  @IsPositive()
+  @IsUUID()
   @IsOptional()
-  id_evento_origem?: number;
+  id_evento_origem?: string;
 
   @ApiProperty({ description: 'Tipo do evento que originou o alerta', required: false, example: 'DADOS_SANITARIOS' })
   @IsString()

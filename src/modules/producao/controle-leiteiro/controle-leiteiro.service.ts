@@ -39,18 +39,18 @@ export class ControleLeiteiroService {
    * Se houver uma ocorrência clínica, cria um alerta associado.
    */
   async create(createDto: CreateDadosLactacaoDto, user: any) {
-    this.customLogger.log('Iniciando criação de registro de lactação', { 
-      module: 'ControleLeiteiroService', 
+    this.customLogger.log('Iniciando criação de registro de lactação', {
+      module: 'ControleLeiteiroService',
       method: 'create',
       bufalaId: createDto.id_bufala,
-      dtOrdenha: createDto.dt_ordenha
+      dtOrdenha: createDto.dt_ordenha,
     });
 
     const idUsuario = await this.getUserId(user);
-    this.customLogger.log('ID do usuário obtido com sucesso', { 
-      module: 'ControleLeiteiroService', 
+    this.customLogger.log('ID do usuário obtido com sucesso', {
+      module: 'ControleLeiteiroService',
       method: 'create',
-      userId: String(idUsuario)
+      userId: String(idUsuario),
     });
 
     const dtoToInsert = { ...createDto, id_usuario: idUsuario };
@@ -59,17 +59,17 @@ export class ControleLeiteiroService {
 
     if (error) {
       if (error.code === '23503') {
-        this.customLogger.warn('Búfala não encontrada', { 
-          module: 'ControleLeiteiroService', 
+        this.customLogger.warn('Búfala não encontrada', {
+          module: 'ControleLeiteiroService',
           method: 'create',
-          bufalaId: createDto.id_bufala
+          bufalaId: createDto.id_bufala,
         });
         throw new BadRequestException(`A búfala com id ${createDto.id_bufala} não foi encontrada.`);
       }
-      this.customLogger.logError(error, { 
-        module: 'ControleLeiteiroService', 
+      this.customLogger.logError(error, {
+        module: 'ControleLeiteiroService',
         method: 'create',
-        bufalaId: createDto.id_bufala
+        bufalaId: createDto.id_bufala,
       });
       throw new InternalServerErrorException('Falha ao criar o dado de lactação.');
     }
@@ -78,32 +78,32 @@ export class ControleLeiteiroService {
       this.customLogger.error('Falha ao obter dados do registro criado', undefined, {
         module: 'ControleLeiteiroService',
         method: 'create',
-        userId: String(idUsuario)
+        userId: String(idUsuario),
       });
       throw new InternalServerErrorException('Falha ao obter dados do registro de lactação criado.');
     }
 
-    this.customLogger.log('Registro de lactação criado com sucesso', { 
-      module: 'ControleLeiteiroService', 
+    this.customLogger.log('Registro de lactação criado com sucesso', {
+      module: 'ControleLeiteiroService',
       method: 'create',
       lactacaoId: lactacaoData.id_lact,
-      bufalaId: createDto.id_bufala
+      bufalaId: createDto.id_bufala,
     });
 
     // Lógica para criação de Alerta
     if (createDto.ocorrencia && createDto.ocorrencia.trim() !== '') {
-      this.customLogger.log('Processando alerta para ocorrência clínica', { 
-        module: 'ControleLeiteiroService', 
+      this.customLogger.log('Processando alerta para ocorrência clínica', {
+        module: 'ControleLeiteiroService',
         method: 'create',
         lactacaoId: lactacaoData.id_lact,
-        ocorrencia: createDto.ocorrencia
+        ocorrencia: createDto.ocorrencia,
       });
-      
+
       this.processarAlertaOcorrencia(createDto, lactacaoData).catch((alertaError) => {
-        this.customLogger.logError(alertaError, { 
-          module: 'ControleLeiteiroService', 
+        this.customLogger.logError(alertaError, {
+          module: 'ControleLeiteiroService',
           method: 'processarAlertaOcorrencia',
-          lactacaoId: lactacaoData.id_lact
+          lactacaoId: lactacaoData.id_lact,
         });
       });
     }
@@ -116,10 +116,10 @@ export class ControleLeiteiroService {
    */
   private async processarAlertaOcorrencia(createDto: CreateDadosLactacaoDto, lactacaoData: any): Promise<void> {
     try {
-      this.customLogger.log('Buscando informações do búfalo para alerta', { 
-        module: 'ControleLeiteiroService', 
+      this.customLogger.log('Buscando informações do búfalo para alerta', {
+        module: 'ControleLeiteiroService',
         method: 'processarAlertaOcorrencia',
-        bufalaId: createDto.id_bufala
+        bufalaId: createDto.id_bufala,
       });
 
       const { data: bufaloInfo, error: bufaloError } = await this.supabase
@@ -134,38 +134,38 @@ export class ControleLeiteiroService {
         .single();
 
       if (bufaloError) {
-        this.customLogger.logError(bufaloError, { 
-          module: 'ControleLeiteiroService', 
+        this.customLogger.logError(bufaloError, {
+          module: 'ControleLeiteiroService',
           method: 'processarAlertaOcorrencia',
-          bufalaId: createDto.id_bufala
+          bufalaId: createDto.id_bufala,
         });
         throw new Error(`Falha ao buscar informações do búfalo: ${bufaloError.message}`);
       }
 
       if (!bufaloInfo) {
-        this.customLogger.warn('Informações do búfalo não encontradas', { 
-          module: 'ControleLeiteiroService', 
+        this.customLogger.warn('Informações do búfalo não encontradas', {
+          module: 'ControleLeiteiroService',
           method: 'processarAlertaOcorrencia',
-          bufalaId: createDto.id_bufala
+          bufalaId: createDto.id_bufala,
         });
         throw new Error('Informações do búfalo não encontradas.');
       }
 
-      this.customLogger.log('Classificando prioridade da ocorrência com IA', { 
-        module: 'ControleLeiteiroService', 
+      this.customLogger.log('Classificando prioridade da ocorrência com IA', {
+        module: 'ControleLeiteiroService',
         method: 'processarAlertaOcorrencia',
         bufalaId: createDto.id_bufala,
-        ocorrencia: createDto.ocorrencia
+        ocorrencia: createDto.ocorrencia,
       });
 
       // Classificar prioridade usando Gemini
       const prioridadeClassificada = await this.geminiService.classificarPrioridadeOcorrencia(createDto.ocorrencia!);
 
-      this.customLogger.log('Criando alerta para ocorrência clínica', { 
-        module: 'ControleLeiteiroService', 
+      this.customLogger.log('Criando alerta para ocorrência clínica', {
+        module: 'ControleLeiteiroService',
         method: 'processarAlertaOcorrencia',
         bufalaId: createDto.id_bufala,
-        prioridade: prioridadeClassificada
+        prioridade: prioridadeClassificada,
       });
 
       const alertaDto: CreateAlertaDto = {
@@ -180,18 +180,18 @@ export class ControleLeiteiroService {
       };
 
       await this.alertasService.create(alertaDto);
-      
-      this.customLogger.log('Alerta criado com sucesso', { 
-        module: 'ControleLeiteiroService', 
+
+      this.customLogger.log('Alerta criado com sucesso', {
+        module: 'ControleLeiteiroService',
         method: 'processarAlertaOcorrencia',
         bufalaId: createDto.id_bufala,
-        prioridade: prioridadeClassificada
+        prioridade: prioridadeClassificada,
       });
     } catch (error) {
-      this.customLogger.logError(error, { 
-        module: 'ControleLeiteiroService', 
+      this.customLogger.logError(error, {
+        module: 'ControleLeiteiroService',
         method: 'processarAlertaOcorrencia',
-        bufalaId: createDto.id_bufala
+        bufalaId: createDto.id_bufala,
       });
       throw error;
     }
@@ -201,11 +201,11 @@ export class ControleLeiteiroService {
    * Lista todos os registros de lactação (sem limitação de usuário).
    */
   async findAll(page = 1, limit = 20) {
-    this.customLogger.log('Iniciando busca de todos os registros de lactação', { 
-      module: 'ControleLeiteiroService', 
+    this.customLogger.log('Iniciando busca de todos os registros de lactação', {
+      module: 'ControleLeiteiroService',
       method: 'findAll',
       page,
-      limit
+      limit,
     });
 
     const from = (page - 1) * limit;
@@ -231,21 +231,21 @@ export class ControleLeiteiroService {
         .range(from, to);
 
       if (error) {
-        this.customLogger.logError(error, { 
-          module: 'ControleLeiteiroService', 
+        this.customLogger.logError(error, {
+          module: 'ControleLeiteiroService',
           method: 'findAll',
           page,
-          limit
+          limit,
         });
         throw new InternalServerErrorException(`Erro ao buscar dados de lactação: ${error.message}`);
       }
 
-      this.customLogger.log(`Busca de registros de lactação concluída - ${data.length} registros encontrados`, { 
-        module: 'ControleLeiteiroService', 
+      this.customLogger.log(`Busca de registros de lactação concluída - ${data.length} registros encontrados`, {
+        module: 'ControleLeiteiroService',
         method: 'findAll',
         page,
         limit,
-        total: count ?? data.length
+        total: count ?? data.length,
       });
 
       return {
@@ -256,11 +256,11 @@ export class ControleLeiteiroService {
         dados: data,
       };
     } catch (error) {
-      this.customLogger.logError(error, { 
-        module: 'ControleLeiteiroService', 
+      this.customLogger.logError(error, {
+        module: 'ControleLeiteiroService',
         method: 'findAll',
         page,
-        limit
+        limit,
       });
       throw error;
     }
@@ -270,13 +270,13 @@ export class ControleLeiteiroService {
    * Lista todos os registros de lactação de uma búfala específica.
    * A autorização é baseada na propriedade do animal, não no criador do registro.
    */
-  async findAllByBufala(id_bufala: number, page = 1, limit = 20, user: any) {
-    this.customLogger.log('Iniciando busca de registros de lactação por búfala', { 
-      module: 'ControleLeiteiroService', 
+  async findAllByBufala(id_bufala: string, page = 1, limit = 20, user: any) {
+    this.customLogger.log('Iniciando busca de registros de lactação por búfala', {
+      module: 'ControleLeiteiroService',
       method: 'findAllByBufala',
       bufalaId: id_bufala,
       page,
-      limit
+      limit,
     });
     const idUsuario = await this.getUserId(user);
 
@@ -289,10 +289,10 @@ export class ControleLeiteiroService {
       .single();
 
     if (bufalaError || !bufalaData) {
-      this.customLogger.warn('Búfala não encontrada', { 
-        module: 'ControleLeiteiroService', 
+      this.customLogger.warn('Búfala não encontrada', {
+        module: 'ControleLeiteiroService',
         method: 'findAllByBufala',
-        bufalaId: id_bufala
+        bufalaId: id_bufala,
       });
       throw new NotFoundException(`Búfala com ID ${id_bufala} não encontrada.`);
     }
@@ -303,12 +303,12 @@ export class ControleLeiteiroService {
     // Se a propriedade não tiver dono ou o dono for diferente do usuário logado, negamos o acesso.
     // (Esta regra pode ser expandida para incluir funcionários da propriedade no futuro).
     if (!idDonoPropriedade || idDonoPropriedade !== idUsuario) {
-      this.customLogger.warn('Acesso negado - usuário não tem permissão para acessar dados da búfala', { 
-        module: 'ControleLeiteiroService', 
+      this.customLogger.warn('Acesso negado - usuário não tem permissão para acessar dados da búfala', {
+        module: 'ControleLeiteiroService',
         method: 'findAllByBufala',
         bufalaId: id_bufala,
         userId: String(idUsuario),
-        idDonoPropriedade
+        idDonoPropriedade,
       });
       throw new UnauthorizedException(`Você não tem permissão para acessar os dados desta búfala.`);
     }
@@ -340,23 +340,23 @@ export class ControleLeiteiroService {
         .range(from, to);
 
       if (error) {
-        this.customLogger.logError(error, { 
-          module: 'ControleLeiteiroService', 
+        this.customLogger.logError(error, {
+          module: 'ControleLeiteiroService',
           method: 'findAllByBufala',
           bufalaId: id_bufala,
           page,
-          limit
+          limit,
         });
         throw new InternalServerErrorException(`Erro ao buscar dados de lactação: ${error.message}`);
       }
 
-      this.customLogger.log(`Busca de registros por búfala concluída - ${data.length} registros encontrados`, { 
-        module: 'ControleLeiteiroService', 
+      this.customLogger.log(`Busca de registros por búfala concluída - ${data.length} registros encontrados`, {
+        module: 'ControleLeiteiroService',
         method: 'findAllByBufala',
         bufalaId: id_bufala,
         page,
         limit,
-        total: count ?? data.length
+        total: count ?? data.length,
       });
 
       return {
@@ -367,12 +367,12 @@ export class ControleLeiteiroService {
         dados: data,
       };
     } catch (error) {
-      this.customLogger.logError(error, { 
-        module: 'ControleLeiteiroService', 
+      this.customLogger.logError(error, {
+        module: 'ControleLeiteiroService',
         method: 'findAllByBufala',
         bufalaId: id_bufala,
         page,
-        limit
+        limit,
       });
       throw error;
     }
@@ -381,32 +381,32 @@ export class ControleLeiteiroService {
   /**
    * Busca um registro de lactação específico, garantindo que ele pertença ao usuário logado.
    */
-  async findOne(id: number, user: any) {
-    this.customLogger.log('Iniciando busca de registro de lactação por ID', { 
-      module: 'ControleLeiteiroService', 
+  async findOne(id: string, user: any) {
+    this.customLogger.log('Iniciando busca de registro de lactação por ID', {
+      module: 'ControleLeiteiroService',
       method: 'findOne',
-      lactacaoId: id
+      lactacaoId: id,
     });
-    
+
     const idUsuario = await this.getUserId(user);
 
     const { data, error } = await this.supabase.from('DadosLactacao').select('*').eq('id_lact', id).eq('id_usuario', idUsuario).single();
 
     if (error || !data) {
-      this.customLogger.warn('Registro de lactação não encontrado ou não pertence ao usuário', { 
-        module: 'ControleLeiteiroService', 
+      this.customLogger.warn('Registro de lactação não encontrado ou não pertence ao usuário', {
+        module: 'ControleLeiteiroService',
         method: 'findOne',
         lactacaoId: id,
-  userId: String(idUsuario)
+        userId: String(idUsuario),
       });
       throw new NotFoundException(`Registro de lactação com ID ${id} não encontrado ou não pertence a este usuário.`);
     }
-    
-    this.customLogger.log('Registro de lactação encontrado com sucesso', { 
-      module: 'ControleLeiteiroService', 
+
+    this.customLogger.log('Registro de lactação encontrado com sucesso', {
+      module: 'ControleLeiteiroService',
       method: 'findOne',
       lactacaoId: id,
-  userId: String(idUsuario)
+      userId: String(idUsuario),
     });
     return data;
   }
@@ -414,30 +414,30 @@ export class ControleLeiteiroService {
   /**
    * Atualiza um registro de lactação, verificando a posse antes da operação.
    */
-  async update(id: number, updateDto: UpdateDadosLactacaoDto, user: any) {
-    this.customLogger.log('Iniciando atualização de registro de lactação', { 
-      module: 'ControleLeiteiroService', 
+  async update(id: string, updateDto: UpdateDadosLactacaoDto, user: any) {
+    this.customLogger.log('Iniciando atualização de registro de lactação', {
+      module: 'ControleLeiteiroService',
       method: 'update',
-      lactacaoId: id
+      lactacaoId: id,
     });
-    
+
     await this.findOne(id, user);
 
     const { data, error } = await this.supabase.from('DadosLactacao').update(updateDto).eq('id_lact', id).select().single();
 
     if (error) {
-      this.customLogger.logError(error, { 
-        module: 'ControleLeiteiroService', 
+      this.customLogger.logError(error, {
+        module: 'ControleLeiteiroService',
         method: 'update',
-        lactacaoId: id
+        lactacaoId: id,
       });
       throw new InternalServerErrorException('Falha ao atualizar o dado de lactação.');
     }
-    
-    this.customLogger.log('Registro de lactação atualizado com sucesso', { 
-      module: 'ControleLeiteiroService', 
+
+    this.customLogger.log('Registro de lactação atualizado com sucesso', {
+      module: 'ControleLeiteiroService',
       method: 'update',
-      lactacaoId: id
+      lactacaoId: id,
     });
     return data;
   }
@@ -445,30 +445,30 @@ export class ControleLeiteiroService {
   /**
    * Remove um registro de lactação, verificando a posse antes de deletar.
    */
-  async remove(id: number, user: any) {
-    this.customLogger.log('Iniciando remoção de registro de lactação', { 
-      module: 'ControleLeiteiroService', 
+  async remove(id: string, user: any) {
+    this.customLogger.log('Iniciando remoção de registro de lactação', {
+      module: 'ControleLeiteiroService',
       method: 'remove',
-      lactacaoId: id
+      lactacaoId: id,
     });
-    
+
     await this.findOne(id, user);
 
     const { error } = await this.supabase.from('DadosLactacao').delete().eq('id_lact', id);
 
     if (error) {
-      this.customLogger.logError(error, { 
-        module: 'ControleLeiteiroService', 
+      this.customLogger.logError(error, {
+        module: 'ControleLeiteiroService',
         method: 'remove',
-        lactacaoId: id
+        lactacaoId: id,
       });
       throw new InternalServerErrorException('Falha ao remover o dado de lactação.');
     }
-    
-    this.customLogger.log('Registro de lactação removido com sucesso', { 
-      module: 'ControleLeiteiroService', 
+
+    this.customLogger.log('Registro de lactação removido com sucesso', {
+      module: 'ControleLeiteiroService',
       method: 'remove',
-      lactacaoId: id
+      lactacaoId: id,
     });
     return;
   }

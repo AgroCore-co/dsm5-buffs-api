@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, ParseIntPipe, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, ParseUUIDPipe, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiResponse, ApiTags, ApiParam, ApiBody } from '@nestjs/swagger';
 import { SupabaseAuthGuard } from '../../auth/guards/auth.guard';
 import { User } from '../../auth/decorators/user.decorator';
@@ -23,7 +23,12 @@ export class EstoqueLeiteController {
   @ApiResponse({ status: 201, description: 'Registro de estoque criado com sucesso.' })
   @ApiResponse({ status: 400, description: 'Dados inválidos.' })
   create(@Body() dto: CreateEstoqueLeiteDto, @User('sub') id_usuario: string) {
-    this.logger.logApiRequest('POST', '/estoque-leite', undefined, { module: 'EstoqueLeiteController', method: 'create', usuarioId: id_usuario, propriedadeId: dto.id_propriedade });
+    this.logger.logApiRequest('POST', '/estoque-leite', undefined, {
+      module: 'EstoqueLeiteController',
+      method: 'create',
+      usuarioId: id_usuario,
+      propriedadeId: dto.id_propriedade,
+    });
     return this.service.create(dto, id_usuario);
   }
 
@@ -37,31 +42,31 @@ export class EstoqueLeiteController {
 
   @Get(':id')
   @ApiOperation({ summary: 'Busca um registro de estoque pelo ID' })
-  @ApiParam({ name: 'id', description: 'ID do registro de estoque' })
+  @ApiParam({ name: 'id', description: 'ID do registro de estoque', type: 'string' })
   @ApiResponse({ status: 200, description: 'Registro encontrado.' })
   @ApiResponse({ status: 404, description: 'Registro não encontrado.' })
-  findOne(@Param('id', ParseIntPipe) id: number) {
+  findOne(@Param('id', ParseUUIDPipe) id: string) {
     this.logger.logApiRequest('GET', `/estoque-leite/${id}`, undefined, { module: 'EstoqueLeiteController', method: 'findOne', estoqueId: id });
     return this.service.findOne(id);
   }
 
   @Patch(':id')
   @ApiOperation({ summary: 'Atualiza um registro de estoque' })
-  @ApiParam({ name: 'id', description: 'ID do registro a ser atualizado' })
+  @ApiParam({ name: 'id', description: 'ID do registro a ser atualizado', type: 'string' })
   @ApiBody({ type: UpdateEstoqueLeiteDto })
   @ApiResponse({ status: 200, description: 'Registro atualizado com sucesso.' })
   @ApiResponse({ status: 404, description: 'Registro não encontrado.' })
-  update(@Param('id', ParseIntPipe) id: number, @Body() dto: UpdateEstoqueLeiteDto) {
+  update(@Param('id', ParseUUIDPipe) id: string, @Body() dto: UpdateEstoqueLeiteDto) {
     this.logger.logApiRequest('PATCH', `/estoque-leite/${id}`, undefined, { module: 'EstoqueLeiteController', method: 'update', estoqueId: id });
     return this.service.update(id, dto);
   }
 
   @Delete(':id')
   @ApiOperation({ summary: 'Remove um registro de estoque' })
-  @ApiParam({ name: 'id', description: 'ID do registro a ser removido' })
+  @ApiParam({ name: 'id', description: 'ID do registro a ser removido', type: 'string' })
   @ApiResponse({ status: 200, description: 'Registro removido com sucesso.' })
   @ApiResponse({ status: 404, description: 'Registro não encontrado.' })
-  remove(@Param('id', ParseIntPipe) id: number) {
+  remove(@Param('id', ParseUUIDPipe) id: string) {
     this.logger.logApiRequest('DELETE', `/estoque-leite/${id}`, undefined, { module: 'EstoqueLeiteController', method: 'remove', estoqueId: id });
     return this.service.remove(id);
   }

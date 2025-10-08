@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, ParseIntPipe, UseGuards, HttpCode, Query } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, ParseUUIDPipe, UseGuards, HttpCode, Query } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiResponse, ApiTags, ApiQuery } from '@nestjs/swagger';
 import { SupabaseAuthGuard } from '../../auth/guards/auth.guard';
 import { User } from '../../auth/decorators/user.decorator';
@@ -36,7 +36,12 @@ export class ControleLeiteiroController {
   @ApiQuery({ name: 'page', required: false, type: Number, description: 'Número da página (default: 1)' })
   @ApiQuery({ name: 'limit', required: false, type: Number, description: 'Quantidade de registros por página (default: 20)' })
   findAll(@Query('page') page: number = 1, @Query('limit') limit: number = 20) {
-    this.logger.logApiRequest('GET', '/lactacao', undefined, { module: 'ControleLeiteiroController', method: 'findAll', page: Number(page), limit: Number(limit) });
+    this.logger.logApiRequest('GET', '/lactacao', undefined, {
+      module: 'ControleLeiteiroController',
+      method: 'findAll',
+      page: Number(page),
+      limit: Number(limit),
+    });
     return this.service.findAll(Number(page), Number(limit));
   }
 
@@ -48,12 +53,18 @@ export class ControleLeiteiroController {
   @ApiQuery({ name: 'page', required: false, type: Number, description: 'Número da página (default: 1)' })
   @ApiQuery({ name: 'limit', required: false, type: Number, description: 'Quantidade de registros por página (default: 20)' })
   findAllByBufala(
-    @Param('id_bufala', ParseIntPipe) id_bufala: number,
+    @Param('id_bufala', ParseUUIDPipe) id_bufala: string,
     @Query('page') page: number = 1,
     @Query('limit') limit: number = 20,
     @User() user: any,
   ) {
-    this.logger.logApiRequest('GET', `/lactacao/bufala/${id_bufala}`, undefined, { module: 'ControleLeiteiroController', method: 'findAllByBufala', bufalaId: id_bufala, page: Number(page), limit: Number(limit) });
+    this.logger.logApiRequest('GET', `/lactacao/bufala/${id_bufala}`, undefined, {
+      module: 'ControleLeiteiroController',
+      method: 'findAllByBufala',
+      bufalaId: id_bufala,
+      page: Number(page),
+      limit: Number(limit),
+    });
     return this.service.findAllByBufala(id_bufala, Number(page), Number(limit), user);
   }
 
@@ -62,7 +73,7 @@ export class ControleLeiteiroController {
   @ApiResponse({ status: 200, description: 'Dados do registro retornados.' })
   @ApiResponse({ status: 401, description: 'Não autorizado.' })
   @ApiResponse({ status: 404, description: 'Registro não encontrado ou não pertence a este usuário.' })
-  findOne(@Param('id', ParseIntPipe) id: number, @User() user: any) {
+  findOne(@Param('id', ParseUUIDPipe) id: string, @User() user: any) {
     this.logger.logApiRequest('GET', `/lactacao/${id}`, undefined, { module: 'ControleLeiteiroController', method: 'findOne', lactacaoId: id });
     return this.service.findOne(id, user);
   }
@@ -72,7 +83,7 @@ export class ControleLeiteiroController {
   @ApiResponse({ status: 200, description: 'Registro atualizado com sucesso.' })
   @ApiResponse({ status: 401, description: 'Não autorizado.' })
   @ApiResponse({ status: 404, description: 'Registro não encontrado ou não pertence a este usuário.' })
-  update(@Param('id', ParseIntPipe) id: number, @Body() dto: UpdateDadosLactacaoDto, @User() user: any) {
+  update(@Param('id', ParseUUIDPipe) id: string, @Body() dto: UpdateDadosLactacaoDto, @User() user: any) {
     this.logger.logApiRequest('PATCH', `/lactacao/${id}`, undefined, { module: 'ControleLeiteiroController', method: 'update', lactacaoId: id });
     return this.service.update(id, dto, user);
   }
@@ -83,7 +94,7 @@ export class ControleLeiteiroController {
   @ApiResponse({ status: 204, description: 'Registro deletado com sucesso.' })
   @ApiResponse({ status: 401, description: 'Não autorizado.' })
   @ApiResponse({ status: 404, description: 'Registro não encontrado ou não pertence a este usuário.' })
-  remove(@Param('id', ParseIntPipe) id: number, @User() user: any) {
+  remove(@Param('id', ParseUUIDPipe) id: string, @User() user: any) {
     this.logger.logApiRequest('DELETE', `/lactacao/${id}`, undefined, { module: 'ControleLeiteiroController', method: 'remove', lactacaoId: id });
     return this.service.remove(id, user);
   }

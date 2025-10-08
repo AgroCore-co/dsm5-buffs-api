@@ -1,5 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsDateString, IsEnum, IsInt, IsOptional, IsPositive, IsString, MaxLength } from 'class-validator';
+import { IsDateString, IsEnum, IsInt, IsOptional, IsPositive, IsString, MaxLength, IsUUID } from 'class-validator';
 
 export enum StatusCicloLactacao {
   EM_LACTACAO = 'Em Lactação',
@@ -8,9 +8,8 @@ export enum StatusCicloLactacao {
 
 export class CreateCicloLactacaoDto {
   @ApiProperty({ description: 'ID da búfala', example: 5 })
-  @IsInt()
-  @IsPositive()
-  id_bufala: number;
+  @IsUUID()
+  id_bufala: string;
 
   @ApiProperty({ description: 'Data do parto', example: '2025-02-01' })
   @IsDateString()
@@ -32,5 +31,3 @@ export class CreateCicloLactacaoDto {
   @IsOptional()
   observacao?: string;
 }
-
-
