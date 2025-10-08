@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, UseGuards, Param, Patch, Delete, ParseIntPipe, UseInterceptors } from '@nestjs/common';
+import { Controller, Get, Post, Body, UseGuards, Param, Patch, Delete, ParseUUIDPipe, UseInterceptors } from '@nestjs/common';
 import { CacheInterceptor, CacheTTL } from '@nestjs/cache-manager';
 import { GrupoService } from './grupo.service';
 import { LoggerService } from '../../../core/logger/logger.service';
@@ -38,11 +38,11 @@ export class GrupoController {
     summary: 'Busca um grupo específico',
     description: 'Retorna os dados de um grupo específico pelo ID.',
   })
-  @ApiParam({ name: 'id', description: 'ID do grupo', type: 'number' })
+  @ApiParam({ name: 'id', description: 'ID do grupo', type: 'string' })
   @ApiResponse({ status: 200, description: 'Grupo encontrado com sucesso.' })
   @ApiResponse({ status: 401, description: 'Não autorizado.' })
   @ApiResponse({ status: 404, description: 'Grupo não encontrado.' })
-  findOne(@Param('id', ParseIntPipe) id: number) {
+  findOne(@Param('id', ParseUUIDPipe) id: string) {
     this.logger.logApiRequest('GET', `/grupos/${id}`, undefined, { module: 'GrupoController', method: 'findOne', grupoId: id });
     return this.grupoService.findOne(id);
   }
@@ -65,12 +65,12 @@ export class GrupoController {
     summary: 'Atualiza um grupo',
     description: 'Atualiza os dados de um grupo específico pelo ID.',
   })
-  @ApiParam({ name: 'id', description: 'ID do grupo', type: 'number' })
+  @ApiParam({ name: 'id', description: 'ID do grupo', type: 'string' })
   @ApiResponse({ status: 200, description: 'Grupo atualizado com sucesso.' })
   @ApiResponse({ status: 400, description: 'Dados inválidos.' })
   @ApiResponse({ status: 401, description: 'Não autorizado.' })
   @ApiResponse({ status: 404, description: 'Grupo não encontrado.' })
-  update(@Param('id', ParseIntPipe) id: number, @Body() updateGrupoDto: UpdateGrupoDto) {
+  update(@Param('id', ParseUUIDPipe) id: string, @Body() updateGrupoDto: UpdateGrupoDto) {
     this.logger.logApiRequest('PATCH', `/grupos/${id}`, undefined, { module: 'GrupoController', method: 'update', grupoId: id });
     return this.grupoService.update(id, updateGrupoDto);
   }
@@ -80,11 +80,11 @@ export class GrupoController {
     summary: 'Remove um grupo',
     description: 'Remove um grupo específico do sistema pelo ID.',
   })
-  @ApiParam({ name: 'id', description: 'ID do grupo', type: 'number' })
+  @ApiParam({ name: 'id', description: 'ID do grupo', type: 'string' })
   @ApiResponse({ status: 200, description: 'Grupo removido com sucesso.' })
   @ApiResponse({ status: 401, description: 'Não autorizado.' })
   @ApiResponse({ status: 404, description: 'Grupo não encontrado.' })
-  remove(@Param('id', ParseIntPipe) id: number) {
+  remove(@Param('id', ParseUUIDPipe) id: string) {
     this.logger.logApiRequest('DELETE', `/grupos/${id}`, undefined, { module: 'GrupoController', method: 'remove', grupoId: id });
     return this.grupoService.remove(id);
   }

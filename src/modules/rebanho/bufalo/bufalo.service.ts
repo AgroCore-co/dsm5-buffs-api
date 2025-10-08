@@ -15,7 +15,7 @@ import { GenealogiaService } from '../../reproducao/genealogia/genealogia.servic
 
 // Interface para tipar as atualizações de maturidade
 interface MaturityUpdate {
-  id_bufalo: number;
+  id_bufalo: string;
   nivel_maturidade: NivelMaturidade;
   status: boolean;
 }
@@ -46,7 +46,7 @@ export class BufaloService {
   /**
    * Busca todas as propriedades vinculadas ao usuário (como dono OU funcionário)
    */
-  private async getUserPropriedades(userId: number): Promise<number[]> {
+  private async getUserPropriedades(userId: number): Promise<string[]> {
     // 1. Busca propriedades onde o usuário é DONO
     const { data: propriedadesComoDono, error: errorDono } = await this.supabase.from('Propriedade').select('id_propriedade').eq('id_dono', userId);
 
@@ -82,7 +82,7 @@ export class BufaloService {
   /**
    * Valida se o usuário tem acesso ao búfalo através das propriedades vinculadas
    */
-  private async validateBufaloAccess(bufaloId: number, userId: number): Promise<void> {
+  private async validateBufaloAccess(bufaloId: string, userId: number): Promise<void> {
     // Busca as propriedades do usuário
     const propriedadesUsuario = await this.getUserPropriedades(userId);
 
@@ -117,7 +117,7 @@ export class BufaloService {
     }
 
     // Validação de outras referências
-    const checkIfExists = async (tableName: string, columnName: string, id: number) => {
+    const checkIfExists = async (tableName: string, columnName: string, id: string) => {
       const { data, error } = await this.supabase.from(tableName).select(columnName).eq(columnName, id).single();
       if (error || !data) {
         throw new NotFoundException(`${tableName} com ID ${id} não encontrado.`);
@@ -210,7 +210,7 @@ export class BufaloService {
     return data || [];
   }
 
-  async findOne(id: number, user: any) {
+  async findOne(id: string, user: any) {
     const userId = await this.getUserId(user);
 
     // Valida acesso antes de buscar os dados completos
@@ -252,7 +252,7 @@ export class BufaloService {
     return data;
   }
 
-  async update(id: number, updateDto: UpdateBufaloDto, user: any) {
+  async update(id: string, updateDto: UpdateBufaloDto, user: any) {
     const userId = await this.getUserId(user);
 
     // Valida acesso ao búfalo
@@ -443,7 +443,7 @@ export class BufaloService {
     }
   }
 
-  async remove(id: number, user: any) {
+  async remove(id: string, user: any) {
     const userId = await this.getUserId(user);
 
     // Valida acesso ao búfalo
@@ -544,7 +544,7 @@ export class BufaloService {
   /**
    * Processa categoria ABCB do búfalo após criação/atualização
    */
-  async processarCategoriaABCB(bufaloId: number): Promise<CategoriaABCB | null> {
+  async processarCategoriaABCB(bufaloId: string): Promise<CategoriaABCB | null> {
     try {
       console.log(`Iniciando processamento da categoria ABCB para búfalo ${bufaloId}`);
 
@@ -665,7 +665,7 @@ export class BufaloService {
   /**
    * Busca búfalo com dados completos
    */
-  private async buscarBufaloCompleto(bufaloId: number): Promise<any> {
+  private async buscarBufaloCompleto(bufaloId: string): Promise<any> {
     try {
       const { data, error } = await this.supabase
         .from(this.tableName)

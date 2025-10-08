@@ -1,26 +1,23 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsInt, IsNotEmpty, IsOptional, IsDateString, IsPositive, ValidateIf, IsString, MaxLength } from 'class-validator';
+import { IsNotEmpty, IsOptional, IsDateString, ValidateIf, IsString, MaxLength, IsUUID } from 'class-validator';
 
 export class CreateMovLoteDto {
-  @ApiProperty({ example: 1, description: 'ID do grupo de animais que está sendo movido' })
-  @IsInt()
-  @IsPositive()
-  id_grupo: number;
+  @ApiProperty({ example: 'b8c4a72d-1234-4567-8901-234567890123', description: 'ID do grupo de animais que está sendo movido' })
+  @IsUUID()
+  id_grupo: string;
 
   @ApiProperty({
-    example: 1,
+    example: 'b8c4a72d-1234-4567-8901-234567890123',
     description: 'ID do lote de origem (opcional - será detectado automaticamente se não informado)',
     required: false,
   })
-  @IsInt()
-  @IsPositive()
+  @IsUUID()
   @IsOptional()
-  id_lote_anterior?: number;
+  id_lote_anterior?: string;
 
-  @ApiProperty({ example: 2, description: 'ID do lote de destino (para onde o grupo está se movendo)' })
-  @IsInt()
-  @IsPositive()
-  id_lote_atual: number;
+  @ApiProperty({ example: 'b8c4a72d-1234-4567-8901-234567890123', description: 'ID do lote de destino (para onde o grupo está se movendo)' })
+  @IsUUID()
+  id_lote_atual: string;
 
   @ApiProperty({ example: '2025-01-15T08:00:00Z', description: 'Data e hora de entrada do grupo no novo lote' })
   @IsDateString()
@@ -44,6 +41,6 @@ export class CreateMovLoteDto {
   })
   @IsDateString()
   @IsOptional()
-  @ValidateIf(o => o.dt_saida !== null)
+  @ValidateIf((o) => o.dt_saida !== null)
   dt_saida?: string;
 }

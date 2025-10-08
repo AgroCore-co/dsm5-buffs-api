@@ -1,5 +1,21 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsString, IsNotEmpty, IsOptional, IsBoolean, IsInt, MaxLength, IsDate, IsEnum, IsPositive, ValidateIf, ValidationArguments, ValidatorConstraint, ValidatorConstraintInterface, Validate } from 'class-validator';
+import {
+  IsString,
+  IsNotEmpty,
+  IsOptional,
+  IsBoolean,
+  IsInt,
+  MaxLength,
+  IsDate,
+  IsEnum,
+  IsPositive,
+  ValidateIf,
+  ValidationArguments,
+  ValidatorConstraint,
+  ValidatorConstraintInterface,
+  Validate,
+  IsUUID,
+} from 'class-validator';
 import { Type } from 'class-transformer';
 import { BufaloValidationUtils } from '../utils/validation.utils';
 import { CategoriaABCB } from './categoria-abcb.dto';
@@ -57,10 +73,11 @@ export class CreateBufaloDto {
   @MaxLength(30)
   microchip?: string;
 
-  @ApiProperty({ 
-    description: 'Data de nascimento do búfalo. A idade máxima permitida é 50 anos. O nível de maturidade será calculado automaticamente baseado na idade e sexo.', 
-    example: '2023-05-20T00:00:00.000Z', 
-    required: false 
+  @ApiProperty({
+    description:
+      'Data de nascimento do búfalo. A idade máxima permitida é 50 anos. O nível de maturidade será calculado automaticamente baseado na idade e sexo.',
+    example: '2023-05-20T00:00:00.000Z',
+    required: false,
   })
   @Type(() => Date)
   @IsDate()
@@ -69,7 +86,8 @@ export class CreateBufaloDto {
   dt_nascimento?: Date;
 
   @ApiProperty({
-    description: 'Nível de maturidade (B-Bezerro, N-Novilho/Novilha, V-Vaca, T-Touro). Se não informado, será calculado automaticamente baseado na data de nascimento e sexo. Bezerro: 0-12 meses, Novilho/Novilha: 12-24 meses, Vaca: após primeira cria (~3 anos), Touro: machos reprodutores a partir de 24 meses.',
+    description:
+      'Nível de maturidade (B-Bezerro, N-Novilho/Novilha, V-Vaca, T-Touro). Se não informado, será calculado automaticamente baseado na data de nascimento e sexo. Bezerro: 0-12 meses, Novilho/Novilha: 12-24 meses, Vaca: após primeira cria (~3 anos), Touro: machos reprodutores a partir de 24 meses.',
     enum: NivelMaturidade,
     example: NivelMaturidade.NOVILHO_NOVILHA,
     required: false,
@@ -87,40 +105,40 @@ export class CreateBufaloDto {
   @IsNotEmpty()
   sexo: SexoBufalo;
 
-  @ApiProperty({ description: 'ID da raça do búfalo. Se não informado e houver dados zootécnicos, o sistema tentará sugerir automaticamente usando IA.', example: 1, required: false })
-  @IsInt()
-  @IsPositive()
+  @ApiProperty({
+    description: 'ID da raça do búfalo. Se não informado e houver dados zootécnicos, o sistema tentará sugerir automaticamente usando IA.',
+    example: 'b8c4a72d-1234-4567-8901-234567890123',
+    required: false,
+  })
+  @IsUUID()
   @IsOptional()
-  id_raca?: number;
+  id_raca?: string;
 
-  @ApiProperty({ description: 'ID da propriedade onde o búfalo está localizado.', example: 1 })
-  @IsInt()
-  @IsPositive()
+  @ApiProperty({ description: 'ID da propriedade onde o búfalo está localizado.', example: 'b8c4a72d-1234-4567-8901-234567890123' })
+  @IsUUID()
   @IsNotEmpty()
-  id_propriedade: number;
+  id_propriedade: string;
 
-  @ApiProperty({ description: 'ID do grupo ao qual o búfalo pertence.', example: 1, required: false })
-  @IsInt()
-  @IsPositive()
+  @ApiProperty({ description: 'ID do grupo ao qual o búfalo pertence.', example: 'b8c4a72d-1234-4567-8901-234567890123', required: false })
+  @IsUUID()
   @IsOptional()
-  id_grupo?: number;
+  id_grupo?: string;
 
-  @ApiProperty({ description: 'ID do búfalo pai (se houver).', example: 10, required: false })
-  @IsInt()
-  @IsPositive()
+  @ApiProperty({ description: 'ID do búfalo pai (se houver).', example: 'b8c4a72d-1234-4567-8901-234567890123', required: false })
+  @IsUUID()
   @IsOptional()
-  id_pai?: number;
+  id_pai?: string;
 
-  @ApiProperty({ description: 'ID da búfala mãe (se houver).', example: 15, required: false })
-  @IsInt()
-  @IsPositive()
+  @ApiProperty({ description: 'ID da búfala mãe (se houver).', example: 'b8c4a72d-1234-4567-8901-234567890123', required: false })
+  @IsUUID()
   @IsOptional()
-  id_mae?: number;
+  id_mae?: string;
 
-  @ApiProperty({ 
-    description: 'Status do búfalo (true para ativo, false para inativo). Será automaticamente definido como false se a idade for superior a 50 anos.', 
-    example: true, 
-    default: true 
+  @ApiProperty({
+    description:
+      'Status do búfalo (true para ativo, false para inativo). Será automaticamente definido como false se a idade for superior a 50 anos.',
+    example: true,
+    default: true,
   })
   @IsBoolean()
   @IsOptional()

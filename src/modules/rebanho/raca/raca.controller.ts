@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, UseGuards, Param, Patch, Delete, ParseIntPipe, UseInterceptors } from '@nestjs/common';
+import { Controller, Get, Post, Body, UseGuards, Param, Patch, Delete, ParseUUIDPipe, UseInterceptors } from '@nestjs/common';
 import { CacheInterceptor, CacheTTL } from '@nestjs/cache-manager';
 import { RacaService } from './raca.service';
 import { LoggerService } from '../../../core/logger/logger.service';
@@ -38,11 +38,11 @@ export class RacaController {
     summary: 'Busca uma raça específica',
     description: 'Retorna os dados de uma raça específica pelo ID.',
   })
-  @ApiParam({ name: 'id', description: 'ID da raça', type: 'number' })
+  @ApiParam({ name: 'id', description: 'ID da raça', type: 'string' })
   @ApiResponse({ status: 200, description: 'Raça encontrada com sucesso.' })
   @ApiResponse({ status: 401, description: 'Não autorizado.' })
   @ApiResponse({ status: 404, description: 'Raça não encontrada.' })
-  findOne(@Param('id', ParseIntPipe) id: number) {
+  findOne(@Param('id', ParseUUIDPipe) id: string) {
     this.logger.logApiRequest('GET', `/racas/${id}`, undefined, { module: 'RacaController', method: 'findOne', racaId: id });
     return this.racaService.findOne(id);
   }
@@ -65,12 +65,12 @@ export class RacaController {
     summary: 'Atualiza uma raça',
     description: 'Atualiza os dados de uma raça específica pelo ID.',
   })
-  @ApiParam({ name: 'id', description: 'ID da raça', type: 'number' })
+  @ApiParam({ name: 'id', description: 'ID da raça', type: 'string' })
   @ApiResponse({ status: 200, description: 'Raça atualizada com sucesso.' })
   @ApiResponse({ status: 400, description: 'Dados inválidos.' })
   @ApiResponse({ status: 401, description: 'Não autorizado.' })
   @ApiResponse({ status: 404, description: 'Raça não encontrada.' })
-  update(@Param('id', ParseIntPipe) id: number, @Body() updateRacaDto: UpdateRacaDto) {
+  update(@Param('id', ParseUUIDPipe) id: string, @Body() updateRacaDto: UpdateRacaDto) {
     this.logger.logApiRequest('PATCH', `/racas/${id}`, undefined, { module: 'RacaController', method: 'update', racaId: id });
     return this.racaService.update(id, updateRacaDto);
   }
@@ -80,11 +80,11 @@ export class RacaController {
     summary: 'Remove uma raça',
     description: 'Remove uma raça específica do sistema pelo ID.',
   })
-  @ApiParam({ name: 'id', description: 'ID da raça', type: 'number' })
+  @ApiParam({ name: 'id', description: 'ID da raça', type: 'string' })
   @ApiResponse({ status: 200, description: 'Raça removida com sucesso.' })
   @ApiResponse({ status: 401, description: 'Não autorizado.' })
   @ApiResponse({ status: 404, description: 'Raça não encontrada.' })
-  remove(@Param('id', ParseIntPipe) id: number) {
+  remove(@Param('id', ParseUUIDPipe) id: string) {
     this.logger.logApiRequest('DELETE', `/racas/${id}`, undefined, { module: 'RacaController', method: 'remove', racaId: id });
     return this.racaService.remove(id);
   }

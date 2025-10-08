@@ -18,7 +18,7 @@ export class GrupoService {
 
   async create(createGrupoDto: CreateGrupoDto) {
     this.logger.log('Iniciando criação de grupo', { module: 'GrupoService', method: 'create' });
-    
+
     const { data, error } = await this.supabase.from('Grupo').insert(createGrupoDto).select().single();
 
     if (error) {
@@ -32,7 +32,7 @@ export class GrupoService {
 
   async findAll() {
     this.logger.log('Iniciando busca de todos os grupos', { module: 'GrupoService', method: 'findAll' });
-    
+
     const { data, error } = await this.supabase.from('Grupo').select('*').order('nome_grupo', { ascending: true });
 
     if (error) {
@@ -44,9 +44,9 @@ export class GrupoService {
     return data;
   }
 
-  async findOne(id: number) {
+  async findOne(id: string) {
     this.logger.log('Iniciando busca de grupo por ID', { module: 'GrupoService', method: 'findOne', grupoId: id });
-    
+
     const { data, error } = await this.supabase.from('Grupo').select('*').eq('id_grupo', id).single();
 
     if (error) {
@@ -62,9 +62,9 @@ export class GrupoService {
     return data;
   }
 
-  async update(id: number, updateGrupoDto: UpdateGrupoDto) {
+  async update(id: string, updateGrupoDto: UpdateGrupoDto) {
     this.logger.log('Iniciando atualização de grupo', { module: 'GrupoService', method: 'update', grupoId: id });
-    
+
     // Primeiro verifica se o grupo existe
     await this.findOne(id);
 
@@ -79,9 +79,9 @@ export class GrupoService {
     return data;
   }
 
-  async remove(id: number) {
+  async remove(id: string) {
     this.logger.log('Iniciando remoção de grupo', { module: 'GrupoService', method: 'remove', grupoId: id });
-    
+
     // Primeiro verifica se o grupo existe
     await this.findOne(id);
 

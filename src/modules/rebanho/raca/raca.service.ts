@@ -18,7 +18,7 @@ export class RacaService {
 
   async create(createRacaDto: CreateRacaDto) {
     this.logger.log('Iniciando criação de raça', { module: 'RacaService', method: 'create' });
-    
+
     const { data, error } = await this.supabase.from('Raca').insert(createRacaDto).select().single();
 
     if (error) {
@@ -32,7 +32,7 @@ export class RacaService {
 
   async findAll() {
     this.logger.log('Iniciando busca de todas as raças', { module: 'RacaService', method: 'findAll' });
-    
+
     const { data, error } = await this.supabase.from('Raca').select('*').order('nome', { ascending: true });
 
     if (error) {
@@ -44,9 +44,9 @@ export class RacaService {
     return data;
   }
 
-  async findOne(id: number) {
+  async findOne(id: string) {
     this.logger.log('Iniciando busca de raça por ID', { module: 'RacaService', method: 'findOne', racaId: id });
-    
+
     const { data, error } = await this.supabase.from('Raca').select('*').eq('id_raca', id).single();
 
     if (error) {
@@ -62,9 +62,9 @@ export class RacaService {
     return data;
   }
 
-  async update(id: number, updateRacaDto: UpdateRacaDto) {
+  async update(id: string, updateRacaDto: UpdateRacaDto) {
     this.logger.log('Iniciando atualização de raça', { module: 'RacaService', method: 'update', racaId: id });
-    
+
     // Primeiro verifica se a raça existe
     await this.findOne(id);
 
@@ -79,9 +79,9 @@ export class RacaService {
     return data;
   }
 
-  async remove(id: number) {
+  async remove(id: string) {
     this.logger.log('Iniciando remoção de raça', { module: 'RacaService', method: 'remove', racaId: id });
-    
+
     // Primeiro verifica se a raça existe
     await this.findOne(id);
 

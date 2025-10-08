@@ -2,16 +2,10 @@ import { CategoriaABCB } from '../dto/categoria-abcb.dto';
 import { ArvoreGenealogicaNode } from '../../../reproducao/genealogia/genealogia.service';
 
 export class CategoriaABCBUtil {
-  
   /**
    * Calcula categoria ABCB baseada na genealogia e propriedade ABCB
    */
-  static calcularCategoria(
-    arvoreGenealogica: ArvoreGenealogicaNode,
-    propriedadeParticipaABCB: boolean,
-    temRacaDefinida: boolean
-  ): CategoriaABCB {
-    
+  static calcularCategoria(arvoreGenealogica: ArvoreGenealogicaNode, propriedadeParticipaABCB: boolean, temRacaDefinida: boolean): CategoriaABCB {
     // Se propriedade não participa da ABCB, sempre SRD
     if (!propriedadeParticipaABCB) {
       return CategoriaABCB.SRD;
@@ -56,11 +50,7 @@ export class CategoriaABCBUtil {
   /**
    * Verifica se tem N gerações puras da mesma raça
    */
-  private static verificarGeracoesPuras(
-    arvore: ArvoreGenealogicaNode, 
-    racaAlvo: number | null, 
-    geracoesNecessarias: number
-  ): boolean {
+  private static verificarGeracoesPuras(arvore: ArvoreGenealogicaNode, racaAlvo: string | null, geracoesNecessarias: number): boolean {
     if (!arvore || !racaAlvo || arvore.id_raca !== racaAlvo) {
       return false;
     }
@@ -76,8 +66,9 @@ export class CategoriaABCBUtil {
     }
 
     // Verifica recursivamente pai e mãe
-    return this.verificarGeracoesPuras(arvore.pai, racaAlvo, geracoesNecessarias) &&
-           this.verificarGeracoesPuras(arvore.mae, racaAlvo, geracoesNecessarias);
+    return (
+      this.verificarGeracoesPuras(arvore.pai, racaAlvo, geracoesNecessarias) && this.verificarGeracoesPuras(arvore.mae, racaAlvo, geracoesNecessarias)
+    );
   }
 
   /**
