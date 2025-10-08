@@ -44,7 +44,7 @@ export class AlertasService {
       // Verifica se já existe um alerta com os mesmos critérios
       if (createAlertaDto.tipo_evento_origem && createAlertaDto.id_evento_origem) {
         const { data: existingAlert, error: searchError } = await this.supabase
-          .from('Alertas')
+          .from('alertas')
           .select('id_alerta')
           .eq('tipo_evento_origem', createAlertaDto.tipo_evento_origem)
           .eq('id_evento_origem', createAlertaDto.id_evento_origem)
