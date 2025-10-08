@@ -60,7 +60,10 @@ export class UsuarioService {
    */
   async findAll() {
     this.logger.log(`[UsuarioService] findAll chamado`);
-    const { data, error } = await this.supabase.from('Usuario').select('*');
+    const { data, error } = await this.supabase.from('Usuario').select(`
+        *,
+        endereco:Endereco(*)
+      `);
 
     if (error) {
       this.logger.logError(error, { method: 'findAll' });
@@ -75,7 +78,16 @@ export class UsuarioService {
    */
   async findOneByEmail(email: string) {
     this.logger.log(`[UsuarioService] findOneByEmail chamado`, { email });
-    const { data, error } = await this.supabase.from('Usuario').select('*').eq('email', email).single();
+    const { data, error } = await this.supabase
+      .from('Usuario')
+      .select(
+        `
+        *,
+        endereco:Endereco(*)
+      `,
+      )
+      .eq('email', email)
+      .single();
 
     if (error && error.code !== 'PGRST116') {
       this.logger.logError(error, { method: 'findOneByEmail', email });
@@ -88,12 +100,21 @@ export class UsuarioService {
   }
 
   /**
-   * Encontra um usuário pela sua chave primária (id_usuario).
-   * @param id O ID numérico (PK) do usuário.
+   * Encontra um usuário pela sua chave primária (id_usuario UUID).
+   * @param id O ID UUID do usuário.
    */
-  async findOne(id: number) {
+  async findOne(id: string) {
     this.logger.log(`[UsuarioService] findOne chamado`, { id });
-    const { data, error } = await this.supabase.from('Usuario').select('*').eq('id_usuario', id).single();
+    const { data, error } = await this.supabase
+      .from('Usuario')
+      .select(
+        `
+        *,
+        endereco:Endereco(*)
+      `,
+      )
+      .eq('id_usuario', id)
+      .single();
 
     if (error && error.code !== 'PGRST116') {
       this.logger.logError(error, { method: 'findOne', id });
@@ -107,12 +128,20 @@ export class UsuarioService {
 
   /**
    * Atualiza os dados de um usuário.
-   * @param id O ID numérico (PK) do usuário.
+   * @param id O ID UUID do usuário.
    * @param updateUsuarioDto Os dados a serem atualizados.
    */
-  async update(id: number, updateUsuarioDto: UpdateUsuarioDto) {
+  async update(id: string, updateUsuarioDto: UpdateUsuarioDto) {
     this.logger.log(`[UsuarioService] update chamado`, { id, updateUsuarioDto });
-    const { data, error } = await this.supabase.from('Usuario').update(updateUsuarioDto).eq('id_usuario', id).select().single();
+    const { data, error } = await this.supabase
+      .from('Usuario')
+      .update({
+        ...updateUsuarioDto,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id_usuario', id)
+      .select()
+      .single();
 
     if (error) {
       if (error.code === 'PGRST116') {
@@ -126,9 +155,9 @@ export class UsuarioService {
 
   /**
    * Remove um usuário.
-   * @param id O ID numérico (PK) do usuário.
+   * @param id O ID UUID do usuário.
    */
-  async remove(id: number) {
+  async remove(id: string) {
     this.logger.log(`[UsuarioService] remove chamado`, { id });
     const { error, count } = await this.supabase.from('Usuario').delete({ count: 'exact' }).eq('id_usuario', id);
 
@@ -145,19 +174,19 @@ export class UsuarioService {
 
   /**
    * Busca todas as propriedades onde o usuário é o dono.
-   * @param userId ID do usuário proprietário.
+   * @param userId ID UUID do usuário proprietário.
    */
-  async getUserPropriedades(userId: number): Promise<number[]> {
-    this.logger.log(`[UsuarioService] getUserPropriedades chamado`, { userId: String(userId) });
+  async getUserPropriedades(userId: string): Promise<string[]> {
+    this.logger.log(`[UsuarioService] getUserPropriedades chamado`, { userId });
     const { data, error } = await this.supabase.from('Propriedade').select('id_propriedade').eq('id_dono', userId);
 
     if (error) {
-      this.logger.logError(error, { method: 'getUserPropriedades', userId: String(userId) });
+      this.logger.logError(error, { method: 'getUserPropriedades', userId });
       throw new InternalServerErrorException('Falha ao buscar propriedades do usuário.');
     }
 
     if (!data || data.length === 0) {
-      this.logger.warn(`[UsuarioService] Usuário não possui nenhuma propriedade`, { userId: String(userId) });
+      this.logger.warn(`[UsuarioService] Usuário não possui nenhuma propriedade`, { userId });
       throw new NotFoundException('Usuário não possui nenhuma propriedade cadastrada.');
     }
 
@@ -175,12 +204,15 @@ export class UsuarioService {
       password: string;
       telefone?: string;
       cargo: Cargo;
-      id_endereco?: number;
-      id_propriedade?: number;
+      id_endereco?: string;
+      id_propriedade?: string;
     },
-    solicitante: { id_usuario?: number; cargo?: Cargo },
+    solicitante: { id_usuario?: string; cargo?: Cargo },
   ) {
-    this.logger.log('[UsuarioService] createFuncionario chamado', { dtoEmail: dto.email, solicitante: String(solicitante?.id_usuario) });
+    this.logger.log('[UsuarioService] createFuncionario chamado', {
+      dtoEmail: dto.email,
+      solicitante: solicitante?.id_usuario,
+    });
 
     if (!solicitante?.id_usuario) {
       throw new ForbiddenException('Solicitante inválido.');
@@ -232,7 +264,7 @@ export class UsuarioService {
     }
 
     // 3) Vincular à propriedade
-    const propriedadesParaVincular: number[] = [];
+    const propriedadesParaVincular: string[] = [];
     if (dto.id_propriedade) {
       propriedadesParaVincular.push(dto.id_propriedade);
     } else {
@@ -240,10 +272,13 @@ export class UsuarioService {
       propriedadesParaVincular.push(...doSolicitante);
     }
 
-    const rows = propriedadesParaVincular.map((id_propriedade) => ({ id_usuario: perfil.id_usuario, id_propriedade }));
+    const rows = propriedadesParaVincular.map((id_propriedade) => ({
+      id_usuario: perfil.id_usuario,
+      id_propriedade,
+    }));
     const { error: vincErr } = await admin.from('UsuarioPropriedade').insert(rows);
     if (vincErr) {
-      this.logger.logError(vincErr, { method: 'createFuncionario.vincular', perfil: String(perfil.id_usuario) });
+      this.logger.logError(vincErr, { method: 'createFuncionario.vincular', perfil: perfil.id_usuario });
       throw new InternalServerErrorException('Erro ao vincular funcionário à propriedade.');
     }
 

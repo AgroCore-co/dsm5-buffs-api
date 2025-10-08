@@ -114,8 +114,11 @@ export class FuncionarioService {
   /**
    * Lista todos os funcionários de uma propriedade específica
    */
-  async listarFuncionariosPorPropriedade(idPropriedade: number, proprietarioEmail: string) {
-    this.logger.log(`[FuncionarioService] listarFuncionariosPorPropriedade chamado`, { idPropriedade, proprietarioEmail });
+  async listarFuncionariosPorPropriedade(idPropriedade: string, proprietarioEmail: string) {
+    this.logger.log(`[FuncionarioService] listarFuncionariosPorPropriedade chamado`, {
+      idPropriedade,
+      proprietarioEmail,
+    });
 
     const proprietario = await this.usuarioService.findOneByEmail(proprietarioEmail);
     const { data: propriedade, error: propError } = await this.supabase
@@ -126,7 +129,10 @@ export class FuncionarioService {
       .single();
 
     if (propError || !propriedade) {
-      this.logger.warn(`[FuncionarioService] Acesso negado: não é proprietário desta propriedade`, { proprietarioEmail, idPropriedade });
+      this.logger.warn(`[FuncionarioService] Acesso negado: não é proprietário desta propriedade`, {
+        proprietarioEmail,
+        idPropriedade,
+      });
       throw new ForbiddenException('Acesso negado: você não é proprietário desta propriedade.');
     }
 
@@ -199,8 +205,12 @@ export class FuncionarioService {
   /**
    * Remove um funcionário de uma propriedade (desvincular)
    */
-  async desvincularFuncionario(idUsuario: number, idPropriedade: number, proprietarioEmail: string) {
-    this.logger.log(`[FuncionarioService] desvincularFuncionario chamado`, { idUsuario, idPropriedade, proprietarioEmail });
+  async desvincularFuncionario(idUsuario: string, idPropriedade: string, proprietarioEmail: string) {
+    this.logger.log(`[FuncionarioService] desvincularFuncionario chamado`, {
+      idUsuario,
+      idPropriedade,
+      proprietarioEmail,
+    });
 
     const proprietario = await this.usuarioService.findOneByEmail(proprietarioEmail);
     const { data: propriedade, error: propError } = await this.supabase
@@ -211,7 +221,10 @@ export class FuncionarioService {
       .single();
 
     if (propError || !propriedade) {
-      this.logger.warn(`[FuncionarioService] Acesso negado para desvincular: não é proprietário`, { proprietarioEmail, idPropriedade });
+      this.logger.warn(`[FuncionarioService] Acesso negado para desvincular: não é proprietário`, {
+        proprietarioEmail,
+        idPropriedade,
+      });
       throw new ForbiddenException('Acesso negado: você não é proprietário desta propriedade.');
     }
 

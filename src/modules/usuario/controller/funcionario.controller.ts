@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Param, Delete, UseGuards, ParseIntPipe } from '@nestjs/common';
+import { Controller, Get, Post, Body, Param, Delete, UseGuards, ParseUUIDPipe } from '@nestjs/common';
 import { FuncionarioService } from '../services/funcionario.service';
 import { CreateFuncionarioDto } from '../dto/create-funcionario.dto';
 import { SupabaseAuthGuard } from '../../auth/guards/auth.guard';
@@ -48,7 +48,7 @@ export class FuncionarioController {
   })
   @ApiResponse({ status: 200, description: 'Lista de funcionários da propriedade retornada.' })
   @ApiResponse({ status: 403, description: 'Acesso negado. Você não é proprietário desta propriedade.' })
-  listarFuncionariosPorPropriedade(@Param('idPropriedade', ParseIntPipe) idPropriedade: number, @User() user: any) {
+  listarFuncionariosPorPropriedade(@Param('idPropriedade', ParseUUIDPipe) idPropriedade: string, @User() user: any) {
     return this.funcionarioService.listarFuncionariosPorPropriedade(idPropriedade, user.email);
   }
 
@@ -61,8 +61,8 @@ export class FuncionarioController {
   })
   @ApiResponse({ status: 200, description: 'Funcionário desvinculado com sucesso.' })
   desvincularFuncionario(
-    @Param('idUsuario', ParseIntPipe) idUsuario: number,
-    @Param('idPropriedade', ParseIntPipe) idPropriedade: number,
+    @Param('idUsuario', ParseUUIDPipe) idUsuario: string,
+    @Param('idPropriedade', ParseUUIDPipe) idPropriedade: string,
     @User() user: any,
   ) {
     return this.funcionarioService.desvincularFuncionario(idUsuario, idPropriedade, user.email);

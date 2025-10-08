@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, ParseIntPipe, UseInterceptors } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, ParseUUIDPipe, UseInterceptors } from '@nestjs/common';
 import { CacheInterceptor, CacheTTL } from '@nestjs/cache-manager';
 import { UsuarioService } from '../services/usuario.service';
 import { CreateFuncionarioDto } from '../dto/create-funcionario.dto';
@@ -60,11 +60,11 @@ export class UsuarioController {
   @UseGuards(RolesGuard)
   @ApiOperation({
     summary: 'Buscar usuário por ID (Admin)',
-    description: 'Busca um usuário específico por seu ID numérico. Apenas para proprietários e gerentes.',
+    description: 'Busca um usuário específico por seu ID UUID. Apenas para proprietários e gerentes.',
   })
   @ApiResponse({ status: 200, description: 'Usuário encontrado.' })
   @ApiResponse({ status: 404, description: 'Usuário não encontrado.' })
-  findOne(@Param('id', ParseIntPipe) id: number) {
+  findOne(@Param('id', ParseUUIDPipe) id: string) {
     return this.usuarioService.findOne(id);
   }
 
@@ -77,7 +77,7 @@ export class UsuarioController {
   })
   @ApiResponse({ status: 200, description: 'Usuário atualizado com sucesso.' })
   @ApiResponse({ status: 404, description: 'Usuário não encontrado.' })
-  update(@Param('id', ParseIntPipe) id: number, @Body() updateUsuarioDto: UpdateUsuarioDto) {
+  update(@Param('id', ParseUUIDPipe) id: string, @Body() updateUsuarioDto: UpdateUsuarioDto) {
     return this.usuarioService.update(id, updateUsuarioDto);
   }
 
@@ -90,7 +90,7 @@ export class UsuarioController {
   })
   @ApiResponse({ status: 200, description: 'Usuário excluído com sucesso.' })
   @ApiResponse({ status: 403, description: 'Acesso negado.' })
-  remove(@Param('id', ParseIntPipe) id: number) {
+  remove(@Param('id', ParseUUIDPipe) id: string) {
     return this.usuarioService.remove(id);
   }
 
@@ -99,7 +99,8 @@ export class UsuarioController {
   @UseGuards(RolesGuard)
   @ApiOperation({
     summary: 'Criar funcionário/gerente/veterinário',
-    description: 'Cria um usuário (GERENTE, FUNCIONARIO ou VETERINARIO) usando o client admin e vincula à propriedade informada ou às propriedades do solicitante.',
+    description:
+      'Cria um usuário (GERENTE, FUNCIONARIO ou VETERINARIO) usando o client admin e vincula à propriedade informada ou às propriedades do solicitante.',
   })
   @ApiResponse({ status: 201, description: 'Funcionário criado com sucesso.' })
   @ApiResponse({ status: 403, description: 'Acesso negado.' })

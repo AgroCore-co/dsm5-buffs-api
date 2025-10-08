@@ -1,5 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsString, IsOptional, IsNotEmpty, IsInt, MaxLength, IsEmail, IsEnum } from 'class-validator';
+import { IsString, IsOptional, IsNotEmpty, IsUUID, MaxLength, IsEmail, IsEnum } from 'class-validator';
 import { Cargo } from '../enums/cargo.enum';
 
 export class CreateFuncionarioDto {
@@ -49,41 +49,41 @@ export class CreateFuncionarioDto {
     example: Cargo.FUNCIONARIO,
     required: true,
     examples: {
-      gerente: { 
-        value: Cargo.GERENTE, 
-        description: 'Pode gerenciar usuários mas não propriedades' 
+      gerente: {
+        value: Cargo.GERENTE,
+        description: 'Pode gerenciar usuários mas não propriedades',
       },
-      funcionario: { 
-        value: Cargo.FUNCIONARIO, 
-        description: 'Acesso apenas às operações básicas' 
+      funcionario: {
+        value: Cargo.FUNCIONARIO,
+        description: 'Acesso apenas às operações básicas',
       },
-      veterinario: { 
-        value: Cargo.VETERINARIO, 
-        description: 'Acesso apenas às operações básicas' 
-      }
-    }
+      veterinario: {
+        value: Cargo.VETERINARIO,
+        description: 'Acesso apenas às operações básicas',
+      },
+    },
   })
   @IsEnum(Cargo, {
-    message: 'Cargo deve ser: GERENTE, FUNCIONARIO ou VETERINARIO (PROPRIETARIO não é permitido neste endpoint)'
+    message: 'Cargo deve ser: GERENTE, FUNCIONARIO ou VETERINARIO (PROPRIETARIO não é permitido neste endpoint)',
   })
   @IsNotEmpty()
   cargo: Cargo;
 
   @ApiProperty({
-    description: 'ID do endereço associado ao funcionário. Deve corresponder a um endereço já cadastrado.',
-    example: 1,
+    description: 'ID do endereço associado ao funcionário (UUID). Deve corresponder a um endereço já cadastrado.',
+    example: 'f47ac10b-58cc-4372-a567-0e02b2c3d479',
     required: false,
   })
-  @IsInt()
+  @IsUUID()
   @IsOptional()
-  id_endereco?: number;
+  id_endereco?: string;
 
   @ApiProperty({
-    description: 'ID da propriedade onde o funcionário irá trabalhar. Se não fornecido, será vinculado às propriedades do proprietário.',
-    example: 1,
+    description: 'ID da propriedade onde o funcionário irá trabalhar (UUID). Se não fornecido, será vinculado às propriedades do proprietário.',
+    example: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890',
     required: false,
   })
-  @IsInt()
+  @IsUUID()
   @IsOptional()
-  id_propriedade?: number;
+  id_propriedade?: string;
 }
