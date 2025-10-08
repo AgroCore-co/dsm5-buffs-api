@@ -15,7 +15,7 @@ export class VacinacaoService {
    */
   private async getInternalUserId(authUuid: string): Promise<number> {
     console.log(`🔍 Buscando usuário com auth_id: ${authUuid}`);
-    
+
     // 1. Tentar encontrar usuário por auth_id
     const { data, error } = await this.supabase
       .getClient()
@@ -33,12 +33,12 @@ export class VacinacaoService {
 
     // 2. Se não encontrar, tentar buscar por email conhecido
     console.log(`🔄 auth_id não encontrado, tentando buscar por email conhecido...`);
-    
+
     // Para este caso específico, sabemos o email
     const userEmail = 'joaobarretoprof@gmail.com';
-    
+
     console.log(`📧 Email extraído do JWT: ${userEmail}`);
-    
+
     if (userEmail) {
       const { data: emailUser, error: emailError } = await this.supabase
         .getClient()
@@ -52,12 +52,8 @@ export class VacinacaoService {
       if (emailUser) {
         // 3. Sincronizar auth_id automaticamente
         console.log(`🔄 Sincronizando auth_id para usuário ${emailUser.nome}...`);
-        
-        await this.supabase
-          .getClient()
-          .from('Usuario')
-          .update({ auth_id: authUuid })
-          .eq('id_usuario', emailUser.id_usuario);
+
+        await this.supabase.getClient().from('Usuario').update({ auth_id: authUuid }).eq('id_usuario', emailUser.id_usuario);
 
         console.log(`✅ Usuário encontrado por email e sincronizado: ${emailUser.nome} (ID: ${emailUser.id_usuario})`);
         return emailUser.id_usuario;
@@ -65,11 +61,7 @@ export class VacinacaoService {
     }
 
     // 4. Se não encontrar nada, mostrar todos usuários para debug
-    const { data: allUsers, error: allError } = await this.supabase
-      .getClient()
-      .from('Usuario')
-      .select('id_usuario, nome, email, auth_id')
-      .limit(5);
+    const { data: allUsers, error: allError } = await this.supabase.getClient().from('Usuario').select('id_usuario, nome, email, auth_id').limit(5);
 
     console.log(`📋 Todos os usuários no sistema:`, allUsers);
 
@@ -81,7 +73,7 @@ export class VacinacaoService {
   /**
    * Método create corrigido para traduzir o UUID do utilizador para o ID numérico.
    */
-  async create(dto: CreateVacinacaoDto, id_bufalo: number, auth_uuid: string) {
+  async create(dto: CreateVacinacaoDto, id_bufalo: string, auth_uuid: string) {
     const internalUserId = await this.getInternalUserId(auth_uuid);
 
     const insertData = {
@@ -93,15 +85,10 @@ export class VacinacaoService {
       unidade_medida: dto.unidade_medida,
       doenca: dto.doenca || 'Vacinação Preventiva',
       necessita_retorno: dto.necessita_retorno || false,
-      dt_retorno: dto.dt_retorno
+      dt_retorno: dto.dt_retorno,
     };
 
-    const { data, error } = await this.supabase
-      .getClient()
-      .from(this.tableName)
-      .insert(insertData)
-      .select()
-      .single();
+    const { data, error } = await this.supabase.getClient().from(this.tableName).insert(insertData).select().single();
 
     if (error) {
       throw new InternalServerErrorException(`Falha ao criar registo de vacinação: ${error.message}`);
@@ -109,11 +96,12 @@ export class VacinacaoService {
     return data;
   }
 
-  async findAllByBufalo(id_bufalo: number) {
+  async findAllByBufalo(id_bufalo: string) {
     const { data, error } = await this.supabase
       .getClient()
       .from(this.tableName)
-      .select(`
+      .select(
+        `
         id_sanit,
         dt_aplicacao,
         dosagem,
@@ -124,7 +112,8 @@ export class VacinacaoService {
         Bufalo!inner(id_bufalo, nome, brinco),
         Usuario!inner(id_usuario, nome),
         Medicacoes!inner(id_medicacao, medicacao, tipo_tratamento, descricao)
-      `)
+      `,
+      )
       .eq('id_bufalo', id_bufalo)
       .eq('Medicacoes.tipo_tratamento', 'Vacinação')
       .order('dt_aplicacao', { ascending: false });
@@ -135,10 +124,12 @@ export class VacinacaoService {
     return data;
   }
 
-  async findOne(id_sanit: number) {
-    const { data, error } = await this.supabase.getClient()
+  async findOne(id_sanit: string) {
+    const { data, error } = await this.supabase
+      .getClient()
       .from(this.tableName)
-      .select(`
+      .select(
+        `
         id_sanit,
         dt_aplicacao,
         dosagem,
@@ -149,7 +140,8 @@ export class VacinacaoService {
         Bufalo!inner(id_bufalo, nome, brinco),
         Usuario!inner(id_usuario, nome),
         Medicacoes!inner(id_medicacao, medicacao, tipo_tratamento, descricao)
-      `)
+      `,
+      )
       .eq('id_sanit', id_sanit)
       .eq('Medicacoes.tipo_tratamento', 'Vacinação')
       .single();
@@ -160,10 +152,11 @@ export class VacinacaoService {
     return data;
   }
 
-  async update(id_sanit: number, dto: UpdateVacinacaoDto) {
+  async update(id_sanit: string, dto: UpdateVacinacaoDto) {
     await this.findOne(id_sanit);
 
-    const { data, error } = await this.supabase.getClient()
+    const { data, error } = await this.supabase
+      .getClient()
       .from(this.tableName)
       .update({
         id_medicao: dto.id_medicacao, // Campo correto na tabela é id_medicao
@@ -173,7 +166,7 @@ export class VacinacaoService {
         doenca: dto.doenca,
         necessita_retorno: dto.necessita_retorno,
         dt_retorno: dto.dt_retorno,
-        updated_at: new Date().toISOString()
+        updated_at: new Date().toISOString(),
       })
       .eq('id_sanit', id_sanit)
       .select()
@@ -185,7 +178,7 @@ export class VacinacaoService {
     return data;
   }
 
-  async remove(id_sanit: number) {
+  async remove(id_sanit: string) {
     await this.findOne(id_sanit);
 
     const { error } = await this.supabase.getClient().from(this.tableName).delete().eq('id_sanit', id_sanit);
@@ -199,10 +192,12 @@ export class VacinacaoService {
   /**
    * Método específico para buscar apenas vacinas por IDs específicos da tabela Medicacoes
    */
-  async findVacinasByBufaloId(id_bufalo: number) {
-    const { data, error } = await this.supabase.getClient()
+  async findVacinasByBufaloId(id_bufalo: string) {
+    const { data, error } = await this.supabase
+      .getClient()
       .from(this.tableName)
-      .select(`
+      .select(
+        `
         id_sanit,
         dt_aplicacao,
         dosagem,
@@ -213,7 +208,8 @@ export class VacinacaoService {
         Bufalo!inner(id_bufalo, nome, brinco),
         Usuario!inner(id_usuario, nome),
         Medicacoes!inner(id_medicacao, medicacao, descricao)
-      `)
+      `,
+      )
       .eq('id_bufalo', id_bufalo)
       .in('id_medicacao', [3, 4, 5, 6, 12, 14]) // IDs das vacinas do seu banco
       .order('dt_aplicacao', { ascending: false });

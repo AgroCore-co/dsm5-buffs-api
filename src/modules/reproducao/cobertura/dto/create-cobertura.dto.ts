@@ -1,5 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsInt, IsNotEmpty, IsOptional, IsDateString, IsString, IsIn } from 'class-validator';
+import { IsUUID, IsNotEmpty, IsOptional, IsDateString, IsString, IsIn } from 'class-validator';
 
 const tiposInseminacao = ['IA', 'Monta Natural', 'TE'];
 const statusValidos = ['Em andamento', 'Confirmada', 'Falhou', 'Concluída'];
@@ -10,23 +10,23 @@ export class CreateCoberturaDto {
     description: 'ID do material genético do sêmen (para IA ou TE)',
     required: false,
   })
-  @IsInt()
+  @IsUUID()
   @IsOptional()
-  id_semen?: number;
+  id_semen?: string;
 
   @ApiProperty({
     example: 2,
     description: 'ID do material genético da doadora (óvulo/embrião para TE)',
     required: false,
   })
-  @IsInt()
+  @IsUUID()
   @IsOptional()
-  id_doadora?: number;
+  id_doadora?: string;
 
   @ApiProperty({ example: 15, description: 'ID da fêmea receptora (quem está sendo coberta)' })
-  @IsInt()
+  @IsUUID()
   @IsNotEmpty()
-  id_receptora: number;
+  id_receptora: string;
 
   @ApiProperty({ example: 'IA', description: 'Tipo de inseminação', enum: tiposInseminacao })
   @IsString()

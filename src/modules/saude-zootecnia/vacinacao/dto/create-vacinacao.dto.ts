@@ -1,11 +1,11 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsString, IsNotEmpty, IsOptional, IsDateString, IsNumber, IsBoolean } from 'class-validator';
+import { IsString, IsNotEmpty, IsOptional, IsDateString, IsUUID, IsBoolean, IsNumber } from 'class-validator';
 
 export class CreateVacinacaoDto {
   @ApiProperty({ example: 3, description: 'ID da vacina na tabela Medicacoes' })
-  @IsNumber()
+  @IsUUID()
   @IsNotEmpty()
-  id_medicacao: number;
+  id_medicacao: string;
 
   @ApiProperty({ example: '2025-08-18', description: 'Data em que a vacina foi aplicada' })
   @IsDateString()

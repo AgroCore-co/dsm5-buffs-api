@@ -36,7 +36,7 @@ export class DadosZootecnicosService {
   /**
    * O parâmetro final 'auth_uuid' é o 'sub' (string UUID) vindo do controller.
    */
-  async create(dto: CreateDadoZootecnicoDto, id_bufalo: number, auth_uuid: string) {
+  async create(dto: CreateDadoZootecnicoDto, id_bufalo: string, auth_uuid: string) {
     // 1. TRADUZIR: Buscar o ID numérico (bigint) usando o Auth UUID (string)
     const internalUserId = await this.getInternalUserId(auth_uuid);
 
@@ -59,7 +59,7 @@ export class DadosZootecnicosService {
     return data;
   }
 
-  async findAllByBufalo(id_bufalo: number) {
+  async findAllByBufalo(id_bufalo: string) {
     const { data, error } = await this.supabase
       .getClient()
       .from(this.tableName)
@@ -73,7 +73,7 @@ export class DadosZootecnicosService {
     return data;
   }
 
-  async findOne(id_zootec: number) {
+  async findOne(id_zootec: string) {
     const { data, error } = await this.supabase.getClient().from(this.tableName).select('*').eq('id_zootec', id_zootec).single();
 
     if (error || !data) {
@@ -82,7 +82,7 @@ export class DadosZootecnicosService {
     return data;
   }
 
-  async update(id_zootec: number, dto: UpdateDadoZootecnicoDto) {
+  async update(id_zootec: string, dto: UpdateDadoZootecnicoDto) {
     await this.findOne(id_zootec); // Garante que o registro existe
 
     const { data, error } = await this.supabase.getClient().from(this.tableName).update(dto).eq('id_zootec', id_zootec).select().single();
@@ -93,7 +93,7 @@ export class DadosZootecnicosService {
     return data;
   }
 
-  async remove(id_zootec: number) {
+  async remove(id_zootec: string) {
     await this.findOne(id_zootec); // Garante que o registro existe
 
     const { error } = await this.supabase.getClient().from(this.tableName).delete().eq('id_zootec', id_zootec);

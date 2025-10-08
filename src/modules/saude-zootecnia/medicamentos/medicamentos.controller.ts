@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, ParseIntPipe, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, ParseUUIDPipe, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiResponse, ApiTags, ApiParam } from '@nestjs/swagger';
 import { SupabaseAuthGuard } from '../../auth/guards/auth.guard';
 import { MedicamentosService } from './medicamentos.service';
@@ -7,7 +7,7 @@ import { UpdateMedicacaoDto } from './dto/update-medicacao.dto';
 
 @ApiBearerAuth('JWT-auth')
 @UseGuards(SupabaseAuthGuard)
-@ApiTags('Saúde/Zootecnia - Medicamentos') 
+@ApiTags('Saúde/Zootecnia - Medicamentos')
 @Controller('medicamentos')
 export class MedicamentosController {
   constructor(private readonly service: MedicamentosService) {}
@@ -28,28 +28,28 @@ export class MedicamentosController {
 
   @Get(':id')
   @ApiOperation({ summary: 'Busca uma medicação pelo ID' })
-  @ApiParam({ name: 'id', description: 'ID da medicação', type: Number })
+  @ApiParam({ name: 'id', description: 'ID da medicação', type: 'string' })
   @ApiResponse({ status: 200, description: 'Medicação encontrada.' })
   @ApiResponse({ status: 404, description: 'Medicação não encontrada.' })
-  findOne(@Param('id', ParseIntPipe) id: number) {
+  findOne(@Param('id', ParseUUIDPipe) id: string) {
     return this.service.findOne(id);
   }
 
   @Patch(':id')
   @ApiOperation({ summary: 'Atualiza uma medicação' })
-  @ApiParam({ name: 'id', description: 'ID da medicação a ser atualizada', type: Number })
+  @ApiParam({ name: 'id', description: 'ID da medicação a ser atualizada', type: 'string' })
   @ApiResponse({ status: 200, description: 'Medicação atualizada com sucesso.' })
   @ApiResponse({ status: 404, description: 'Medicação não encontrada.' })
-  update(@Param('id', ParseIntPipe) id: number, @Body() dto: UpdateMedicacaoDto) {
+  update(@Param('id', ParseUUIDPipe) id: string, @Body() dto: UpdateMedicacaoDto) {
     return this.service.update(id, dto);
   }
 
   @Delete(':id')
   @ApiOperation({ summary: 'Remove uma medicação' })
-  @ApiParam({ name: 'id', description: 'ID da medicação a ser removida', type: Number })
+  @ApiParam({ name: 'id', description: 'ID da medicação a ser removida', type: 'string' })
   @ApiResponse({ status: 200, description: 'Medicação removida com sucesso.' })
   @ApiResponse({ status: 404, description: 'Medicação não encontrada.' })
-  remove(@Param('id', ParseIntPipe) id: number) {
+  remove(@Param('id', ParseUUIDPipe) id: string) {
     return this.service.remove(id);
   }
 }

@@ -1,10 +1,4 @@
-import {
-  Injectable,
-  InternalServerErrorException,
-  NotFoundException,
-  BadRequestException,
-  UnauthorizedException,
-} from '@nestjs/common';
+import { Injectable, InternalServerErrorException, NotFoundException, BadRequestException, UnauthorizedException } from '@nestjs/common';
 import { SupabaseService } from '../../../core/supabase/supabase.service';
 import { CreateDadosSanitariosDto } from './dto/create-dados-sanitarios.dto';
 import { UpdateDadosSanitariosDto } from './dto/update-dados-sanitarios.dto';
@@ -21,12 +15,7 @@ export class DadosSanitariosService {
    * a partir do UUID de autenticação do Supabase (o 'sub' do JWT).
    */
   private async getInternalUserId(authUuid: string): Promise<number> {
-    const { data, error } = await this.supabase
-      .getClient()
-      .from('Usuario')
-      .select('id_usuario')
-      .eq('auth_id', authUuid)
-      .single();
+    const { data, error } = await this.supabase.getClient().from('Usuario').select('id_usuario').eq('auth_id', authUuid).single();
 
     if (error || !data) {
       throw new UnauthorizedException(
@@ -92,7 +81,7 @@ export class DadosSanitariosService {
     return data;
   }
 
-  async findByBufalo(id_bufalo: number) {
+  async findByBufalo(id_bufalo: string) {
     const { data, error } = await this.supabase
       .getClient()
       .from(this.tableName)
@@ -111,7 +100,7 @@ export class DadosSanitariosService {
     return data;
   }
 
-  async findOne(id_sanit: number) {
+  async findOne(id_sanit: string) {
     const { data, error } = await this.supabase
       .getClient()
       .from(this.tableName)
@@ -130,7 +119,7 @@ export class DadosSanitariosService {
     return data;
   }
 
-  async update(id_sanit: number, dto: UpdateDadosSanitariosDto) {
+  async update(id_sanit: string, dto: UpdateDadosSanitariosDto) {
     await this.findOne(id_sanit);
 
     if (dto.id_medicao) {
@@ -154,7 +143,7 @@ export class DadosSanitariosService {
     return data;
   }
 
-  async remove(id_sanit: number) {
+  async remove(id_sanit: string) {
     await this.findOne(id_sanit);
 
     const { error } = await this.supabase.getClient().from(this.tableName).delete().eq('id_sanit', id_sanit);
