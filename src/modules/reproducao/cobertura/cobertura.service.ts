@@ -32,7 +32,7 @@ export class CoberturaService {
     return data;
   }
 
-  async findOne(id_repro: number) {
+  async findOne(id_repro: string) {
     const { data, error } = await this.supabase.getClient().from(this.tableName).select('*').eq('id_repro', id_repro).single();
 
     if (error || !data) {
@@ -41,7 +41,7 @@ export class CoberturaService {
     return data;
   }
 
-  async update(id_repro: number, dto: UpdateCoberturaDto) {
+  async update(id_repro: string, dto: UpdateCoberturaDto) {
     await this.findOne(id_repro);
 
     const { data, error } = await this.supabase.getClient().from(this.tableName).update(dto).eq('id_repro', id_repro).select().single();
@@ -52,7 +52,7 @@ export class CoberturaService {
     return data;
   }
 
-  async remove(id_repro: number) {
+  async remove(id_repro: string) {
     await this.findOne(id_repro);
 
     const { error } = await this.supabase.getClient().from(this.tableName).delete().eq('id_repro', id_repro);

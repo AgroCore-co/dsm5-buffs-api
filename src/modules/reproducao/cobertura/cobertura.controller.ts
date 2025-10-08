@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, ParseIntPipe, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, ParseUUIDPipe, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiResponse, ApiTags, ApiParam, ApiBody } from '@nestjs/swagger';
 import { SupabaseAuthGuard } from '../../auth/guards/auth.guard';
 import { CoberturaService } from './cobertura.service';
@@ -29,30 +29,30 @@ export class CoberturaController {
   }
 
   @Get(':id')
-  @ApiOperation({ summary: 'Busca um registro de reprodução pelo ID' })
-  @ApiParam({ name: 'id', description: 'ID do registro de reprodução' })
-  @ApiResponse({ status: 200, description: 'Registro encontrado.' })
-  @ApiResponse({ status: 404, description: 'Registro não encontrado.' })
-  findOne(@Param('id', ParseIntPipe) id: number) {
+  @ApiOperation({ summary: 'Buscar cobertura por ID' })
+  @ApiParam({ name: 'id', description: 'ID da cobertura' })
+  @ApiResponse({ status: 200, description: 'Cobertura encontrada.' })
+  @ApiResponse({ status: 404, description: 'Cobertura não encontrada.' })
+  findOne(@Param('id', ParseUUIDPipe) id: string) {
     return this.service.findOne(id);
   }
 
   @Patch(':id')
-  @ApiOperation({ summary: 'Atualiza um registro de reprodução' })
-  @ApiParam({ name: 'id', description: 'ID do registro a ser atualizado' })
+  @ApiOperation({ summary: 'Atualizar cobertura' })
+  @ApiParam({ name: 'id', description: 'ID da cobertura' })
   @ApiBody({ type: UpdateCoberturaDto })
-  @ApiResponse({ status: 200, description: 'Registro atualizado com sucesso.' })
-  @ApiResponse({ status: 404, description: 'Registro não encontrado.' })
-  update(@Param('id', ParseIntPipe) id: number, @Body() dto: UpdateCoberturaDto) {
+  @ApiResponse({ status: 200, description: 'Cobertura atualizada com sucesso.' })
+  @ApiResponse({ status: 404, description: 'Cobertura não encontrada.' })
+  update(@Param('id', ParseUUIDPipe) id: string, @Body() dto: UpdateCoberturaDto) {
     return this.service.update(id, dto);
   }
 
   @Delete(':id')
-  @ApiOperation({ summary: 'Remove um registro de reprodução' })
-  @ApiParam({ name: 'id', description: 'ID do registro a ser removido' })
-  @ApiResponse({ status: 200, description: 'Registro removido com sucesso.' })
-  @ApiResponse({ status: 404, description: 'Registro não encontrado.' })
-  remove(@Param('id', ParseIntPipe) id: number) {
+  @ApiOperation({ summary: 'Remover cobertura' })
+  @ApiParam({ name: 'id', description: 'ID da cobertura' })
+  @ApiResponse({ status: 200, description: 'Cobertura removida com sucesso.' })
+  @ApiResponse({ status: 404, description: 'Cobertura não encontrada.' })
+  remove(@Param('id', ParseUUIDPipe) id: string) {
     return this.service.remove(id);
   }
 }

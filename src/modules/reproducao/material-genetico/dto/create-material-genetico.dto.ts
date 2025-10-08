@@ -1,5 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsString, IsNotEmpty, IsOptional, IsDateString, IsInt, IsIn, IsPositive, MaxLength } from 'class-validator';
+import { IsString, IsNotEmpty, IsOptional, IsDateString, IsInt, IsIn, IsPositive, MaxLength, IsUUID } from 'class-validator';
 
 const tiposValidos = ['Sêmen', 'Embrião', 'Óvulo'];
 const origensValidas = ['Coleta Própria', 'Compra'];
@@ -18,14 +18,13 @@ export class CreateMaterialGeneticoDto {
   origem: string;
 
   @ApiProperty({
-    example: 5,
+    example: '550e8400-e29b-41d4-a716-446655440000',
     description: 'ID do búfalo do qual o material foi coletado (se a origem for "Coleta Própria")',
     required: false,
   })
-  @IsInt()
-  @IsPositive()
+  @IsUUID()
   @IsOptional()
-  id_bufalo_origem?: number;
+  id_bufalo_origem?: string;
 
   @ApiProperty({
     example: 'Central de Genética XYZ',
@@ -38,9 +37,9 @@ export class CreateMaterialGeneticoDto {
   @MaxLength(255)
   fornecedor?: string;
 
-  @ApiProperty({ 
-    example: '2025-07-20T10:30:00Z', 
-    description: 'Data e hora em que o material foi coletado ou adquirido (formato ISO 8601)' 
+  @ApiProperty({
+    example: '2025-07-20T10:30:00Z',
+    description: 'Data e hora em que o material foi coletado ou adquirido (formato ISO 8601)',
   })
   @IsDateString()
   @IsNotEmpty()

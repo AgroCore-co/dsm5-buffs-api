@@ -17,11 +17,7 @@ export class AlertasService {
    */
   async create(createAlertaDto: CreateAlertaDto) {
     try {
-      const { data, error } = await this.supabase
-        .from('Alertas')
-        .insert(createAlertaDto)
-        .select()
-        .single();
+      const { data, error } = await this.supabase.from('Alertas').insert(createAlertaDto).select().single();
 
       if (error) {
         console.error('Erro ao criar alerta:', error.message);
@@ -35,7 +31,7 @@ export class AlertasService {
     }
   }
 
-/**
+  /**
    * Cria um alerta apenas se não existir um alerta com a mesma origem de evento.
    * Isso torna a tarefa (CRON) idempotente.
    * @param createAlertaDto - Os dados para a criação do novo alerta.
@@ -91,7 +87,7 @@ export class AlertasService {
       if (tipo) {
         query = query.eq('nicho', tipo);
       }
-      
+
       if (!incluirVistos) {
         query = query.eq('visto', false);
       }
@@ -100,14 +96,13 @@ export class AlertasService {
         const hoje = new Date();
         const dataLimite = new Date();
         dataLimite.setDate(hoje.getDate() + Number(antecendencia));
-        
+
         query = query.gte('data_alerta', hoje.toISOString().split('T')[0]); // Compara apenas a data
         query = query.lte('data_alerta', dataLimite.toISOString().split('T')[0]);
       }
 
       // Ordenar por data para mostrar os mais próximos primeiro, depois por prioridade
-      query = query.order('data_alerta', { ascending: true })
-                   .order('prioridade', { ascending: false }); // Ex: ALTA vem primeiro
+      query = query.order('data_alerta', { ascending: true }).order('prioridade', { ascending: false }); // Ex: ALTA vem primeiro
 
       const { data, error } = await query;
 
@@ -122,16 +117,12 @@ export class AlertasService {
 
   /**
    * Encontra um alerta específico pela sua chave primária (id_alerta).
-   * @param id - O ID numérico (PK) do alerta.
+   * @param id - O ID UUID do alerta.
    * @returns O objeto do alerta correspondente.
    */
-  async findOne(id: number) {
-    const { data, error } = await this.supabase
-      .from('Alertas')
-      .select('*')
-      .eq('id_alerta', id)
-      .single();
-    
+  async findOne(id: string) {
+    const { data, error } = await this.supabase.from('Alertas').select('*').eq('id_alerta', id).single();
+
     if (error) {
       // Erro específico para quando o registro não é encontrado
       if (error.code === 'PGRST116') {
@@ -148,10 +139,10 @@ export class AlertasService {
    * @param visto - O novo status (true para visto, false para não visto).
    * @returns O objeto do alerta com o status atualizado.
    */
-  async setVisto(id: number, visto: boolean) {
+  async setVisto(id: string, visto: boolean) {
     // Garante que o alerta existe antes de atualizar
     await this.findOne(id);
-    
+
     const { data, error } = await this.supabase
       .from('Alertas')
       .update({ visto: visto, updated_at: new Date().toISOString() })
@@ -171,9 +162,9 @@ export class AlertasService {
 
   /**
    * Remove um alerta do banco de dados.
-   * @param id - O ID numérico (PK) do alerta a ser removido.
+   * @param id - O ID UUID do alerta a ser removido.
    */
-  async remove(id: number) {
+  async remove(id: string) {
     // Garante que o alerta existe antes de deletar
     await this.findOne(id);
 

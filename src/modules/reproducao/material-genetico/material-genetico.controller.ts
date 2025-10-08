@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, ParseIntPipe, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, ParseUUIDPipe, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiResponse, ApiTags, ApiParam, ApiBody } from '@nestjs/swagger';
 import { SupabaseAuthGuard } from '../../auth/guards/auth.guard';
 import { MaterialGeneticoService } from './material-genetico.service';
@@ -29,30 +29,30 @@ export class MaterialGeneticoController {
   }
 
   @Get(':id')
-  @ApiOperation({ summary: 'Busca um material genético pelo ID' })
+  @ApiOperation({ summary: 'Buscar material genético por ID' })
   @ApiParam({ name: 'id', description: 'ID do material genético' })
-  @ApiResponse({ status: 200, description: 'Registro encontrado.' })
-  @ApiResponse({ status: 404, description: 'Registro não encontrado.' })
-  findOne(@Param('id', ParseIntPipe) id: number) {
+  @ApiResponse({ status: 200, description: 'Material genético encontrado.' })
+  @ApiResponse({ status: 404, description: 'Material genético não encontrado.' })
+  findOne(@Param('id', ParseUUIDPipe) id: string) {
     return this.service.findOne(id);
   }
 
   @Patch(':id')
-  @ApiOperation({ summary: 'Atualiza um registro de material genético' })
-  @ApiParam({ name: 'id', description: 'ID do registro a ser atualizado' })
+  @ApiOperation({ summary: 'Atualizar material genético' })
+  @ApiParam({ name: 'id', description: 'ID do material genético' })
   @ApiBody({ type: UpdateMaterialGeneticoDto })
-  @ApiResponse({ status: 200, description: 'Registro atualizado com sucesso.' })
-  @ApiResponse({ status: 404, description: 'Registro não encontrado.' })
-  update(@Param('id', ParseIntPipe) id: number, @Body() dto: UpdateMaterialGeneticoDto) {
+  @ApiResponse({ status: 200, description: 'Material genético atualizado com sucesso.' })
+  @ApiResponse({ status: 404, description: 'Material genético não encontrado.' })
+  update(@Param('id', ParseUUIDPipe) id: string, @Body() dto: UpdateMaterialGeneticoDto) {
     return this.service.update(id, dto);
   }
 
   @Delete(':id')
-  @ApiOperation({ summary: 'Remove um registro de material genético' })
-  @ApiParam({ name: 'id', description: 'ID do registro a ser removido' })
-  @ApiResponse({ status: 200, description: 'Registro removido com sucesso.' })
-  @ApiResponse({ status: 404, description: 'Registro não encontrado.' })
-  remove(@Param('id', ParseIntPipe) id: number) {
+  @ApiOperation({ summary: 'Remover material genético' })
+  @ApiParam({ name: 'id', description: 'ID do material genético' })
+  @ApiResponse({ status: 200, description: 'Material genético removido com sucesso.' })
+  @ApiResponse({ status: 404, description: 'Material genético não encontrado.' })
+  remove(@Param('id', ParseUUIDPipe) id: string) {
     return this.service.remove(id);
   }
 }
