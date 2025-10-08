@@ -61,7 +61,7 @@ export class LoteService {
       ...createLoteDto,
     };
 
-    const { data, error } = await this.supabase.from('Lote').insert(loteToInsert).select().single();
+    const { data, error } = await this.supabase.from('lote').insert(loteToInsert).select().single();
 
     if (error) {
       if (error.code === '23503') {

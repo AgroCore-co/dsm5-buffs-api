@@ -58,14 +58,14 @@ export class FuncionarioService {
     }
 
     try {
-      const { data: existingUser } = await this.supabase.from('Usuario').select('id_usuario').eq('email', createFuncionarioDto.email).single();
+      const { data: existingUser } = await this.supabase.from('usuario').select('id_usuario').eq('email', createFuncionarioDto.email).single();
 
       if (existingUser) {
         throw new ConflictException('Já existe um perfil de usuário com este email.');
       }
 
       const { data: novoFuncionario, error: insertError } = await this.adminSupabase
-        .from('Usuario')
+        .from('usuario')
         .insert([
           {
             auth_id: authUser.user.id,
@@ -90,7 +90,7 @@ export class FuncionarioService {
         id_propriedade: idPropriedade,
       }));
 
-      const { error: vinculoError } = await this.adminSupabase.from('UsuarioPropriedade').insert(vinculos);
+      const { error: vinculoError } = await this.adminSupabase.from('usuariopropriedade').insert(vinculos);
 
       if (vinculoError) {
         throw new InternalServerErrorException(`Falha ao vincular funcionário às propriedades: ${vinculoError.message}`);
@@ -122,7 +122,7 @@ export class FuncionarioService {
 
     const proprietario = await this.usuarioService.findOneByEmail(proprietarioEmail);
     const { data: propriedade, error: propError } = await this.supabase
-      .from('Propriedade')
+      .from('propriedade')
       .select('id_dono')
       .eq('id_propriedade', idPropriedade)
       .eq('id_dono', proprietario.id_usuario)
@@ -137,7 +137,7 @@ export class FuncionarioService {
     }
 
     const { data, error: funcionariosError } = await this.adminSupabase
-      .from('UsuarioPropriedade')
+      .from('usuariopropriedade')
       .select(
         `
         Usuario (
@@ -169,7 +169,7 @@ export class FuncionarioService {
     const propriedadesProprietario = await this.usuarioService.getUserPropriedades(proprietario.id_usuario);
 
     const { data, error } = await this.adminSupabase
-      .from('UsuarioPropriedade')
+      .from('usuariopropriedade')
       .select(
         `
         id_propriedade,
@@ -214,7 +214,7 @@ export class FuncionarioService {
 
     const proprietario = await this.usuarioService.findOneByEmail(proprietarioEmail);
     const { data: propriedade, error: propError } = await this.supabase
-      .from('Propriedade')
+      .from('propriedade')
       .select('id_dono')
       .eq('id_propriedade', idPropriedade)
       .eq('id_dono', proprietario.id_usuario)
@@ -229,7 +229,7 @@ export class FuncionarioService {
     }
 
     const { error: desvincularError } = await this.supabase
-      .from('UsuarioPropriedade')
+      .from('usuariopropriedade')
       .delete()
       .eq('id_usuario', idUsuario)
       .eq('id_propriedade', idPropriedade);

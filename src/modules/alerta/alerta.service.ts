@@ -20,7 +20,7 @@ export class AlertasService {
    */
   async create(createAlertaDto: CreateAlertaDto) {
     try {
-      const { data, error } = await this.supabase.from('Alertas').insert(createAlertaDto).select().single();
+      const { data, error } = await this.supabase.from('alertas').insert(createAlertaDto).select().single();
 
       if (error) {
         console.error('Erro ao criar alerta:', error.message);
@@ -91,8 +91,8 @@ export class AlertasService {
       const { page = 1, limit = 10 } = paginationDto;
       const { limit: limitValue, offset } = calculatePaginationParams(page, limit);
 
-      let countQuery = this.supabase.from('Alertas').select('*', { count: 'exact', head: true });
-      let dataQuery = this.supabase.from('Alertas').select(`
+      let countQuery = this.supabase.from('alertas').select('*', { count: 'exact', head: true });
+      let dataQuery = this.supabase.from('alertas').select(`
         *,
         animal:Bufalo ( id_bufalo, nome, brinco )
       `);
@@ -148,7 +148,7 @@ export class AlertasService {
    * @returns O objeto do alerta correspondente.
    */
   async findOne(id: string) {
-    const { data, error } = await this.supabase.from('Alertas').select('*').eq('id_alerta', id).single();
+    const { data, error } = await this.supabase.from('alertas').select('*').eq('id_alerta', id).single();
 
     if (error) {
       // Erro específico para quando o registro não é encontrado
@@ -171,7 +171,7 @@ export class AlertasService {
     await this.findOne(id);
 
     const { data, error } = await this.supabase
-      .from('Alertas')
+      .from('alertas')
       .update({ visto: visto, updated_at: new Date().toISOString() })
       .eq('id_alerta', id)
       .select()
@@ -195,7 +195,7 @@ export class AlertasService {
     // Garante que o alerta existe antes de deletar
     await this.findOne(id);
 
-    const { error } = await this.supabase.from('Alertas').delete().eq('id_alerta', id);
+    const { error } = await this.supabase.from('alertas').delete().eq('id_alerta', id);
 
     if (error) {
       throw new InternalServerErrorException(`Falha ao remover o alerta: ${error.message}`);

@@ -263,7 +263,7 @@ export class MovLoteService {
 
   async findHistoricoByGrupo(id_grupo: string) {
     const { data, error } = await this.supabase
-      .from('MovLote')
+      .from('movlote')
       .select(
         `
         *,
@@ -302,7 +302,7 @@ export class MovLoteService {
 
   async findStatusAtual(id_grupo: string) {
     const { data, error } = await this.supabase
-      .from('MovLote')
+      .from('movlote')
       .select(
         `
         *,

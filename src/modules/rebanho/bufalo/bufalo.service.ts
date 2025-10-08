@@ -365,7 +365,7 @@ export class BufaloService {
 
       // Validação: Garante que o grupo de destino existe
       const { data: grupoExiste, error: grupoError } = await this.supabase
-        .from('Grupo')
+        .from('grupo')
         .select('id_grupo, nome_grupo')
         .eq('id_grupo', id_novo_grupo)
         .single();

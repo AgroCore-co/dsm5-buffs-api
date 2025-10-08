@@ -15,7 +15,7 @@ export class DashboardService {
     try {
       // Verifica se a propriedade existe
       const { data: propriedadeExists, error: propError } = await supabase
-        .from('Propriedade')
+        .from('propriedade')
         .select('id_propriedade')
         .eq('id_propriedade', id_propriedade)
         .single();
@@ -26,7 +26,7 @@ export class DashboardService {
 
       // Busca estatísticas dos búfalos
       const { data: bufalosStats, error: bufalosError } = await supabase
-        .from('Bufalo')
+        .from('bufalo')
         .select('sexo, nivel_maturidade, status')
         .eq('id_propriedade', id_propriedade);
 
@@ -36,7 +36,7 @@ export class DashboardService {
 
       // Busca búfalas em lactação
       const { data: bufalasLactando, error: lactacaoError } = await supabase
-        .from('CicloLactacao')
+        .from('ciclolactacao')
         .select('id_bufala')
         .eq('id_propriedade', id_propriedade)
         .eq('status', 'Em Lactação');
@@ -47,7 +47,7 @@ export class DashboardService {
 
       // Busca quantidade de lotes
       const { count: qtdLotes, error: lotesError } = await supabase
-        .from('Lote')
+        .from('lote')
         .select('*', { count: 'exact', head: true })
         .eq('id_propriedade', id_propriedade);
 
@@ -57,7 +57,7 @@ export class DashboardService {
 
       // Busca quantidade de usuários vinculados à propriedade
       const { count: qtdUsuarios, error: usuariosError } = await supabase
-        .from('UsuarioPropriedade')
+        .from('usuariopropriedade')
         .select('*', { count: 'exact', head: true })
         .eq('id_propriedade', id_propriedade);
 

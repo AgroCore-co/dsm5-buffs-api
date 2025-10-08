@@ -53,7 +53,7 @@ export class EnderecoService {
     await this.findOne(id);
 
     const { data, error } = await this.supabase
-      .from('Endereco')
+      .from('endereco')
       .update({
         ...updateEnderecoDto,
         updated_at: new Date().toISOString(),

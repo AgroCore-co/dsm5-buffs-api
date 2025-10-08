@@ -212,7 +212,7 @@ export class PropriedadeService {
       throw new NotFoundException(`Propriedade com ID ${id} não encontrada ou você não tem permissão para removê-la.`);
     }
 
-    const { error: deleteError } = await this.supabase.from('Propriedade').delete().eq('id_propriedade', id);
+    const { error: deleteError } = await this.supabase.from('propriedade').delete().eq('id_propriedade', id);
 
     if (deleteError) {
       throw new InternalServerErrorException('Falha ao remover a propriedade.');

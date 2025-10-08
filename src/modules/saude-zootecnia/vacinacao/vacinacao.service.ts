@@ -61,7 +61,7 @@ export class VacinacaoService {
     }
 
     // 4. Se não encontrar nada, mostrar todos usuários para debug
-    const { data: allUsers, error: allError } = await this.supabase.getClient().from('Usuario').select('id_usuario, nome, email, auth_id').limit(5);
+    const { data: allUsers, error: allError } = await this.supabase.getClient().from('usuario').select('id_usuario, nome, email, auth_id').limit(5);
 
     console.log(`📋 Todos os usuários no sistema:`, allUsers);
 
