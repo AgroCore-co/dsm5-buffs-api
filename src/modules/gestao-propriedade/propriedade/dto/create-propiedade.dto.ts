@@ -1,5 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsString, IsNotEmpty, IsBoolean, IsOptional, IsInt } from 'class-validator';
+import { IsString, IsNotEmpty, IsBoolean, IsOptional, IsUUID } from 'class-validator';
 
 export class CreatePropriedadeDto {
   @ApiProperty({
@@ -19,11 +19,11 @@ export class CreatePropriedadeDto {
   cnpj: string;
 
   @ApiProperty({
-    description: 'ID do endereço da propriedade. O endereço deve ser criado previamente através do endpoint POST /enderecos.',
-    example: 1,
+    description: 'ID do endereço da propriedade (UUID). O endereço deve ser criado previamente através do endpoint POST /enderecos.',
+    example: 'f47ac10b-58cc-4372-a567-0e02b2c3d479',
   })
-  @IsInt()
-  id_endereco: number;
+  @IsUUID()
+  id_endereco: string;
 
   @ApiProperty({
     description: 'Indica se a propriedade participa do programa ABCB.',

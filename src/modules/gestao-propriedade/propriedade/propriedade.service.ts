@@ -14,11 +14,10 @@ export class PropriedadeService {
   }
 
   /**
-   * Método privado para obter o ID numérico do usuário a partir do token.
+   * Método privado para obter o ID UUID do usuário a partir do token.
    * Reutilizado em vários métodos para evitar repetição de código.
    */
-  private async getUserId(user: any): Promise<number> {
-    // Sem coluna auth_id no schema: buscamos pelo e-mail do token
+  private async getUserId(user: any): Promise<string> {
     const { data: perfilUsuario, error } = await this.supabase.from('Usuario').select('id_usuario').eq('email', user.email).single();
 
     if (error || !perfilUsuario) {
@@ -53,32 +52,57 @@ export class PropriedadeService {
   async findAll(user: any) {
     const userId = await this.getUserId(user);
     this.logger.log(`[INICIO] Buscando propriedades do usuário ${userId}`);
-    
+
     try {
       // Busca propriedades onde o usuário é DONO
       const { data: propriedadesComoDono, error: errorDono } = await this.supabase
         .from('Propriedade')
-        .select(`
+        .select(
+          `
           *,
-          endereco:id_endereco(*),
-          lotes:Lote(id_lote, nome_lote, area_m2)
-        `)
+          endereco:Endereco(*),
+          lotes:Lote(id_lote, nome_lote, area_m2, status)
+        `,
+        )
         .eq('id_dono', userId);
 
-      // TODO: Buscar também propriedades onde o usuário é FUNCIONÁRIO (tabela UsuarioPropriedade)
-      // Por enquanto, apenas propriedades como dono
+      // Busca propriedades onde o usuário é FUNCIONÁRIO (tabela UsuarioPropriedade)
+      const { data: propriedadesComoFuncionario, error: errorFuncionario } = await this.supabase
+        .from('UsuarioPropriedade')
+        .select(
+          `
+          Propriedade(
+            *,
+            endereco:Endereco(*),
+            lotes:Lote(id_lote, nome_lote, area_m2, status)
+          )
+        `,
+        )
+        .eq('id_usuario', userId);
 
       if (errorDono) {
-        this.logger.error(`[ERRO] Falha na consulta: ${errorDono.message}`);
+        this.logger.error(`[ERRO] Falha na consulta propriedades como dono: ${errorDono.message}`);
         throw new InternalServerErrorException(`Erro ao buscar propriedades: ${errorDono.message}`);
       }
 
-      this.logger.log(`[SUCESSO] ${propriedadesComoDono?.length || 0} propriedades encontradas para o usuário ${userId}`);
+      if (errorFuncionario) {
+        this.logger.error(`[ERRO] Falha na consulta propriedades como funcionário: ${errorFuncionario.message}`);
+      }
+
+      // Combina as duas listas e remove duplicatas
+      const todasPropriedades = [...(propriedadesComoDono || []), ...(propriedadesComoFuncionario?.map((item) => item.Propriedade) || [])];
+
+      // Remove duplicatas baseado no id_propriedade
+      const propriedadesUnicas = todasPropriedades.filter(
+        (propriedade, index, self) => index === self.findIndex((p) => p.id_propriedade === propriedade.id_propriedade),
+      );
+
+      this.logger.log(`[SUCESSO] ${propriedadesUnicas.length} propriedades encontradas para o usuário ${userId}`);
 
       return {
         message: 'Propriedades recuperadas com sucesso',
-        total: propriedadesComoDono?.length || 0,
-        propriedades: propriedadesComoDono || []
+        total: propriedadesUnicas.length,
+        propriedades: propriedadesUnicas,
       };
     } catch (error) {
       this.logger.error(`[ERRO_GERAL] ${error.message}`);
@@ -89,33 +113,80 @@ export class PropriedadeService {
   /**
    * Busca uma propriedade específica, garantindo que ela pertença ao usuário logado.
    */
-  async findOne(id: number, user: any) {
-    const idDono = await this.getUserId(user);
+  async findOne(id: string, user: any) {
+    const userId = await this.getUserId(user);
 
-    const { data, error } = await this.supabase
+    // Verifica se o usuário é dono da propriedade
+    const { data: propriedadeComoDono, error: erroDono } = await this.supabase
       .from('Propriedade')
-      .select('*')
+      .select(
+        `
+        *,
+        endereco:Endereco(*),
+        lotes:Lote(id_lote, nome_lote, area_m2, status)
+      `,
+      )
       .eq('id_propriedade', id)
-      .eq('id_dono', idDono) // Filtro de segurança chave!
+      .eq('id_dono', userId)
       .single();
 
-    if (error || !data) {
-      throw new NotFoundException(`Propriedade com ID ${id} não encontrada ou não pertence a este usuário.`);
+    if (propriedadeComoDono && !erroDono) {
+      return propriedadeComoDono;
     }
 
-    return data;
+    // Se não é dono, verifica se é funcionário
+    const { data: propriedadeComoFuncionario, error: erroFuncionario } = await this.supabase
+      .from('UsuarioPropriedade')
+      .select(
+        `
+        Propriedade(
+          *,
+          endereco:Endereco(*),
+          lotes:Lote(id_lote, nome_lote, area_m2, status)
+        )
+      `,
+      )
+      .eq('id_propriedade', id)
+      .eq('id_usuario', userId)
+      .single();
+
+    if (propriedadeComoFuncionario && !erroFuncionario) {
+      return propriedadeComoFuncionario.Propriedade;
+    }
+
+    throw new NotFoundException(`Propriedade com ID ${id} não encontrada ou não pertence a este usuário.`);
   }
 
   /**
    * Atualiza uma propriedade, verificando a posse antes de realizar a operação.
+   * Apenas donos podem atualizar propriedades.
    */
-  async update(id: number, updatePropriedadeDto: UpdatePropriedadeDto, user: any) {
-    // Garante que o usuário é o dono da propriedade antes de tentar atualizar.
-    await this.findOne(id, user);
+  async update(id: string, updatePropriedadeDto: UpdatePropriedadeDto, user: any) {
+    const userId = await this.getUserId(user);
 
-    const { data, error } = await this.supabase.from('Propriedade').update(updatePropriedadeDto).eq('id_propriedade', id).select().single();
+    // Verifica se o usuário é DONO da propriedade (apenas donos podem atualizar)
+    const { data: propriedade, error } = await this.supabase
+      .from('Propriedade')
+      .select('id_propriedade')
+      .eq('id_propriedade', id)
+      .eq('id_dono', userId)
+      .single();
 
-    if (error) {
+    if (error || !propriedade) {
+      throw new NotFoundException(`Propriedade com ID ${id} não encontrada ou você não tem permissão para atualizá-la.`);
+    }
+
+    const { data, error: updateError } = await this.supabase
+      .from('Propriedade')
+      .update({
+        ...updatePropriedadeDto,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id_propriedade', id)
+      .select()
+      .single();
+
+    if (updateError) {
       throw new InternalServerErrorException('Falha ao atualizar a propriedade.');
     }
 
@@ -124,14 +195,26 @@ export class PropriedadeService {
 
   /**
    * Remove uma propriedade, verificando a posse antes de deletar.
+   * Apenas donos podem remover propriedades.
    */
-  async remove(id: number, user: any) {
-    // Garante que o usuário é o dono da propriedade antes de tentar remover.
-    await this.findOne(id, user);
+  async remove(id: string, user: any) {
+    const userId = await this.getUserId(user);
 
-    const { error } = await this.supabase.from('Propriedade').delete().eq('id_propriedade', id);
+    // Verifica se o usuário é DONO da propriedade (apenas donos podem deletar)
+    const { data: propriedade, error } = await this.supabase
+      .from('Propriedade')
+      .select('id_propriedade')
+      .eq('id_propriedade', id)
+      .eq('id_dono', userId)
+      .single();
 
-    if (error) {
+    if (error || !propriedade) {
+      throw new NotFoundException(`Propriedade com ID ${id} não encontrada ou você não tem permissão para removê-la.`);
+    }
+
+    const { error: deleteError } = await this.supabase.from('Propriedade').delete().eq('id_propriedade', id);
+
+    if (deleteError) {
       throw new InternalServerErrorException('Falha ao remover a propriedade.');
     }
 

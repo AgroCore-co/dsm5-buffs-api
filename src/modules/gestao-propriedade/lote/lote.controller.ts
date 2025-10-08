@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, UseGuards, Param, Patch, Delete, ParseIntPipe, HttpCode } from '@nestjs/common';
+import { Controller, Get, Post, Body, UseGuards, Param, Patch, Delete, ParseUUIDPipe, HttpCode } from '@nestjs/common';
 import { LoteService } from './lote.service';
 import { CreateLoteDto } from './dto/create-lote.dto';
 import { UpdateLoteDto } from './dto/update-lote.dto';
@@ -19,13 +19,13 @@ export class LoteController {
 
   @Get('propriedade/:id_propriedade')
   @ApiOperation({ summary: 'Lista todos os lotes de uma propriedade específica' })
-  @ApiParam({ name: 'id_propriedade', description: 'ID da propriedade' })
+  @ApiParam({ name: 'id_propriedade', description: 'ID da propriedade (UUID)', type: 'string' })
   @ApiResponse({ status: 200, description: 'Lista de lotes da propriedade retornada com sucesso.' })
   @ApiResponse({ status: 404, description: 'Propriedade não encontrada ou não pertence ao usuário.' })
-  findAllByPropriedade(@Param('id_propriedade', ParseIntPipe) id_propriedade: number, @User() user: any) {
+  findAllByPropriedade(@Param('id_propriedade', ParseUUIDPipe) id_propriedade: string, @User() user: any) {
     return this.loteService.findAllByPropriedade(id_propriedade, user);
   }
-  
+
   @Post()
   @ApiOperation({ summary: 'Cria um novo lote (piquete) com dados geográficos' })
   @ApiResponse({ status: 201, description: 'Lote criado com sucesso.' })
@@ -36,29 +36,29 @@ export class LoteController {
 
   @Get(':id')
   @ApiOperation({ summary: 'Busca um lote específico' })
-  @ApiParam({ name: 'id', description: 'ID do lote' })
+  @ApiParam({ name: 'id', description: 'ID do lote (UUID)', type: 'string' })
   @ApiResponse({ status: 200, description: 'Lote encontrado com sucesso.' })
   @ApiResponse({ status: 404, description: 'Lote não encontrado ou não pertence ao usuário.' })
-  findOne(@Param('id', ParseIntPipe) id: number, @User() user: any) {
+  findOne(@Param('id', ParseUUIDPipe) id: string, @User() user: any) {
     return this.loteService.findOne(id, user);
   }
 
   @Patch(':id')
   @ApiOperation({ summary: 'Atualiza um lote' })
-  @ApiParam({ name: 'id', description: 'ID do lote' })
+  @ApiParam({ name: 'id', description: 'ID do lote (UUID)', type: 'string' })
   @ApiResponse({ status: 200, description: 'Lote atualizado com sucesso.' })
   @ApiResponse({ status: 404, description: 'Lote não encontrado ou não pertence ao usuário.' })
-  update(@Param('id', ParseIntPipe) id: number, @Body() updateLoteDto: UpdateLoteDto, @User() user: any) {
+  update(@Param('id', ParseUUIDPipe) id: string, @Body() updateLoteDto: UpdateLoteDto, @User() user: any) {
     return this.loteService.update(id, updateLoteDto, user);
   }
 
   @Delete(':id')
   @HttpCode(204)
   @ApiOperation({ summary: 'Remove um lote' })
-  @ApiParam({ name: 'id', description: 'ID do lote' })
+  @ApiParam({ name: 'id', description: 'ID do lote (UUID)', type: 'string' })
   @ApiResponse({ status: 204, description: 'Lote removido com sucesso.' })
   @ApiResponse({ status: 404, description: 'Lote não encontrado ou não pertence ao usuário.' })
-  remove(@Param('id', ParseIntPipe) id: number, @User() user: any) {
+  remove(@Param('id', ParseUUIDPipe) id: string, @User() user: any) {
     return this.loteService.remove(id, user);
   }
 }

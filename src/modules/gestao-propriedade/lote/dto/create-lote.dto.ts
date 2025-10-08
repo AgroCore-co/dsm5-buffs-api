@@ -1,5 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsObject, IsString, IsNotEmpty, IsOptional, IsInt, IsPositive } from 'class-validator';
+import { IsObject, IsString, IsNotEmpty, IsOptional, IsUUID, IsInt, IsPositive } from 'class-validator';
 
 export class CreateLoteDto {
   @ApiProperty({
@@ -11,12 +11,29 @@ export class CreateLoteDto {
   nome_lote: string;
 
   @ApiProperty({
-    description: 'ID da propriedade à qual este lote pertence.',
-    example: 1,
+    description: 'ID da propriedade à qual este lote pertence (UUID).',
+    example: 'f47ac10b-58cc-4372-a567-0e02b2c3d479',
   })
-  @IsInt()
-  @IsPositive()
-  id_propriedade: number;
+  @IsUUID()
+  id_propriedade: string;
+
+  @ApiProperty({
+    description: 'Tipo do lote (ex: pasto, curral, etc).',
+    example: 'Pasto',
+    required: false,
+  })
+  @IsString()
+  @IsOptional()
+  tipo_lote?: string;
+
+  @ApiProperty({
+    description: 'Status do lote (ativo, inativo, manutenção).',
+    example: 'ativo',
+    required: false,
+  })
+  @IsString()
+  @IsOptional()
+  status?: string;
 
   @ApiProperty({
     description: 'Descrição opcional sobre o lote.',
@@ -27,22 +44,42 @@ export class CreateLoteDto {
   @IsOptional()
   descricao?: string;
 
+  @ApiProperty({
+    description: 'Quantidade máxima de animais suportada pelo lote.',
+    example: 50,
+    required: false,
+  })
+  @IsInt()
+  @IsPositive()
+  @IsOptional()
+  qtd_max?: number;
 
-    @ApiProperty({
+  @ApiProperty({
+    description: 'Área do lote em metros quadrados.',
+    example: 10000.5,
+    required: false,
+  })
+  @IsPositive()
+  @IsOptional()
+  area_m2?: number;
+
+  @ApiProperty({
     description: 'Objeto GeoJSON contendo a geometria do polígono.',
-    // Este exemplo agora corresponde ao que o Swagger mostrava
     example: {
       type: 'Polygon',
       coordinates: [
         [
-          [-47.5, -24.5], [-47.4, -24.5], [-47.4, -24.4], [-47.5, -24.4], [-47.5, -24.5]
-        ]
-      ]
+          [-47.5, -24.5],
+          [-47.4, -24.5],
+          [-47.4, -24.4],
+          [-47.5, -24.4],
+          [-47.5, -24.5],
+        ],
+      ],
     },
-    required: true, // Ou false, dependendo da sua regra
+    required: false,
   })
-  @IsObject() // Validação para OBJETO
-  @IsNotEmpty()
-  geo_mapa: object; // O tipo agora é OBJETO
+  @IsObject()
+  @IsOptional()
+  geo_mapa?: object;
 }
-

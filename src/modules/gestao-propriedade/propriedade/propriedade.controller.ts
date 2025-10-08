@@ -1,4 +1,4 @@
-import { Controller, Post, Body, UseGuards, Get, Param, ParseIntPipe, Patch, Delete, HttpCode, UseInterceptors } from '@nestjs/common';
+import { Controller, Post, Body, UseGuards, Get, Param, ParseUUIDPipe, Patch, Delete, HttpCode, UseInterceptors } from '@nestjs/common';
 import { CacheInterceptor, CacheTTL } from '@nestjs/cache-manager';
 import { PropriedadeService } from './propriedade.service';
 import { CreatePropriedadeDto } from './dto/create-propiedade.dto';
@@ -48,11 +48,11 @@ export class PropriedadeController {
   @Get(':id')
   @UseInterceptors(CacheInterceptor)
   @CacheTTL(3600)
-  @ApiOperation({ summary: 'Busca uma propriedade específica pelo ID' })
+  @ApiOperation({ summary: 'Busca uma propriedade específica pelo ID UUID' })
   @ApiResponse({ status: 200, description: 'Dados da propriedade retornados.' })
   @ApiResponse({ status: 401, description: 'Não autorizado.' })
   @ApiResponse({ status: 404, description: 'Propriedade não encontrada ou não pertence a este usuário.' })
-  findOne(@Param('id', ParseIntPipe) id: number, @User() user: any) {
+  findOne(@Param('id', ParseUUIDPipe) id: string, @User() user: any) {
     return this.propriedadeService.findOne(id, user);
   }
 
@@ -63,7 +63,7 @@ export class PropriedadeController {
   @ApiResponse({ status: 200, description: 'Propriedade atualizada com sucesso.' })
   @ApiResponse({ status: 401, description: 'Não autorizado.' })
   @ApiResponse({ status: 404, description: 'Propriedade não encontrada ou não pertence a este usuário.' })
-  update(@Param('id', ParseIntPipe) id: number, @Body() updatePropriedadeDto: UpdatePropriedadeDto, @User() user: any) {
+  update(@Param('id', ParseUUIDPipe) id: string, @Body() updatePropriedadeDto: UpdatePropriedadeDto, @User() user: any) {
     return this.propriedadeService.update(id, updatePropriedadeDto, user);
   }
 
@@ -75,7 +75,7 @@ export class PropriedadeController {
   @ApiResponse({ status: 204, description: 'Propriedade deletada com sucesso.' })
   @ApiResponse({ status: 401, description: 'Não autorizado.' })
   @ApiResponse({ status: 404, description: 'Propriedade não encontrada ou não pertence a este usuário.' })
-  remove(@Param('id', ParseIntPipe) id: number, @User() user: any) {
+  remove(@Param('id', ParseUUIDPipe) id: string, @User() user: any) {
     return this.propriedadeService.remove(id, user);
   }
 }

@@ -1,4 +1,4 @@
-import { Controller, Post, Body, UseGuards, Get, Param, Patch, Delete, ParseIntPipe, UseInterceptors } from '@nestjs/common';
+import { Controller, Post, Body, UseGuards, Get, Param, Patch, Delete, ParseUUIDPipe, UseInterceptors } from '@nestjs/common';
 import { CacheInterceptor, CacheTTL } from '@nestjs/cache-manager';
 import { EnderecoService } from './endereco.service';
 import { CreateEnderecoDto } from './dto/create-endereco.dto';
@@ -49,11 +49,11 @@ export class EnderecoController {
     summary: 'Busca um endereço específico',
     description: 'Retorna os dados de um endereço específico pelo ID.',
   })
-  @ApiParam({ name: 'id', description: 'ID do endereço', type: 'number' })
+  @ApiParam({ name: 'id', description: 'ID do endereço (UUID)', type: 'string' })
   @ApiResponse({ status: 200, description: 'Endereço encontrado com sucesso.' })
   @ApiResponse({ status: 401, description: 'Não autorizado.' })
   @ApiResponse({ status: 404, description: 'Endereço não encontrado.' })
-  findOne(@Param('id', ParseIntPipe) id: number) {
+  findOne(@Param('id', ParseUUIDPipe) id: string) {
     return this.enderecoService.findOne(id);
   }
 
@@ -62,12 +62,12 @@ export class EnderecoController {
     summary: 'Atualiza um endereço',
     description: 'Atualiza os dados de um endereço específico pelo ID.',
   })
-  @ApiParam({ name: 'id', description: 'ID do endereço', type: 'number' })
+  @ApiParam({ name: 'id', description: 'ID do endereço (UUID)', type: 'string' })
   @ApiResponse({ status: 200, description: 'Endereço atualizado com sucesso.' })
   @ApiResponse({ status: 400, description: 'Dados inválidos.' })
   @ApiResponse({ status: 401, description: 'Não autorizado.' })
   @ApiResponse({ status: 404, description: 'Endereço não encontrado.' })
-  update(@Param('id', ParseIntPipe) id: number, @Body() updateEnderecoDto: UpdateEnderecoDto) {
+  update(@Param('id', ParseUUIDPipe) id: string, @Body() updateEnderecoDto: UpdateEnderecoDto) {
     return this.enderecoService.update(id, updateEnderecoDto);
   }
 
@@ -76,11 +76,11 @@ export class EnderecoController {
     summary: 'Remove um endereço',
     description: 'Remove um endereço específico do sistema pelo ID.',
   })
-  @ApiParam({ name: 'id', description: 'ID do endereço', type: 'number' })
+  @ApiParam({ name: 'id', description: 'ID do endereço (UUID)', type: 'string' })
   @ApiResponse({ status: 200, description: 'Endereço removido com sucesso.' })
   @ApiResponse({ status: 401, description: 'Não autorizado.' })
   @ApiResponse({ status: 404, description: 'Endereço não encontrado.' })
-  remove(@Param('id', ParseIntPipe) id: number) {
+  remove(@Param('id', ParseUUIDPipe) id: string) {
     return this.enderecoService.remove(id);
   }
 }

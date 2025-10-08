@@ -34,7 +34,7 @@ export class EnderecoService {
     return data;
   }
 
-  async findOne(id: number) {
+  async findOne(id: string) {
     const { data, error } = await this.supabase.from('Endereco').select('*').eq('id_endereco', id).single();
 
     if (error) {
@@ -48,11 +48,19 @@ export class EnderecoService {
     return data;
   }
 
-  async update(id: number, updateEnderecoDto: UpdateEnderecoDto) {
+  async update(id: string, updateEnderecoDto: UpdateEnderecoDto) {
     // Primeiro verifica se o endereço existe
     await this.findOne(id);
 
-    const { data, error } = await this.supabase.from('Endereco').update(updateEnderecoDto).eq('id_endereco', id).select().single();
+    const { data, error } = await this.supabase
+      .from('Endereco')
+      .update({
+        ...updateEnderecoDto,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id_endereco', id)
+      .select()
+      .single();
 
     if (error) {
       console.error('Erro ao atualizar endereço:', error);
@@ -62,7 +70,7 @@ export class EnderecoService {
     return data;
   }
 
-  async remove(id: number) {
+  async remove(id: string) {
     // Primeiro verifica se o endereço existe
     await this.findOne(id);
 
