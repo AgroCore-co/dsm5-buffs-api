@@ -18,6 +18,7 @@ import { AlertasService } from './alerta.service';
 import { CreateAlertaDto, PrioridadeAlerta, NichoAlerta } from './dto/create-alerta.dto';
 import { SupabaseAuthGuard } from '../auth/guards/auth.guard';
 import { ApiBearerAuth, ApiOperation, ApiQuery, ApiResponse, ApiTags, ApiParam } from '@nestjs/swagger';
+import { PaginationDto } from '../../core/dto/pagination.dto';
 
 @ApiBearerAuth('JWT-auth')
 @UseGuards(SupabaseAuthGuard)
@@ -97,17 +98,20 @@ export class AlertasController {
     type: Boolean,
     example: false,
   })
+  @ApiQuery({ name: 'page', required: false, type: Number, description: 'Número da página (padrão: 1)' })
+  @ApiQuery({ name: 'limit', required: false, type: Number, description: 'Itens por página (padrão: 10)' })
   @ApiResponse({
     status: 200,
-    description: 'Lista de alertas retornada. Prioridades podem ter sido classificadas pela IA Gemini.',
+    description: 'Lista de alertas retornada com paginação. Prioridades podem ter sido classificadas pela IA Gemini.',
   })
   findAll(
     @Query('tipo') tipo?: string,
     @Query('prioridade') prioridade?: PrioridadeAlerta,
     @Query('antecedencia') antecendencia?: number,
     @Query('incluirVistos', new ParseBoolPipe({ optional: true })) incluirVistos?: boolean,
+    @Query() paginationDto?: PaginationDto,
   ) {
-    return this.alertasService.findAll(tipo, antecendencia, incluirVistos);
+    return this.alertasService.findAll(tipo, antecendencia, incluirVistos, paginationDto);
   }
 
   @Get(':id')

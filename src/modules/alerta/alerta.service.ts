@@ -2,6 +2,9 @@ import { Injectable, InternalServerErrorException, NotFoundException } from '@ne
 import { SupabaseService } from 'src/core/supabase/supabase.service';
 import { CreateAlertaDto } from './dto/create-alerta.dto';
 import { SupabaseClient } from '@supabase/supabase-js';
+import { PaginationDto } from '../../core/dto/pagination.dto';
+import { PaginatedResponse } from '../../core/dto/pagination.dto';
+import { createPaginatedResponse, calculatePaginationParams } from '../../core/utils/pagination.utils';
 
 @Injectable()
 export class AlertasService {
@@ -71,25 +74,38 @@ export class AlertasService {
   }
 
   /**
-   * Retorna uma lista de alertas com base nos filtros fornecidos.
+   * Retorna uma lista de alertas com base nos filtros fornecidos e paginação.
    * @param tipo - Filtra os alertas por nicho (ex: 'CLINICO', 'REPRODUCAO').
    * @param antecendencia - Filtra alertas que ocorrerão nos próximos X dias.
    * @param incluirVistos - Se `true`, inclui alertas já marcados como vistos.
-   * @returns Um array de alertas, incluindo dados do animal relacionado.
+   * @param paginationDto - Parâmetros de paginação.
+   * @returns Um resultado paginado de alertas, incluindo dados do animal relacionado.
    */
-  async findAll(tipo?: string, antecendencia?: number, incluirVistos: boolean = false) {
+  async findAll(
+    tipo?: string,
+    antecendencia?: number,
+    incluirVistos: boolean = false,
+    paginationDto: PaginationDto = {},
+  ): Promise<PaginatedResponse<any>> {
     try {
-      let query = this.supabase.from('Alertas').select(`
+      const { page = 1, limit = 10 } = paginationDto;
+      const { limit: limitValue, offset } = calculatePaginationParams(page, limit);
+
+      let countQuery = this.supabase.from('Alertas').select('*', { count: 'exact', head: true });
+      let dataQuery = this.supabase.from('Alertas').select(`
         *,
         animal:Bufalo ( id_bufalo, nome, brinco )
       `);
 
+      // Aplicar os mesmos filtros em ambas as queries
       if (tipo) {
-        query = query.eq('nicho', tipo);
+        countQuery = countQuery.eq('nicho', tipo);
+        dataQuery = dataQuery.eq('nicho', tipo);
       }
 
       if (!incluirVistos) {
-        query = query.eq('visto', false);
+        countQuery = countQuery.eq('visto', false);
+        dataQuery = dataQuery.eq('visto', false);
       }
 
       if (antecendencia) {
@@ -97,19 +113,30 @@ export class AlertasService {
         const dataLimite = new Date();
         dataLimite.setDate(hoje.getDate() + Number(antecendencia));
 
-        query = query.gte('data_alerta', hoje.toISOString().split('T')[0]); // Compara apenas a data
-        query = query.lte('data_alerta', dataLimite.toISOString().split('T')[0]);
+        const hojeStr = hoje.toISOString().split('T')[0];
+        const dataLimiteStr = dataLimite.toISOString().split('T')[0];
+
+        countQuery = countQuery.gte('data_alerta', hojeStr).lte('data_alerta', dataLimiteStr);
+        dataQuery = dataQuery.gte('data_alerta', hojeStr).lte('data_alerta', dataLimiteStr);
       }
 
-      // Ordenar por data para mostrar os mais próximos primeiro, depois por prioridade
-      query = query.order('data_alerta', { ascending: true }).order('prioridade', { ascending: false }); // Ex: ALTA vem primeiro
+      // Contar total
+      const { count, error: countError } = await countQuery;
+      if (countError) {
+        throw new InternalServerErrorException(`Falha ao contar alertas: ${countError.message}`);
+      }
 
-      const { data, error } = await query;
+      // Buscar dados com paginação
+      const { data, error } = await dataQuery
+        .order('data_alerta', { ascending: true })
+        .order('prioridade', { ascending: false })
+        .range(offset, offset + limitValue - 1);
 
       if (error) {
         throw new InternalServerErrorException(`Falha ao buscar os alertas: ${error.message}`);
       }
-      return data;
+
+      return createPaginatedResponse(data, count || 0, page, limitValue);
     } catch (error) {
       throw error;
     }

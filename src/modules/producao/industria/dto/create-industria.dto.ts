@@ -1,7 +1,12 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsString, IsNotEmpty, IsOptional, MaxLength } from 'class-validator';
+import { IsString, IsNotEmpty, IsOptional, MaxLength, IsUUID } from 'class-validator';
 
 export class CreateIndustriaDto {
+  @ApiProperty({ description: 'ID da propriedade à qual esta indústria está vinculada (UUID)', example: 'f47ac10b-58cc-4372-a567-0e02b2c3d479' })
+  @IsUUID()
+  @IsNotEmpty()
+  id_propriedade: string;
+
   @ApiProperty({ example: 'Laticínios Búfalo Dourado', description: 'Nome da indústria/laticínio' })
   @IsString()
   @IsNotEmpty()

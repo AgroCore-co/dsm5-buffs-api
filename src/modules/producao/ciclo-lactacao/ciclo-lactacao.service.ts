@@ -3,6 +3,9 @@ import { SupabaseService } from '../../../core/supabase/supabase.service';
 import { LoggerService } from '../../../core/logger/logger.service';
 import { CreateCicloLactacaoDto } from './dto/create-ciclo-lactacao.dto';
 import { UpdateCicloLactacaoDto } from './dto/update-ciclo-lactacao.dto';
+import { PaginationDto } from '../../../core/dto/pagination.dto';
+import { PaginatedResponse } from '../../../core/dto/pagination.dto';
+import { createPaginatedResponse, calculatePaginationParams } from '../../../core/utils/pagination.utils';
 
 @Injectable()
 export class CicloLactacaoService {
@@ -71,17 +74,33 @@ export class CicloLactacaoService {
     return data;
   }
 
-  async findAll() {
-    this.logger.log('Iniciando busca de todos os ciclos de lactação', {
+  async findAll(paginationDto: PaginationDto = {}): Promise<PaginatedResponse<any>> {
+    this.logger.log('Iniciando busca de todos os ciclos de lactação com paginação', {
       module: 'CicloLactacaoService',
       method: 'findAll',
     });
 
+    const { page = 1, limit = 10 } = paginationDto;
+    const { limit: limitValue, offset } = calculatePaginationParams(page, limit);
+
+    // Contar total de registros
+    const { count, error: countError } = await this.supabase.getClient().from(this.tableName).select('*', { count: 'exact', head: true });
+
+    if (countError) {
+      this.logger.logError(countError, {
+        module: 'CicloLactacaoService',
+        method: 'findAll',
+      });
+      throw new InternalServerErrorException(`Falha ao contar ciclos de lactação: ${countError.message}`);
+    }
+
+    // Buscar registros com paginação
     const { data, error } = await this.supabase
       .getClient()
       .from(this.tableName)
       .select('*, bufala:Bufalo(nome)')
-      .order('dt_parto', { ascending: false });
+      .order('dt_parto', { ascending: false })
+      .range(offset, offset + limitValue - 1);
 
     if (error) {
       this.logger.logError(error, {
@@ -91,11 +110,12 @@ export class CicloLactacaoService {
       throw new InternalServerErrorException(`Falha ao buscar ciclos de lactação: ${error.message}`);
     }
 
-    this.logger.log(`Busca de ciclos de lactação concluída - ${data.length} ciclos encontrados`, {
+    this.logger.log(`Busca de ciclos de lactação concluída - ${data.length} ciclos encontrados (página ${page})`, {
       module: 'CicloLactacaoService',
       method: 'findAll',
     });
-    return data;
+
+    return createPaginatedResponse(data, count || 0, page, limitValue);
   }
 
   async findOne(id_ciclo_lactacao: string) {

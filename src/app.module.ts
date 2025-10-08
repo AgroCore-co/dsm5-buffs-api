@@ -10,6 +10,7 @@ import { SaudeZootecniaModule } from './modules/saude-zootecnia/saude-zootecnia.
 import { ReproducaoModule } from './modules/reproducao/reproducao.module';
 import { ProducaoModule } from './modules/producao/producao.module';
 import { HealthModule } from './health/health.module';
+import { DashboardModule } from './modules/dashboard/dashboard.module';
 
 @Module({
   imports: [
@@ -24,6 +25,7 @@ import { HealthModule } from './health/health.module';
     ReproducaoModule,
     ProducaoModule,
     HealthModule,
+    DashboardModule,
   ],
   controllers: [],
   providers: [],

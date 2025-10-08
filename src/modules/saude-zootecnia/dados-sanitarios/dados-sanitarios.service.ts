@@ -2,6 +2,8 @@ import { Injectable, InternalServerErrorException, NotFoundException, BadRequest
 import { SupabaseService } from '../../../core/supabase/supabase.service';
 import { CreateDadosSanitariosDto } from './dto/create-dados-sanitarios.dto';
 import { UpdateDadosSanitariosDto } from './dto/update-dados-sanitarios.dto';
+import { PaginationDto, PaginatedResponse } from '../../../core/dto/pagination.dto';
+import { createPaginatedResponse, calculatePaginationParams } from '../../../core/utils/pagination.utils';
 
 @Injectable()
 export class DadosSanitariosService {
@@ -63,25 +65,52 @@ export class DadosSanitariosService {
     return data;
   }
 
-  async findAll() {
+  async findAll(paginationDto: PaginationDto = {}): Promise<PaginatedResponse<any>> {
+    const { page = 1, limit = 10 } = paginationDto;
+    const { offset } = calculatePaginationParams(page, limit);
+
+    // Primeiro, busca o total de registros
+    const { count, error: countError } = await this.supabase.getClient().from(this.tableName).select('*', { count: 'exact', head: true });
+
+    if (countError) {
+      throw new InternalServerErrorException(`Falha ao contar registros sanitários: ${countError.message}`);
+    }
+
     const { data, error } = await this.supabase
       .getClient()
       .from(this.tableName)
       .select(
         `
         *,
-        medicacao:Medicacoes!inner(id_medicacao, tipo_tratamento, medicacao, descricao)
+        medicacao:Medicacoes!inner(id_medicacao, tipo_tratamento, medicacao, descricao),
+        bufalo:id_bufalo(nome, brinco)
       `,
       )
-      .order('dt_aplicacao', { ascending: false });
+      .order('dt_aplicacao', { ascending: false })
+      .range(offset, offset + limit - 1);
 
     if (error) {
       throw new InternalServerErrorException(`Falha ao buscar dados sanitários: ${error.message}`);
     }
-    return data;
+
+    return createPaginatedResponse(data || [], count || 0, page, limit);
   }
 
-  async findByBufalo(id_bufalo: string) {
+  async findByBufalo(id_bufalo: string, paginationDto: PaginationDto = {}): Promise<PaginatedResponse<any>> {
+    const { page = 1, limit = 10 } = paginationDto;
+    const { offset } = calculatePaginationParams(page, limit);
+
+    // Primeiro, busca o total de registros para o búfalo
+    const { count, error: countError } = await this.supabase
+      .getClient()
+      .from(this.tableName)
+      .select('*', { count: 'exact', head: true })
+      .eq('id_bufalo', id_bufalo);
+
+    if (countError) {
+      throw new InternalServerErrorException(`Falha ao contar registros sanitários do búfalo: ${countError.message}`);
+    }
+
     const { data, error } = await this.supabase
       .getClient()
       .from(this.tableName)
@@ -92,12 +121,14 @@ export class DadosSanitariosService {
       `,
       )
       .eq('id_bufalo', id_bufalo)
-      .order('dt_aplicacao', { ascending: false });
+      .order('dt_aplicacao', { ascending: false })
+      .range(offset, offset + limit - 1);
 
     if (error) {
       throw new InternalServerErrorException(`Falha ao buscar dados sanitários do búfalo: ${error.message}`);
     }
-    return data;
+
+    return createPaginatedResponse(data || [], count || 0, page, limit);
   }
 
   async findOne(id_sanit: string) {

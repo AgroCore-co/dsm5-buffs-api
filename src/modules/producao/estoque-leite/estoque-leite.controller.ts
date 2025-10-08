@@ -1,11 +1,12 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, ParseUUIDPipe, UseGuards } from '@nestjs/common';
-import { ApiBearerAuth, ApiOperation, ApiResponse, ApiTags, ApiParam, ApiBody } from '@nestjs/swagger';
+import { Controller, Get, Post, Body, Patch, Param, Delete, ParseUUIDPipe, UseGuards, Query } from '@nestjs/common';
+import { ApiBearerAuth, ApiOperation, ApiResponse, ApiTags, ApiParam, ApiBody, ApiQuery } from '@nestjs/swagger';
 import { SupabaseAuthGuard } from '../../auth/guards/auth.guard';
 import { User } from '../../auth/decorators/user.decorator';
 import { LoggerService } from '../../../core/logger/logger.service';
 import { EstoqueLeiteService } from './estoque-leite.service';
 import { CreateEstoqueLeiteDto } from './dto/create-estoque-leite.dto';
 import { UpdateEstoqueLeiteDto } from './dto/update-estoque-leite.dto';
+import { PaginationDto } from '../../../core/dto/pagination.dto';
 
 @ApiBearerAuth('JWT-auth')
 @UseGuards(SupabaseAuthGuard)
@@ -33,11 +34,13 @@ export class EstoqueLeiteController {
   }
 
   @Get()
-  @ApiOperation({ summary: 'Lista todos os registros de estoque de leite' })
+  @ApiOperation({ summary: 'Lista todos os registros de estoque de leite com paginação' })
+  @ApiQuery({ name: 'page', required: false, type: Number, description: 'Número da página (padrão: 1)' })
+  @ApiQuery({ name: 'limit', required: false, type: Number, description: 'Itens por página (padrão: 10)' })
   @ApiResponse({ status: 200, description: 'Lista de registros retornada com sucesso.' })
-  findAll() {
+  findAll(@Query() paginationDto: PaginationDto) {
     this.logger.logApiRequest('GET', '/estoque-leite', undefined, { module: 'EstoqueLeiteController', method: 'findAll' });
-    return this.service.findAll();
+    return this.service.findAll(paginationDto);
   }
 
   @Get(':id')

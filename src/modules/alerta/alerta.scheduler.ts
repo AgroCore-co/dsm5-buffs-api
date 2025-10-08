@@ -37,7 +37,8 @@ export class AlertasScheduler {
       // Busca tratamentos que precisam de retorno na data alvo
       const { data: tratamentos, error } = await this.supabase
         .from('DadosSanitarios')
-        .select(`
+        .select(
+          `
           id_sanit,
           dt_retorno,
           doenca,
@@ -46,7 +47,8 @@ export class AlertasScheduler {
             grupo:Grupo ( nome_grupo ),
             propriedade:Propriedade ( nome )
           )
-        `)
+        `,
+        )
         .eq('necessita_retorno', true)
         .eq('dt_retorno', dataAlvoString);
 
@@ -77,13 +79,14 @@ export class AlertasScheduler {
             animal_id: bufaloInfo.id_bufalo,
             grupo: bufaloInfo.grupo?.nome_grupo || 'Não informado',
             localizacao: bufaloInfo.propriedade?.nome || 'Não informada',
+            id_propriedade: bufaloInfo.propriedade?.id_propriedade || bufaloInfo.id_propriedade,
             motivo: `Retorno de tratamento para "${tratamento.doenca}" agendado.`,
             nicho: NichoAlerta.SANITARIO,
             data_alerta: tratamento.dt_retorno,
             prioridade: PrioridadeAlerta.MEDIA,
             observacao: `Verificar protocolo sanitário. ID do tratamento original: ${tratamento.id_sanit}`,
             id_evento_origem: tratamento.id_sanit,
-            tipo_evento_origem: 'DADOS_SANITARIOS'
+            tipo_evento_origem: 'DADOS_SANITARIOS',
           };
 
           await this.alertasService.createIfNotExists(alertaDto);
@@ -110,7 +113,8 @@ export class AlertasScheduler {
     try {
       const { data: reproducoes, error } = await this.supabase
         .from('DadosReproducao')
-        .select(`
+        .select(
+          `
           id_reproducao,
           dt_evento,
           bufala:Bufalo (
@@ -118,7 +122,8 @@ export class AlertasScheduler {
             grupo:Grupo ( nome_grupo ),
             propriedade:Propriedade ( nome )
           )
-        `)
+        `,
+        )
         .eq('status', 'Confirmada'); // Apenas para gestações confirmadas
 
       if (error) {
@@ -130,10 +135,10 @@ export class AlertasScheduler {
         this.logger.log('Nenhum dado de reprodução encontrado para processar.');
         return;
       }
-      
+
       let alertasCriados = 0;
       let alertasComErro = 0;
-      
+
       for (const rep of reproducoes) {
         try {
           if (!rep.dt_evento) {
@@ -145,7 +150,7 @@ export class AlertasScheduler {
           const dataEvento = new Date(rep.dt_evento);
           const dataPrevistaParto = new Date(dataEvento);
           dataPrevistaParto.setDate(dataEvento.getDate() + TEMPO_GESTAÇÃO_DIAS);
-          
+
           const hoje = new Date();
           const diffTime = dataPrevistaParto.getTime() - hoje.getTime();
           const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
@@ -164,15 +169,16 @@ export class AlertasScheduler {
               animal_id: bufalaInfo.id_bufalo,
               grupo: bufalaInfo.grupo?.nome_grupo || 'Não informado',
               localizacao: bufalaInfo.propriedade?.nome || 'Não informada',
+              id_propriedade: bufalaInfo.propriedade?.id_propriedade || bufalaInfo.id_propriedade,
               motivo: `Previsão de parto para ${dataPrevistaParto.toLocaleDateString('pt-BR')}.`,
               nicho: NichoAlerta.REPRODUCAO,
               data_alerta: dataPrevistaParto.toISOString().split('T')[0],
               prioridade: PrioridadeAlerta.ALTA,
               observacao: `Preparar área de maternidade. Gestação confirmada em ${new Date(rep.dt_evento).toLocaleDateString('pt-BR')}.`,
               id_evento_origem: rep.id_reproducao,
-              tipo_evento_origem: 'DADOS_REPRODUCAO'
+              tipo_evento_origem: 'DADOS_REPRODUCAO',
             };
-            
+
             await this.alertasService.createIfNotExists(alertaDto);
             alertasCriados++;
           }

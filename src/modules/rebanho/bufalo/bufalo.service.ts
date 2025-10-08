@@ -12,6 +12,8 @@ import { CategoriaABCBUtil } from './utils/categoria-abcb.util';
 import { GeminiRacaUtil } from './utils/gemini-raca.util';
 import { CategoriaABCB } from './dto/categoria-abcb.dto';
 import { GenealogiaService } from '../../reproducao/genealogia/genealogia.service';
+import { PaginationDto, PaginatedResponse } from '../../../core/dto/pagination.dto';
+import { createPaginatedResponse, calculatePaginationParams } from '../../../core/utils/pagination.utils';
 
 // Interface para tipar as atualizações de maturidade
 interface MaturityUpdate {
@@ -191,23 +193,51 @@ export class BufaloService {
     return data;
   }
 
-  async findAll(user: any) {
+  async findAll(user: any, paginationDto: PaginationDto = {}): Promise<PaginatedResponse<any>> {
+    const { page = 1, limit = 10 } = paginationDto;
+    const { offset } = calculatePaginationParams(page, limit);
+
     const userId = await this.getUserId(user);
 
     // Busca as propriedades do usuário
     const propriedadesUsuario = await this.getUserPropriedades(userId);
 
-    // Busca búfalos de todas as propriedades vinculadas ao usuário
-    const { data, error } = await this.supabase.from(this.tableName).select('*').in('id_propriedade', propriedadesUsuario);
+    // Primeiro, busca o total de registros
+    const { count, error: countError } = await this.supabase
+      .from(this.tableName)
+      .select('*', { count: 'exact', head: true })
+      .in('id_propriedade', propriedadesUsuario);
+
+    if (countError) {
+      throw new InternalServerErrorException('Falha ao contar os búfalos.');
+    }
+
+    // Busca búfalos com paginação e ordenação conforme especificado
+    // Prioriza status = true, depois ordena por data de nascimento (mais antigos primeiro)
+    const { data, error } = await this.supabase
+      .from(this.tableName)
+      .select(
+        `
+        *,
+        raca:id_raca(nome),
+        grupo:id_grupo(nome_grupo),
+        propriedade:id_propriedade(nome)
+      `,
+      )
+      .in('id_propriedade', propriedadesUsuario)
+      .order('status', { ascending: false }) // true primeiro
+      .order('dt_nascimento', { ascending: true }) // mais antigos primeiro
+      .range(offset, offset + limit - 1);
 
     if (error) {
       throw new InternalServerErrorException('Falha ao buscar os búfalos.');
     }
 
-    // Atualiza maturidade automaticamente para búfalos que precisam
-    await this.updateMaturityIfNeeded(data || []);
+    // Atualiza maturidade automaticamente para búfalos com status = true
+    const bufalosAtivos = (data || []).filter((bufalo) => bufalo.status === true);
+    await this.updateMaturityIfNeeded(bufalosAtivos);
 
-    return data || [];
+    return createPaginatedResponse(data || [], count || 0, page, limit);
   }
 
   async findOne(id: string, user: any) {
@@ -489,13 +519,19 @@ export class BufaloService {
   /**
    * Atualiza automaticamente a maturidade de búfalos quando necessário
    * Este método é chamado automaticamente em findAll e findOne
+   * Só processa búfalos com status = true (ativos)
    */
   private async updateMaturityIfNeeded(bufalos: any[]): Promise<void> {
     if (!bufalos || bufalos.length === 0) return;
 
+    // Filtrar apenas búfalos ativos (status = true)
+    const bufalosAtivos = bufalos.filter((bufalo) => bufalo.status === true);
+
+    if (bufalosAtivos.length === 0) return;
+
     const updates: MaturityUpdate[] = []; // Tipagem explícita do array
 
-    for (const bufalo of bufalos) {
+    for (const bufalo of bufalosAtivos) {
       if (bufalo.dt_nascimento && bufalo.sexo) {
         const birthDate = new Date(bufalo.dt_nascimento);
         const hasOffspring = await this.checkIfHasOffspring(bufalo.id_bufalo);
@@ -517,7 +553,7 @@ export class BufaloService {
 
     // Executa atualizações em lote se necessário
     if (updates.length > 0) {
-      console.log(`Atualizando maturidade de ${updates.length} búfalo(s)...`);
+      console.log(`Atualizando maturidade de ${updates.length} búfalo(s) ativo(s)...`);
 
       for (const update of updates) {
         await this.supabase
@@ -529,7 +565,7 @@ export class BufaloService {
           .eq('id_bufalo', update.id_bufalo);
       }
 
-      console.log(`Maturidade atualizada para ${updates.length} búfalo(s)`);
+      console.log(`Maturidade atualizada para ${updates.length} búfalo(s) ativo(s)`);
     }
   }
 

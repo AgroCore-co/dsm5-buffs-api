@@ -3,6 +3,9 @@ import { SupabaseService } from '../../../core/supabase/supabase.service';
 import { LoggerService } from '../../../core/logger/logger.service';
 import { CreateEstoqueLeiteDto } from './dto/create-estoque-leite.dto';
 import { UpdateEstoqueLeiteDto } from './dto/update-estoque-leite.dto';
+import { PaginationDto } from '../../../core/dto/pagination.dto';
+import { PaginatedResponse } from '../../../core/dto/pagination.dto';
+import { createPaginatedResponse, calculatePaginationParams } from '../../../core/utils/pagination.utils';
 
 @Injectable()
 export class EstoqueLeiteService {
@@ -50,17 +53,33 @@ export class EstoqueLeiteService {
     return data;
   }
 
-  async findAll() {
-    this.logger.log('Iniciando busca de todos os registros de estoque de leite', {
+  async findAll(paginationDto: PaginationDto = {}): Promise<PaginatedResponse<any>> {
+    this.logger.log('Iniciando busca de todos os registros de estoque de leite com paginação', {
       module: 'EstoqueLeiteService',
       method: 'findAll',
     });
 
+    const { page = 1, limit = 10 } = paginationDto;
+    const { limit: limitValue, offset } = calculatePaginationParams(page, limit);
+
+    // Contar total de registros
+    const { count, error: countError } = await this.supabase.getClient().from(this.tableName).select('*', { count: 'exact', head: true });
+
+    if (countError) {
+      this.logger.logError(countError, {
+        module: 'EstoqueLeiteService',
+        method: 'findAll',
+      });
+      throw new InternalServerErrorException(`Falha ao contar estoque de leite: ${countError.message}`);
+    }
+
+    // Buscar registros com paginação
     const { data, error } = await this.supabase
       .getClient()
       .from(this.tableName)
       .select('*, propriedade:Propriedade(nome), usuario:Usuario(nome)')
-      .order('dt_registro', { ascending: false });
+      .order('dt_registro', { ascending: false })
+      .range(offset, offset + limitValue - 1);
 
     if (error) {
       this.logger.logError(error, {
@@ -70,11 +89,12 @@ export class EstoqueLeiteService {
       throw new InternalServerErrorException(`Falha ao buscar estoque de leite: ${error.message}`);
     }
 
-    this.logger.log(`Busca de registros de estoque concluída - ${data.length} registros encontrados`, {
+    this.logger.log(`Busca de registros de estoque concluída - ${data.length} registros encontrados (página ${page})`, {
       module: 'EstoqueLeiteService',
       method: 'findAll',
     });
-    return data;
+
+    return createPaginatedResponse(data, count || 0, page, limitValue);
   }
 
   async findOne(id_estoque: string) {

@@ -2,6 +2,9 @@ import { Injectable, InternalServerErrorException, NotFoundException, Unauthoriz
 import { SupabaseService } from '../../../core/supabase/supabase.service';
 import { CreateDadoZootecnicoDto } from './dto/create-dado-zootecnico.dto';
 import { UpdateDadoZootecnicoDto } from './dto/update-dado-zootecnico.dto';
+import { PaginationDto } from '../../../core/dto/pagination.dto';
+import { PaginatedResponse } from '../../../core/dto/pagination.dto';
+import { createPaginatedResponse, calculatePaginationParams } from '../../../core/utils/pagination.utils';
 
 @Injectable()
 export class DadosZootecnicosService {
@@ -59,18 +62,35 @@ export class DadosZootecnicosService {
     return data;
   }
 
-  async findAllByBufalo(id_bufalo: string) {
+  async findAllByBufalo(id_bufalo: string, paginationDto: PaginationDto = {}): Promise<PaginatedResponse<any>> {
+    const { page = 1, limit = 10 } = paginationDto;
+    const { limit: limitValue, offset } = calculatePaginationParams(page, limit);
+
+    // Contar total de registros para este búfalo
+    const { count, error: countError } = await this.supabase
+      .getClient()
+      .from(this.tableName)
+      .select('*', { count: 'exact', head: true })
+      .eq('id_bufalo', id_bufalo);
+
+    if (countError) {
+      throw new InternalServerErrorException(`Falha ao contar dados do búfalo: ${countError.message}`);
+    }
+
+    // Buscar registros com paginação
     const { data, error } = await this.supabase
       .getClient()
       .from(this.tableName)
       .select('*')
       .eq('id_bufalo', id_bufalo)
-      .order('dt_registro', { ascending: false });
+      .order('dt_registro', { ascending: false })
+      .range(offset, offset + limitValue - 1);
 
     if (error) {
       throw new InternalServerErrorException(`Falha ao buscar dados do búfalo: ${error.message}`);
     }
-    return data;
+
+    return createPaginatedResponse(data, count || 0, page, limitValue);
   }
 
   async findOne(id_zootec: string) {

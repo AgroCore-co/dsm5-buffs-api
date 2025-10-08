@@ -11,6 +11,10 @@ export class CreateCicloLactacaoDto {
   @IsUUID()
   id_bufala: string;
 
+  @ApiProperty({ description: 'ID da propriedade onde o ciclo está sendo registrado (UUID)', example: 'f47ac10b-58cc-4372-a567-0e02b2c3d479' })
+  @IsUUID()
+  id_propriedade: string;
+
   @ApiProperty({ description: 'Data do parto', example: '2025-02-01' })
   @IsDateString()
   dt_parto: string;

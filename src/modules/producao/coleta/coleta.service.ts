@@ -3,6 +3,9 @@ import { SupabaseService } from '../../../core/supabase/supabase.service';
 import { LoggerService } from '../../../core/logger/logger.service';
 import { CreateColetaDto } from './dto/create-coleta.dto';
 import { UpdateColetaDto } from './dto/update-coleta.dto';
+import { PaginationDto } from '../../../core/dto/pagination.dto';
+import { PaginatedResponse } from '../../../core/dto/pagination.dto';
+import { createPaginatedResponse, calculatePaginationParams } from '../../../core/utils/pagination.utils';
 
 @Injectable()
 export class ColetaService {
@@ -49,17 +52,33 @@ export class ColetaService {
     return data;
   }
 
-  async findAll() {
-    this.logger.log('Iniciando busca de todas as coletas', {
+  async findAll(paginationDto: PaginationDto = {}): Promise<PaginatedResponse<any>> {
+    this.logger.log('Iniciando busca de todas as coletas com paginação', {
       module: 'ColetaService',
       method: 'findAll',
     });
 
+    const { page = 1, limit = 10 } = paginationDto;
+    const { limit: limitValue, offset } = calculatePaginationParams(page, limit);
+
+    // Contar total de registros
+    const { count, error: countError } = await this.supabase.getClient().from(this.tableName).select('*', { count: 'exact', head: true });
+
+    if (countError) {
+      this.logger.logError(countError, {
+        module: 'ColetaService',
+        method: 'findAll',
+      });
+      throw new InternalServerErrorException(`Falha ao contar coletas: ${countError.message}`);
+    }
+
+    // Buscar registros com paginação
     const { data, error } = await this.supabase
       .getClient()
       .from(this.tableName)
       .select('*, industria:Industria(nome), funcionario:Usuario(nome)')
-      .order('dt_coleta', { ascending: false });
+      .order('dt_coleta', { ascending: false })
+      .range(offset, offset + limitValue - 1);
 
     if (error) {
       this.logger.logError(error, {
@@ -69,11 +88,12 @@ export class ColetaService {
       throw new InternalServerErrorException(`Falha ao buscar coletas: ${error.message}`);
     }
 
-    this.logger.log(`Busca de coletas concluída - ${data.length} coletas encontradas`, {
+    this.logger.log(`Busca de coletas concluída - ${data.length} coletas encontradas (página ${page})`, {
       module: 'ColetaService',
       method: 'findAll',
     });
-    return data;
+
+    return createPaginatedResponse(data, count || 0, page, limitValue);
   }
 
   async findOne(id_coleta: string) {

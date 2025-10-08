@@ -1,14 +1,29 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, ParseUUIDPipe, HttpCode, UseInterceptors, Logger } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Patch,
+  Param,
+  Delete,
+  UseGuards,
+  ParseUUIDPipe,
+  HttpCode,
+  UseInterceptors,
+  Logger,
+  Query,
+} from '@nestjs/common';
 import { CacheInterceptor, CacheTTL } from '@nestjs/cache-manager';
 import { BufaloService } from './bufalo.service';
 import { CreateBufaloDto } from './dto/create-bufalo.dto';
 import { UpdateBufaloDto } from './dto/update-bufalo.dto';
 import { UpdateGrupoBufaloDto } from './dto/update-grupo-bufalo.dto';
-import { ApiTags, ApiOperation, ApiResponse, ApiParam, ApiBearerAuth } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiResponse, ApiParam, ApiBearerAuth, ApiQuery } from '@nestjs/swagger';
 import { SupabaseAuthGuard } from '../../auth/guards/auth.guard';
 import { User } from '../../auth/decorators/user.decorator';
 import { CategoriaABCB } from './dto/categoria-abcb.dto';
 import { NotFoundException, InternalServerErrorException } from '@nestjs/common';
+import { PaginationDto } from '../../../core/dto/pagination.dto';
 
 @ApiBearerAuth('JWT-auth')
 @UseGuards(SupabaseAuthGuard)
@@ -35,10 +50,15 @@ export class BufaloController {
   @Get()
   @UseInterceptors(CacheInterceptor)
   @CacheTTL(300000) // 5 minutos
-  @ApiOperation({ summary: 'Lista todos os búfalos do usuário logado' })
-  @ApiResponse({ status: 200, description: 'Lista de búfalos retornada com sucesso.' })
-  findAll(@User() user: any) {
-    return this.bufaloService.findAll(user);
+  @ApiOperation({
+    summary: 'Lista todos os búfalos do usuário logado com paginação',
+    description: 'Retorna búfalos ordenados por data de nascimento (mais antigos primeiro), priorizando animais com status = true',
+  })
+  @ApiQuery({ name: 'page', required: false, type: Number, description: 'Número da página (começa em 1)' })
+  @ApiQuery({ name: 'limit', required: false, type: Number, description: 'Número de itens por página (máximo 100)' })
+  @ApiResponse({ status: 200, description: 'Lista paginada de búfalos retornada com sucesso.' })
+  findAll(@User() user: any, @Query() paginationDto: PaginationDto) {
+    return this.bufaloService.findAll(user, paginationDto);
   }
 
   @Get('categoria/:categoria')

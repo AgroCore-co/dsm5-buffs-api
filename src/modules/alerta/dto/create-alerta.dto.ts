@@ -30,6 +30,11 @@ export class CreateAlertaDto {
   @IsNotEmpty()
   localizacao: string;
 
+  @ApiProperty({ description: 'ID da propriedade onde o alerta foi gerado (UUID)', example: 'f47ac10b-58cc-4372-a567-0e02b2c3d479' })
+  @IsUUID()
+  @IsNotEmpty()
+  id_propriedade: string;
+
   @ApiProperty({ description: 'Motivo detalhado do alerta', example: 'Previsão de parto para os próximos 15 dias.' })
   @IsString()
   @IsNotEmpty()

@@ -2,6 +2,9 @@ import { Injectable, InternalServerErrorException, NotFoundException } from '@ne
 import { SupabaseService } from '../../../core/supabase/supabase.service';
 import { CreateCoberturaDto } from './dto/create-cobertura.dto';
 import { UpdateCoberturaDto } from './dto/update-cobertura.dto';
+import { PaginationDto } from '../../../core/dto/pagination.dto';
+import { PaginatedResponse } from '../../../core/dto/pagination.dto';
+import { createPaginatedResponse, calculatePaginationParams } from '../../../core/utils/pagination.utils';
 
 @Injectable()
 export class CoberturaService {
@@ -23,13 +26,30 @@ export class CoberturaService {
     return data;
   }
 
-  async findAll() {
-    const { data, error } = await this.supabase.getClient().from(this.tableName).select('*').order('dt_evento', { ascending: false });
+  async findAll(paginationDto: PaginationDto = {}): Promise<PaginatedResponse<any>> {
+    const { page = 1, limit = 10 } = paginationDto;
+    const { limit: limitValue, offset } = calculatePaginationParams(page, limit);
+
+    // Contar total de registros
+    const { count, error: countError } = await this.supabase.getClient().from(this.tableName).select('*', { count: 'exact', head: true });
+
+    if (countError) {
+      throw new InternalServerErrorException(`Falha ao contar dados de reprodução: ${countError.message}`);
+    }
+
+    // Buscar registros com paginação
+    const { data, error } = await this.supabase
+      .getClient()
+      .from(this.tableName)
+      .select('*')
+      .order('dt_evento', { ascending: false })
+      .range(offset, offset + limitValue - 1);
 
     if (error) {
       throw new InternalServerErrorException(`Falha ao buscar dados de reprodução: ${error.message}`);
     }
-    return data;
+
+    return createPaginatedResponse(data, count || 0, page, limitValue);
   }
 
   async findOne(id_repro: string) {

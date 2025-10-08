@@ -1,10 +1,11 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, ParseUUIDPipe, UseGuards } from '@nestjs/common';
-import { ApiBearerAuth, ApiOperation, ApiResponse, ApiTags, ApiParam } from '@nestjs/swagger';
+import { Controller, Get, Post, Body, Patch, Param, Delete, ParseUUIDPipe, UseGuards, Query } from '@nestjs/common';
+import { ApiBearerAuth, ApiOperation, ApiResponse, ApiTags, ApiParam, ApiQuery } from '@nestjs/swagger';
 import { SupabaseAuthGuard } from '../../auth/guards/auth.guard';
 import { User } from '../../auth/decorators/user.decorator';
 import { DadosSanitariosService } from './dados-sanitarios.service';
 import { CreateDadosSanitariosDto } from './dto/create-dados-sanitarios.dto';
 import { UpdateDadosSanitariosDto } from './dto/update-dados-sanitarios.dto';
+import { PaginationDto } from '../../../core/dto/pagination.dto';
 
 @ApiBearerAuth('JWT-auth')
 @UseGuards(SupabaseAuthGuard)
@@ -21,19 +22,29 @@ export class DadosSanitariosController {
   }
 
   @Get()
-  @ApiOperation({ summary: 'Lista todos os registros sanitários' })
-  @ApiResponse({ status: 200, description: 'Lista retornada com sucesso.' })
-  findAll() {
-    return this.service.findAll();
+  @ApiOperation({
+    summary: 'Lista todos os registros sanitários com paginação',
+    description: 'Retorna registros ordenados por data de aplicação (mais recentes primeiro)',
+  })
+  @ApiQuery({ name: 'page', required: false, type: Number, description: 'Número da página (começa em 1)' })
+  @ApiQuery({ name: 'limit', required: false, type: Number, description: 'Número de itens por página (máximo 100)' })
+  @ApiResponse({ status: 200, description: 'Lista paginada retornada com sucesso.' })
+  findAll(@Query() paginationDto: PaginationDto) {
+    return this.service.findAll(paginationDto);
   }
 
   @Get('bufalo/:id_bufalo')
-  @ApiOperation({ summary: 'Busca todos os registros sanitários de um búfalo específico' })
+  @ApiOperation({
+    summary: 'Busca todos os registros sanitários de um búfalo específico com paginação',
+    description: 'Retorna registros ordenados por data de aplicação (mais recentes primeiro)',
+  })
   @ApiParam({ name: 'id_bufalo', description: 'ID do búfalo', type: 'string' })
+  @ApiQuery({ name: 'page', required: false, type: Number, description: 'Número da página (começa em 1)' })
+  @ApiQuery({ name: 'limit', required: false, type: Number, description: 'Número de itens por página (máximo 100)' })
   @ApiResponse({ status: 200, description: 'Registros encontrados.' })
   @ApiResponse({ status: 404, description: 'Nenhum registro encontrado para este búfalo.' })
-  findByBufalo(@Param('id_bufalo', ParseUUIDPipe) id_bufalo: string) {
-    return this.service.findByBufalo(id_bufalo);
+  findByBufalo(@Param('id_bufalo', ParseUUIDPipe) id_bufalo: string, @Query() paginationDto: PaginationDto) {
+    return this.service.findByBufalo(id_bufalo, paginationDto);
   }
 
   @Get(':id')

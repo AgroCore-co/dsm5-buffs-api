@@ -12,6 +12,10 @@ export class CreateDadosLactacaoDto {
   @IsUUID()
   id_bufala: string;
 
+  @ApiProperty({ description: 'ID da propriedade onde a ordenha foi realizada (UUID)', example: 'f47ac10b-58cc-4372-a567-0e02b2c3d479' })
+  @IsUUID()
+  id_propriedade: string;
+
   @ApiProperty({ description: 'Quantidade ordenhada (L)', example: 8.75 })
   @IsNumber()
   @IsPositive()

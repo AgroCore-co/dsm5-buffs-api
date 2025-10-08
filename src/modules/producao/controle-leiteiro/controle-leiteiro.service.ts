@@ -172,6 +172,7 @@ export class ControleLeiteiroService {
         animal_id: createDto.id_bufala,
         grupo: (bufaloInfo.grupo as any)?.nome_grupo || 'Não informado',
         localizacao: (bufaloInfo.propriedade as any)?.nome || 'Não informada',
+        id_propriedade: createDto.id_propriedade,
         motivo: createDto.ocorrencia!,
         nicho: NichoAlerta.CLINICO,
         data_alerta: createDto.dt_ordenha,

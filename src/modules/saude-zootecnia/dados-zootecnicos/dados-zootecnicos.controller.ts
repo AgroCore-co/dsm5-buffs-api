@@ -1,10 +1,11 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, ParseUUIDPipe, UseGuards } from '@nestjs/common';
-import { ApiBearerAuth, ApiOperation, ApiResponse, ApiTags, ApiParam } from '@nestjs/swagger';
+import { Controller, Get, Post, Body, Patch, Param, Delete, ParseUUIDPipe, UseGuards, Query } from '@nestjs/common';
+import { ApiBearerAuth, ApiOperation, ApiResponse, ApiTags, ApiParam, ApiQuery } from '@nestjs/swagger';
 import { SupabaseAuthGuard } from '../../auth/guards/auth.guard';
 import { User } from '../../auth/decorators/user.decorator'; // <-- Importe o decorator
 import { DadosZootecnicosService } from './dados-zootecnicos.service';
 import { CreateDadoZootecnicoDto } from './dto/create-dado-zootecnico.dto';
 import { UpdateDadoZootecnicoDto } from './dto/update-dado-zootecnico.dto';
+import { PaginationDto } from '../../../core/dto/pagination.dto';
 
 @ApiBearerAuth('JWT-auth')
 @UseGuards(SupabaseAuthGuard)
@@ -36,13 +37,15 @@ export class DadosZootecnicosController {
 
   @Get('/bufalo/:id_bufalo')
   @ApiOperation({
-    summary: 'Lista todos os registros zootécnicos de um búfalo',
+    summary: 'Lista todos os registros zootécnicos de um búfalo com paginação',
     description: 'Retorna o histórico completo de dados zootécnicos para um búfalo específico.',
   })
   @ApiParam({ name: 'id_bufalo', description: 'ID do búfalo para consultar os registros', type: 'string' })
+  @ApiQuery({ name: 'page', required: false, type: Number, description: 'Número da página (padrão: 1)' })
+  @ApiQuery({ name: 'limit', required: false, type: Number, description: 'Itens por página (padrão: 10)' })
   @ApiResponse({ status: 200, description: 'Lista de registros retornada com sucesso.' })
-  findAllByBufalo(@Param('id_bufalo', ParseUUIDPipe) id_bufalo: string) {
-    return this.service.findAllByBufalo(id_bufalo);
+  findAllByBufalo(@Param('id_bufalo', ParseUUIDPipe) id_bufalo: string, @Query() paginationDto: PaginationDto) {
+    return this.service.findAllByBufalo(id_bufalo, paginationDto);
   }
 
   // --- ROTAS DIRETAS PARA UM REGISTRO ESPECÍFICO ---

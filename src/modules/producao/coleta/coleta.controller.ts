@@ -1,12 +1,13 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, ParseUUIDPipe, UseGuards, UseInterceptors } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, ParseUUIDPipe, UseGuards, UseInterceptors, Query } from '@nestjs/common';
 import { CacheInterceptor, CacheTTL } from '@nestjs/cache-manager';
-import { ApiBearerAuth, ApiOperation, ApiResponse, ApiTags, ApiParam, ApiBody } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiOperation, ApiResponse, ApiTags, ApiParam, ApiBody, ApiQuery } from '@nestjs/swagger';
 import { SupabaseAuthGuard } from '../../auth/guards/auth.guard';
 import { User } from '../../auth/decorators/user.decorator';
 import { LoggerService } from '../../../core/logger/logger.service';
 import { ColetaService } from './coleta.service';
 import { CreateColetaDto } from './dto/create-coleta.dto';
 import { UpdateColetaDto } from './dto/update-coleta.dto';
+import { PaginationDto } from '../../../core/dto/pagination.dto';
 
 @ApiBearerAuth('JWT-auth')
 @UseGuards(SupabaseAuthGuard)
@@ -36,11 +37,13 @@ export class ColetaController {
   @Get()
   @UseInterceptors(CacheInterceptor)
   @CacheTTL(300)
-  @ApiOperation({ summary: 'Lista todas as coletas de leite' })
+  @ApiOperation({ summary: 'Lista todas as coletas de leite com paginação' })
+  @ApiQuery({ name: 'page', required: false, type: Number, description: 'Número da página (padrão: 1)' })
+  @ApiQuery({ name: 'limit', required: false, type: Number, description: 'Itens por página (padrão: 10)' })
   @ApiResponse({ status: 200, description: 'Lista de coletas retornada com sucesso.' })
-  findAll() {
+  findAll(@Query() paginationDto: PaginationDto) {
     this.logger.logApiRequest('GET', '/coletas', undefined, { module: 'ColetaController', method: 'findAll' });
-    return this.service.findAll();
+    return this.service.findAll(paginationDto);
   }
 
   @Get(':id')

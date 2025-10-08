@@ -1,9 +1,10 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, ParseUUIDPipe, UseGuards } from '@nestjs/common';
-import { ApiBearerAuth, ApiOperation, ApiResponse, ApiTags, ApiParam, ApiBody } from '@nestjs/swagger';
+import { Controller, Get, Post, Body, Patch, Param, Delete, ParseUUIDPipe, UseGuards, Query } from '@nestjs/common';
+import { ApiBearerAuth, ApiOperation, ApiResponse, ApiTags, ApiParam, ApiBody, ApiQuery } from '@nestjs/swagger';
 import { SupabaseAuthGuard } from '../../auth/guards/auth.guard';
 import { MaterialGeneticoService } from './material-genetico.service';
 import { CreateMaterialGeneticoDto } from './dto/create-material-genetico.dto';
 import { UpdateMaterialGeneticoDto } from './dto/update-material-genetico.dto';
+import { PaginationDto } from '../../../core/dto/pagination.dto';
 
 @ApiBearerAuth('JWT-auth')
 @UseGuards(SupabaseAuthGuard)
@@ -22,10 +23,12 @@ export class MaterialGeneticoController {
   }
 
   @Get()
-  @ApiOperation({ summary: 'Lista todos os materiais genéticos disponíveis' })
+  @ApiOperation({ summary: 'Lista todos os materiais genéticos disponíveis com paginação' })
+  @ApiQuery({ name: 'page', required: false, type: Number, description: 'Número da página (padrão: 1)' })
+  @ApiQuery({ name: 'limit', required: false, type: Number, description: 'Itens por página (padrão: 10)' })
   @ApiResponse({ status: 200, description: 'Lista de materiais retornada com sucesso.' })
-  findAll() {
-    return this.service.findAll();
+  findAll(@Query() paginationDto: PaginationDto) {
+    return this.service.findAll(paginationDto);
   }
 
   @Get(':id')

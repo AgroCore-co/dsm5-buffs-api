@@ -5,6 +5,11 @@ const tiposValidos = ['Sêmen', 'Embrião', 'Óvulo'];
 const origensValidas = ['Coleta Própria', 'Compra'];
 
 export class CreateMaterialGeneticoDto {
+  @ApiProperty({ description: 'ID da propriedade onde o material genético está armazenado (UUID)', example: 'f47ac10b-58cc-4372-a567-0e02b2c3d479' })
+  @IsUUID()
+  @IsNotEmpty()
+  id_propriedade: string;
+
   @ApiProperty({ example: 'Sêmen', description: 'Tipo do material genético', enum: tiposValidos })
   @IsString()
   @IsNotEmpty()

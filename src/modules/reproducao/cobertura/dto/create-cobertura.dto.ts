@@ -5,6 +5,11 @@ const tiposInseminacao = ['IA', 'Monta Natural', 'TE'];
 const statusValidos = ['Em andamento', 'Confirmada', 'Falhou', 'Concluída'];
 
 export class CreateCoberturaDto {
+  @ApiProperty({ description: 'ID da propriedade onde a cobertura foi realizada (UUID)', example: 'f47ac10b-58cc-4372-a567-0e02b2c3d479' })
+  @IsUUID()
+  @IsNotEmpty()
+  id_propriedade: string;
+
   @ApiProperty({
     example: 1,
     description: 'ID do material genético do sêmen (para IA ou TE)',

@@ -1,11 +1,12 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, ParseUUIDPipe, UseGuards, UseInterceptors } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, ParseUUIDPipe, UseGuards, UseInterceptors, Query } from '@nestjs/common';
 import { CacheInterceptor, CacheTTL } from '@nestjs/cache-manager';
-import { ApiBearerAuth, ApiBody, ApiOperation, ApiParam, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiBody, ApiOperation, ApiParam, ApiResponse, ApiTags, ApiQuery } from '@nestjs/swagger';
 import { SupabaseAuthGuard } from '../../auth/guards/auth.guard';
 import { LoggerService } from '../../../core/logger/logger.service';
 import { CicloLactacaoService } from './ciclo-lactacao.service';
 import { CreateCicloLactacaoDto } from './dto/create-ciclo-lactacao.dto';
 import { UpdateCicloLactacaoDto } from './dto/update-ciclo-lactacao.dto';
+import { PaginationDto } from '../../../core/dto/pagination.dto';
 
 @ApiBearerAuth('JWT-auth')
 @UseGuards(SupabaseAuthGuard)
@@ -34,11 +35,13 @@ export class CicloLactacaoController {
   @Get()
   @UseInterceptors(CacheInterceptor)
   @CacheTTL(900)
-  @ApiOperation({ summary: 'Lista todos os ciclos de lactação' })
+  @ApiOperation({ summary: 'Lista todos os ciclos de lactação com paginação' })
+  @ApiQuery({ name: 'page', required: false, type: Number, description: 'Número da página (padrão: 1)' })
+  @ApiQuery({ name: 'limit', required: false, type: Number, description: 'Itens por página (padrão: 10)' })
   @ApiResponse({ status: 200, description: 'Lista retornada com sucesso.' })
-  findAll() {
+  findAll(@Query() paginationDto: PaginationDto) {
     this.logger.logApiRequest('GET', '/ciclos-lactacao', undefined, { module: 'CicloLactacaoController', method: 'findAll' });
-    return this.service.findAll();
+    return this.service.findAll(paginationDto);
   }
 
   @Get(':id')

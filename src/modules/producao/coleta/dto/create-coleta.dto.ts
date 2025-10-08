@@ -7,6 +7,11 @@ export class CreateColetaDto {
   @IsNotEmpty()
   id_industria: string;
 
+  @ApiProperty({ description: 'ID da propriedade onde a coleta foi realizada (UUID)', example: 'f47ac10b-58cc-4372-a567-0e02b2c3d479' })
+  @IsUUID()
+  @IsNotEmpty()
+  id_propriedade: string;
+
   @ApiProperty({ example: true, description: 'Resultado do teste de qualidade do leite (aprovado/reprovado)', required: false })
   @IsBoolean()
   @IsOptional()
@@ -27,5 +32,5 @@ export class CreateColetaDto {
   @ApiProperty({ example: '2025-08-18T08:30:00.000Z', description: 'Data e hora da coleta' })
   @IsDateString()
   @IsNotEmpty()
-  dt_coleta: Date;
+  dt_coleta: string;
 }
