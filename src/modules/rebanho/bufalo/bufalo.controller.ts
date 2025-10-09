@@ -83,11 +83,7 @@ export class BufaloController {
   @ApiQuery({ name: 'limit', required: false, type: Number, description: 'Número de itens por página (máximo 100)' })
   @ApiResponse({ status: 200, description: 'Lista paginada de búfalos da propriedade retornada com sucesso.' })
   @ApiResponse({ status: 404, description: 'Propriedade não encontrada ou você não tem acesso a ela.' })
-  findByPropriedade(
-    @Param('id_propriedade', ParseUUIDPipe) id_propriedade: string,
-    @User() user: any,
-    @Query() paginationDto: PaginationDto,
-  ) {
+  findByPropriedade(@Param('id_propriedade', ParseUUIDPipe) id_propriedade: string, @User() user: any, @Query() paginationDto: PaginationDto) {
     return this.bufaloService.findByPropriedade(id_propriedade, user, paginationDto);
   }
 
@@ -98,8 +94,8 @@ export class BufaloController {
   @ApiParam({ name: 'microchip', description: 'Número do microchip do búfalo', type: String })
   @ApiResponse({ status: 200, description: 'Búfalo encontrado com sucesso.' })
   @ApiResponse({ status: 404, description: 'Búfalo com o microchip especificado não encontrado.' })
-  findByMicrochip(@Param('microchip') microchip: string) {
-    return this.bufaloService.findByMicrochip(microchip);
+  findByMicrochip(@Param('microchip') microchip: string, @User() user: any) {
+    return this.bufaloService.findByMicrochip(microchip, user);
   }
 
   @Get(':id')
