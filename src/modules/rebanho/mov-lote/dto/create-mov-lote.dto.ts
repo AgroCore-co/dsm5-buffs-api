@@ -1,5 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { IsNotEmpty, IsOptional, IsDateString, ValidateIf, IsString, MaxLength, IsUUID } from 'class-validator';
+import { Transform } from 'class-transformer';
 
 export class CreateMovLoteDto {
   @ApiProperty({ example: 'b8c4a72d-1234-4567-8901-234567890123', description: 'ID do grupo de animais que está sendo movido' })
@@ -13,6 +14,7 @@ export class CreateMovLoteDto {
   })
   @IsUUID()
   @IsOptional()
+  @Transform(({ value }) => (value === '' ? undefined : value))
   id_lote_anterior?: string;
 
   @ApiProperty({ example: 'b8c4a72d-1234-4567-8901-234567890123', description: 'ID do lote de destino (para onde o grupo está se movendo)' })

@@ -126,10 +126,10 @@ export class BufaloService {
       }
     };
 
-    if (dto.id_raca) await checkIfExists('Raca', 'id_raca', dto.id_raca);
-    if (dto.id_grupo) await checkIfExists('Grupo', 'id_grupo', dto.id_grupo);
-    if (dto.id_pai) await checkIfExists('Bufalo', 'id_bufalo', dto.id_pai);
-    if (dto.id_mae) await checkIfExists('Bufalo', 'id_bufalo', dto.id_mae);
+    if (dto.id_raca) await checkIfExists('raca', 'id_raca', dto.id_raca);
+    if (dto.id_grupo) await checkIfExists('grupo', 'id_grupo', dto.id_grupo);
+    if (dto.id_pai) await checkIfExists('bufalo', 'id_bufalo', dto.id_pai);
+    if (dto.id_mae) await checkIfExists('bufalo', 'id_bufalo', dto.id_mae);
   }
 
   async create(createDto: CreateBufaloDto, user: any) {
@@ -149,24 +149,12 @@ export class BufaloService {
     console.log('BufaloService.create - Inserindo no banco de dados...');
     console.log('BufaloService.create - DTO para inserção:', JSON.stringify(processedDto, null, 2));
 
-    // Remove qualquer id_bufalo que possa estar sendo enviado
+    // Remove qualquer id_bufalo que possa estar sendo enviado (UUID é auto-gerado pelo banco)
     const { id_bufalo, ...insertDto } = processedDto;
     console.log('BufaloService.create - DTO final (sem id_bufalo):', JSON.stringify(insertDto, null, 2));
 
-    // Busca o próximo ID disponível para evitar conflitos
-    let maxIdResult;
-    try {
-      console.log('BufaloService.create - Buscando próximo ID...');
-      maxIdResult = await this.supabase.from(this.tableName).select('id_bufalo').order('id_bufalo', { ascending: false }).limit(1).single();
-    } catch (maxIdError) {
-      console.log('BufaloService.create - Sem registros existentes, começando do ID 1');
-    }
-
-    const nextId = maxIdResult?.data?.id_bufalo ? maxIdResult.data.id_bufalo + 1 : 1;
-    const insertDtoWithId = { ...insertDto, id_bufalo: nextId };
-    console.log('BufaloService.create - Próximo ID calculado:', nextId);
-
-    const { data, error } = await this.supabase.from(this.tableName).insert(insertDtoWithId).select().single();
+    // Insere o búfalo (id_bufalo será auto-gerado como UUID pelo banco)
+    const { data, error } = await this.supabase.from(this.tableName).insert(insertDto).select().single();
 
     if (error) {
       console.error('BufaloService.create - Erro ao inserir:', error);
@@ -708,9 +696,9 @@ export class BufaloService {
         .select(
           `
           *,
-          Propriedade!inner (
+          propriedade!inner (
             p_abcb,
-            Endereco (estado)
+            endereco (estado)
           )
         `,
         )

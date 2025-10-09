@@ -1,5 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { IsString, IsOptional, IsNotEmpty, IsUUID, MaxLength, IsEmail, IsEnum } from 'class-validator';
+import { Transform } from 'class-transformer';
 import { Cargo } from '../enums/cargo.enum';
 
 export class CreateFuncionarioDto {
@@ -76,6 +77,7 @@ export class CreateFuncionarioDto {
   })
   @IsUUID()
   @IsOptional()
+  @Transform(({ value }) => (value === '' ? undefined : value))
   id_endereco?: string;
 
   @ApiProperty({
@@ -85,5 +87,6 @@ export class CreateFuncionarioDto {
   })
   @IsUUID()
   @IsOptional()
+  @Transform(({ value }) => (value === '' ? undefined : value))
   id_propriedade?: string;
 }

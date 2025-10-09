@@ -16,7 +16,7 @@ import {
   Validate,
   IsUUID,
 } from 'class-validator';
-import { Type } from 'class-transformer';
+import { Type, Transform } from 'class-transformer';
 import { BufaloValidationUtils } from '../utils/validation.utils';
 import { CategoriaABCB } from './categoria-abcb.dto';
 
@@ -112,6 +112,7 @@ export class CreateBufaloDto {
   })
   @IsUUID()
   @IsOptional()
+  @Transform(({ value }) => (value === '' ? undefined : value))
   id_raca?: string;
 
   @ApiProperty({ description: 'ID da propriedade onde o búfalo está localizado.', example: 'b8c4a72d-1234-4567-8901-234567890123' })
@@ -122,16 +123,19 @@ export class CreateBufaloDto {
   @ApiProperty({ description: 'ID do grupo ao qual o búfalo pertence.', example: 'b8c4a72d-1234-4567-8901-234567890123', required: false })
   @IsUUID()
   @IsOptional()
+  @Transform(({ value }) => (value === '' ? undefined : value))
   id_grupo?: string;
 
   @ApiProperty({ description: 'ID do búfalo pai (se houver).', example: 'b8c4a72d-1234-4567-8901-234567890123', required: false })
   @IsUUID()
   @IsOptional()
+  @Transform(({ value }) => (value === '' ? undefined : value))
   id_pai?: string;
 
   @ApiProperty({ description: 'ID da búfala mãe (se houver).', example: 'b8c4a72d-1234-4567-8901-234567890123', required: false })
   @IsUUID()
   @IsOptional()
+  @Transform(({ value }) => (value === '' ? undefined : value))
   id_mae?: string;
 
   @ApiProperty({

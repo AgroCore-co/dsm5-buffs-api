@@ -1,5 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { IsString, IsNotEmpty, IsDateString, IsEnum, IsOptional, IsUUID, IsBoolean } from 'class-validator';
+import { Transform } from 'class-transformer';
 import { PartialType } from '@nestjs/swagger';
 
 export enum NichoAlerta {
@@ -68,6 +69,7 @@ export class CreateAlertaDto {
   @ApiProperty({ description: 'ID do evento que originou o alerta', required: false, example: 123 })
   @IsUUID()
   @IsOptional()
+  @Transform(({ value }) => (value === '' ? undefined : value))
   id_evento_origem?: string;
 
   @ApiProperty({ description: 'Tipo do evento que originou o alerta', required: false, example: 'DADOS_SANITARIOS' })

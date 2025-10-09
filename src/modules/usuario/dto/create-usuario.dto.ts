@@ -1,5 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { IsString, IsOptional, IsNotEmpty, IsUUID, MaxLength } from 'class-validator';
+import { Transform } from 'class-transformer';
 
 export class CreateUsuarioDto {
   @ApiProperty({
@@ -29,6 +30,7 @@ export class CreateUsuarioDto {
   })
   @IsUUID()
   @IsOptional()
+  @Transform(({ value }) => (value === '' ? undefined : value))
   id_endereco?: string;
 
   // NOTA: Campo 'cargo' removido - será sempre definido como PROPRIETARIO automaticamente

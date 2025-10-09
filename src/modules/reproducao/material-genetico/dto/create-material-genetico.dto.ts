@@ -1,5 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { IsString, IsNotEmpty, IsOptional, IsDateString, IsInt, IsIn, IsPositive, MaxLength, IsUUID } from 'class-validator';
+import { Transform } from 'class-transformer';
 
 const tiposValidos = ['Sêmen', 'Embrião', 'Óvulo'];
 const origensValidas = ['Coleta Própria', 'Compra'];
@@ -27,6 +28,7 @@ export class CreateMaterialGeneticoDto {
     description: 'ID do búfalo do qual o material foi coletado (se a origem for "Coleta Própria")',
     required: false,
   })
+  @Transform(({ value }) => (value === '' ? undefined : value))
   @IsUUID()
   @IsOptional()
   id_bufalo_origem?: string;
