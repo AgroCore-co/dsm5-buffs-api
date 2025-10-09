@@ -54,7 +54,7 @@ export class PropriedadeService {
     this.logger.log(`[INICIO] Buscando propriedades do usuário ${userId}`);
 
     try {
-      // Busca propriedades onde o usuário é DONO
+      // 1. Busca propriedades onde o usuário é DONO
       const { data: propriedadesComoDono, error: errorDono } = await this.supabase
         .from('propriedade')
         .select('*')
@@ -65,12 +65,32 @@ export class PropriedadeService {
         throw new InternalServerErrorException(`Erro ao buscar propriedades: ${errorDono.message}`);
       }
 
-      this.logger.log(`[SUCESSO] ${propriedadesComoDono?.length || 0} propriedades encontradas para o usuário ${userId}`);
+      // 2. Busca propriedades onde o usuário é FUNCIONÁRIO
+      const { data: propriedadesComoFuncionario, error: errorFuncionario } = await this.supabase
+        .from('usuariopropriedade')
+        .select('id_propriedade, propriedade(*)')
+        .eq('id_usuario', userId);
+
+      if (errorFuncionario) {
+        this.logger.error(`[ERRO] Falha na consulta propriedades como funcionário: ${errorFuncionario.message}`);
+        throw new InternalServerErrorException(`Erro ao buscar propriedades vinculadas: ${errorFuncionario.message}`);
+      }
+
+      // 3. Combina as propriedades (removendo duplicatas)
+      const propriedadesFuncionario = propriedadesComoFuncionario?.map((item: any) => item.propriedade) || [];
+      const todasPropriedades = [...(propriedadesComoDono || []), ...propriedadesFuncionario];
+
+      // Remove duplicatas pelo id_propriedade
+      const propriedadesUnicas = Array.from(
+        new Map(todasPropriedades.map((p) => [p.id_propriedade, p])).values()
+      );
+
+      this.logger.log(`[SUCESSO] ${propriedadesUnicas.length} propriedades encontradas para o usuário ${userId}`);
 
       return {
         message: 'Propriedades recuperadas com sucesso',
-        total: propriedadesComoDono?.length || 0,
-        propriedades: propriedadesComoDono || [],
+        total: propriedadesUnicas.length,
+        propriedades: propriedadesUnicas,
       };
     } catch (error) {
       this.logger.error(`[ERRO_GERAL] ${error.message}`);
@@ -84,7 +104,7 @@ export class PropriedadeService {
   async findOne(id: string, user: any) {
     const userId = await this.getUserId(user);
 
-    // Verifica se o usuário é dono da propriedade
+    // 1. Verifica se o usuário é dono da propriedade
     const { data: propriedadeComoDono, error: erroDono } = await this.supabase
       .from('propriedade')
       .select('*')
@@ -94,6 +114,18 @@ export class PropriedadeService {
 
     if (propriedadeComoDono && !erroDono) {
       return propriedadeComoDono;
+    }
+
+    // 2. Verifica se o usuário é funcionário vinculado à propriedade
+    const { data: vinculo, error: erroVinculo } = await this.supabase
+      .from('usuariopropriedade')
+      .select('propriedade(*)')
+      .eq('id_usuario', userId)
+      .eq('id_propriedade', id)
+      .single();
+
+    if (vinculo && !erroVinculo) {
+      return vinculo.propriedade;
     }
 
     throw new NotFoundException(`Propriedade com ID ${id} não encontrada ou não pertence a este usuário.`);
