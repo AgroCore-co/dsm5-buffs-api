@@ -72,11 +72,11 @@ export class DashboardService {
       const stats: DashboardStatsDto = {
         qtd_macho_ativos: bufalosAtivos.filter((b) => b.sexo === 'M').length,
         qtd_femeas_ativas: bufalosAtivos.filter((b) => b.sexo === 'F').length,
-        qtd_bufalos_registradas: bufalos.length,
-        qtd_bufalos_bezerro: bufalos.filter((b) => b.nivel_maturidade === 'B').length,
-        qtd_bufalos_novilha: bufalos.filter((b) => b.nivel_maturidade === 'N').length,
-        qtd_bufalos_vaca: bufalos.filter((b) => b.nivel_maturidade === 'V').length,
-        qtd_bufalos_touro: bufalos.filter((b) => b.nivel_maturidade === 'T').length,
+        qtd_bufalos_registradas: bufalos.length, // TODOS (ativos + inativos)
+        qtd_bufalos_bezerro: bufalosAtivos.filter((b) => b.nivel_maturidade === 'B').length, // ← SOMENTE ATIVOS
+        qtd_bufalos_novilha: bufalosAtivos.filter((b) => b.nivel_maturidade === 'N').length, // ← SOMENTE ATIVOS
+        qtd_bufalos_vaca: bufalosAtivos.filter((b) => b.nivel_maturidade === 'V').length, // ← SOMENTE ATIVOS
+        qtd_bufalos_touro: bufalosAtivos.filter((b) => b.nivel_maturidade === 'T').length, // ← SOMENTE ATIVOS
         qtd_bufalas_lactando: bufalasLactando?.length || 0,
         qtd_lotes: qtdLotes || 0,
         qtd_usuarios: qtdUsuarios || 0,
