@@ -21,6 +21,28 @@ export class AuthService {
       throw new BadRequestException(`Erro ao criar usuário: ${error.message}`);
     }
 
+    // ✅ CRIAR PERFIL AUTOMATICAMENTE na tabela usuario
+    if (data.user && metadata?.nome) {
+      try {
+        const { error: perfilError } = await this.supabase.getAdminClient()
+          .from('usuario')
+          .insert({
+            auth_id: data.user.id,
+            email: data.user.email,
+            nome: metadata.nome,
+            telefone: metadata.telefone || null,
+            cargo: 'PROPRIETARIO',
+          });
+
+        if (perfilError) {
+          console.error('[AuthService] Erro ao criar perfil:', perfilError);
+          // Não lançar erro, pois o usuário pode criar o perfil depois via POST /usuarios
+        }
+      } catch (err) {
+        console.error('[AuthService] Exceção ao criar perfil:', err);
+      }
+    }
+
     return {
       user: {
         id: data.user?.id,

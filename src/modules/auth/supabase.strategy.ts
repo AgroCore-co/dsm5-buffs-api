@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { PassportStrategy } from '@nestjs/passport';
 import { ExtractJwt, Strategy } from 'passport-jwt';
 import { ConfigService } from '@nestjs/config';
@@ -17,33 +17,32 @@ export class SupabaseStrategy extends PassportStrategy(Strategy, 'jwt') {
     }
 
     super({
-      // Define como o token será extraído da requisição
       jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
-      // Garante que tokens expirados sejam rejeitados
       ignoreExpiration: false,
-      // A chave secreta para verificar a assinatura do token
       secretOrKey: supabaseJwtSecret,
     });
   }
 
   async validate(payload: any) {
-    // Se a estratégia chegou até aqui, o token JWT é válido.
-    // Busca o cargo do usuário no banco de dados
-    const supabase = this.supabaseService.getClient();
-    
-    const { data: usuario } = await supabase
-      .from('Usuario')
-      .select('cargo, id_usuario')
-      .eq('email', payload.email)
+    if (!payload.sub) {
+      throw new UnauthorizedException('Token inválido');
+    }
+
+    // ✅ Buscar perfil do usuário (se existir)
+    const { data: usuario } = await this.supabaseService
+      .getAdminClient()
+      .from('usuario')
+      .select('cargo, id_usuario, email, nome')
+      .eq('auth_id', payload.sub)
       .single();
 
-    // Retorna payload do JWT + cargo do banco
+    // ✅ PERMITE acesso mesmo sem perfil (para criar perfil depois)
     return {
-      id: payload.sub,           // auth_id do Supabase
-      email: payload.email,      // email do JWT
-      cargo: usuario?.cargo,     // cargo do banco de dados
-      id_usuario: usuario?.id_usuario, // ID do banco
-      ...payload                 // outros campos do JWT
+      id: payload.sub,
+      email: payload.email,
+      cargo: usuario?.cargo || null, // null se ainda não criou perfil
+      id_usuario: usuario?.id_usuario || null,
+      ...payload
     };
   }
 }
