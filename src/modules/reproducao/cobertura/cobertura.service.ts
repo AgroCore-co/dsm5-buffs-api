@@ -18,7 +18,7 @@ export class CoberturaService {
       status: dto.status || 'Em andamento', // Garante um status inicial
     };
 
-    const { data, error } = await this.supabase.getClient().from(this.tableName).insert(dtoComStatus).select().single();
+    const { data, error } = await this.supabase.getAdminClient().from(this.tableName).insert(dtoComStatus).select().single();
 
     if (error) {
       throw new InternalServerErrorException(`Falha ao criar dado de reprodução: ${error.message}`);
@@ -31,7 +31,7 @@ export class CoberturaService {
     const { limit: limitValue, offset } = calculatePaginationParams(page, limit);
 
     // Contar total de registros
-    const { count, error: countError } = await this.supabase.getClient().from(this.tableName).select('*', { count: 'exact', head: true });
+    const { count, error: countError } = await this.supabase.getAdminClient().from(this.tableName).select('*', { count: 'exact', head: true });
 
     if (countError) {
       throw new InternalServerErrorException(`Falha ao contar dados de reprodução: ${countError.message}`);
@@ -39,7 +39,7 @@ export class CoberturaService {
 
     // Buscar registros com paginação
     const { data, error } = await this.supabase
-      .getClient()
+      .getAdminClient()
       .from(this.tableName)
       .select('*')
       .order('dt_evento', { ascending: false })
@@ -53,7 +53,7 @@ export class CoberturaService {
   }
 
   async findOne(id_repro: string) {
-    const { data, error } = await this.supabase.getClient().from(this.tableName).select('*').eq('id_repro', id_repro).single();
+    const { data, error } = await this.supabase.getAdminClient().from(this.tableName).select('*').eq('id_repro', id_repro).single();
 
     if (error || !data) {
       throw new NotFoundException(`Dado de reprodução com ID ${id_repro} não encontrado.`);
@@ -64,7 +64,7 @@ export class CoberturaService {
   async update(id_repro: string, dto: UpdateCoberturaDto) {
     await this.findOne(id_repro);
 
-    const { data, error } = await this.supabase.getClient().from(this.tableName).update(dto).eq('id_repro', id_repro).select().single();
+    const { data, error } = await this.supabase.getAdminClient().from(this.tableName).update(dto).eq('id_repro', id_repro).select().single();
 
     if (error) {
       throw new InternalServerErrorException(`Falha ao atualizar dado de reprodução: ${error.message}`);
@@ -75,7 +75,7 @@ export class CoberturaService {
   async remove(id_repro: string) {
     await this.findOne(id_repro);
 
-    const { error } = await this.supabase.getClient().from(this.tableName).delete().eq('id_repro', id_repro);
+    const { error } = await this.supabase.getAdminClient().from(this.tableName).delete().eq('id_repro', id_repro);
 
     if (error) {
       throw new InternalServerErrorException(`Falha ao remover dado de reprodução: ${error.message}`);

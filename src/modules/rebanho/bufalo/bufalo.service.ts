@@ -33,7 +33,7 @@ export class BufaloService {
     private readonly geminiRacaUtil: GeminiRacaUtil,
     private readonly genealogiaService: GenealogiaService,
   ) {
-    this.supabase = this.supabaseService.getClient();
+    this.supabase = this.supabaseService.getAdminClient();
   }
 
   private async getUserId(user: any): Promise<number> {

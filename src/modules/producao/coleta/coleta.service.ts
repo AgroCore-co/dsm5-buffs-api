@@ -25,7 +25,7 @@ export class ColetaService {
     });
 
     const { data, error } = await this.supabase
-      .getClient()
+      .getAdminClient()
       .from(this.tableName)
       .insert({
         ...dto,
@@ -62,7 +62,7 @@ export class ColetaService {
     const { limit: limitValue, offset } = calculatePaginationParams(page, limit);
 
     // Contar total de registros
-    const { count, error: countError } = await this.supabase.getClient().from(this.tableName).select('*', { count: 'exact', head: true });
+    const { count, error: countError } = await this.supabase.getAdminClient().from(this.tableName).select('*', { count: 'exact', head: true });
 
     if (countError) {
       this.logger.logError(countError, {
@@ -74,7 +74,7 @@ export class ColetaService {
 
     // Buscar registros com paginação
     const { data, error } = await this.supabase
-      .getClient()
+      .getAdminClient()
       .from(this.tableName)
       .select('*, industria:Industria(nome), funcionario:Usuario(nome)')
       .order('dt_coleta', { ascending: false })
@@ -104,7 +104,7 @@ export class ColetaService {
     });
 
     const { data, error } = await this.supabase
-      .getClient()
+      .getAdminClient()
       .from(this.tableName)
       .select('*, industria:Industria(nome, representante), funcionario:Usuario(nome, cargo)')
       .eq('id_coleta', id_coleta)
@@ -136,7 +136,7 @@ export class ColetaService {
 
     await this.findOne(id_coleta);
 
-    const { data, error } = await this.supabase.getClient().from(this.tableName).update(dto).eq('id_coleta', id_coleta).select().single();
+    const { data, error } = await this.supabase.getAdminClient().from(this.tableName).update(dto).eq('id_coleta', id_coleta).select().single();
 
     if (error) {
       this.logger.logError(error, {
@@ -164,7 +164,7 @@ export class ColetaService {
 
     await this.findOne(id_coleta);
 
-    const { error } = await this.supabase.getClient().from(this.tableName).delete().eq('id_coleta', id_coleta);
+    const { error } = await this.supabase.getAdminClient().from(this.tableName).delete().eq('id_coleta', id_coleta);
 
     if (error) {
       this.logger.logError(error, {

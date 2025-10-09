@@ -10,7 +10,7 @@ import { createPaginatedResponse, calculatePaginationParams } from '../../core/u
 export class AlertasService {
   private supabase: SupabaseClient;
   constructor(private readonly supabaseService: SupabaseService) {
-    this.supabase = this.supabaseService.getClient();
+    this.supabase = this.supabaseService.getAdminClient();
   }
 
   /**

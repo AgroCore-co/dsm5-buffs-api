@@ -10,7 +10,7 @@ export class PropriedadeService {
   private supabase: SupabaseClient;
 
   constructor(private readonly supabaseService: SupabaseService) {
-    this.supabase = this.supabaseService.getClient();
+    this.supabase = this.supabaseService.getAdminClient();
   }
 
   /**
@@ -57,52 +57,20 @@ export class PropriedadeService {
       // Busca propriedades onde o usuário é DONO
       const { data: propriedadesComoDono, error: errorDono } = await this.supabase
         .from('propriedade')
-        .select(
-          `
-          *,
-          endereco:Endereco(*),
-          lotes:Lote(id_lote, nome_lote, area_m2, status)
-        `,
-        )
+        .select('*')
         .eq('id_dono', userId);
-
-      // Busca propriedades onde o usuário é FUNCIONÁRIO (tabela UsuarioPropriedade)
-      const { data: propriedadesComoFuncionario, error: errorFuncionario } = await this.supabase
-        .from('usuariopropriedade')
-        .select(
-          `
-          Propriedade(
-            *,
-            endereco:Endereco(*),
-            lotes:Lote(id_lote, nome_lote, area_m2, status)
-          )
-        `,
-        )
-        .eq('id_usuario', userId);
 
       if (errorDono) {
         this.logger.error(`[ERRO] Falha na consulta propriedades como dono: ${errorDono.message}`);
         throw new InternalServerErrorException(`Erro ao buscar propriedades: ${errorDono.message}`);
       }
 
-      if (errorFuncionario) {
-        this.logger.error(`[ERRO] Falha na consulta propriedades como funcionário: ${errorFuncionario.message}`);
-      }
-
-      // Combina as duas listas e remove duplicatas
-      const todasPropriedades = [...(propriedadesComoDono || []), ...(propriedadesComoFuncionario?.map((item) => item.Propriedade) || [])];
-
-      // Remove duplicatas baseado no id_propriedade
-      const propriedadesUnicas = todasPropriedades.filter(
-        (propriedade, index, self) => index === self.findIndex((p) => p.id_propriedade === propriedade.id_propriedade),
-      );
-
-      this.logger.log(`[SUCESSO] ${propriedadesUnicas.length} propriedades encontradas para o usuário ${userId}`);
+      this.logger.log(`[SUCESSO] ${propriedadesComoDono?.length || 0} propriedades encontradas para o usuário ${userId}`);
 
       return {
         message: 'Propriedades recuperadas com sucesso',
-        total: propriedadesUnicas.length,
-        propriedades: propriedadesUnicas,
+        total: propriedadesComoDono?.length || 0,
+        propriedades: propriedadesComoDono || [],
       };
     } catch (error) {
       this.logger.error(`[ERRO_GERAL] ${error.message}`);
@@ -119,39 +87,13 @@ export class PropriedadeService {
     // Verifica se o usuário é dono da propriedade
     const { data: propriedadeComoDono, error: erroDono } = await this.supabase
       .from('propriedade')
-      .select(
-        `
-        *,
-        endereco:Endereco(*),
-        lotes:Lote(id_lote, nome_lote, area_m2, status)
-      `,
-      )
+      .select('*')
       .eq('id_propriedade', id)
       .eq('id_dono', userId)
       .single();
 
     if (propriedadeComoDono && !erroDono) {
       return propriedadeComoDono;
-    }
-
-    // Se não é dono, verifica se é funcionário
-    const { data: propriedadeComoFuncionario, error: erroFuncionario } = await this.supabase
-      .from('usuariopropriedade')
-      .select(
-        `
-        Propriedade(
-          *,
-          endereco:Endereco(*),
-          lotes:Lote(id_lote, nome_lote, area_m2, status)
-        )
-      `,
-      )
-      .eq('id_propriedade', id)
-      .eq('id_usuario', userId)
-      .single();
-
-    if (propriedadeComoFuncionario && !erroFuncionario) {
-      return propriedadeComoFuncionario.Propriedade;
     }
 
     throw new NotFoundException(`Propriedade com ID ${id} não encontrada ou não pertence a este usuário.`);

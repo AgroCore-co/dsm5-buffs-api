@@ -14,7 +14,7 @@ export class MovLoteService {
     private readonly supabaseService: SupabaseService,
     logger: LoggerService,
   ) {
-    this.supabase = this.supabaseService.getClient();
+    this.supabase = this.supabaseService.getAdminClient();
     this.logger = logger;
   }
 

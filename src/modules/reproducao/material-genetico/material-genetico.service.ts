@@ -30,7 +30,7 @@ export class MaterialGeneticoService {
       this.logger.debug(`[DADOS_LIMPOS] Inserindo: ${JSON.stringify(dadosLimpos)}`);
 
       const { data, error } = await this.supabase
-        .getClient()
+        .getAdminClient()
         .from(this.tableName)
         .insert([dadosLimpos]) // Só os campos necessários, SEM id_material
         .select()
@@ -61,7 +61,7 @@ export class MaterialGeneticoService {
       const { limit: limitValue, offset } = calculatePaginationParams(page, limit);
 
       // Contar total de registros
-      const { count, error: countError } = await this.supabase.getClient().from(this.tableName).select('*', { count: 'exact', head: true });
+      const { count, error: countError } = await this.supabase.getAdminClient().from(this.tableName).select('*', { count: 'exact', head: true });
 
       if (countError) {
         this.logger.error(`[ERRO] Falha ao contar: ${countError.message}`);
@@ -70,7 +70,7 @@ export class MaterialGeneticoService {
 
       // Buscar registros com paginação
       const { data, error } = await this.supabase
-        .getClient()
+        .getAdminClient()
         .from(this.tableName)
         .select(
           `
@@ -100,7 +100,7 @@ export class MaterialGeneticoService {
 
   async findOne(id_material: string) {
     const { data, error } = await this.supabase
-      .getClient()
+      .getAdminClient()
       .from(this.tableName)
       .select('*, bufalo_origem:Bufalo(id_bufalo, nome, brinco)')
       .eq('id_material', id_material)
@@ -126,7 +126,7 @@ export class MaterialGeneticoService {
       this.logger.debug(`[UPDATE] Dados limpos para atualização: ${JSON.stringify(cleanedDto)}`);
 
       const { data, error } = await this.supabase
-        .getClient()
+        .getAdminClient()
         .from(this.tableName)
         .update(cleanedDto)
         .eq('id_material', id_material)
@@ -157,7 +157,7 @@ export class MaterialGeneticoService {
     await this.findOne(id_material);
 
     try {
-      const { error } = await this.supabase.getClient().from(this.tableName).delete().eq('id_material', id_material);
+      const { error } = await this.supabase.getAdminClient().from(this.tableName).delete().eq('id_material', id_material);
 
       if (error) {
         this.logger.error(`[ERRO] Falha na remoção: ${error.message}`);

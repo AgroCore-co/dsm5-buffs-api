@@ -18,7 +18,7 @@ export class GenealogiaService {
   private supabase: SupabaseClient;
 
   constructor(private readonly supabaseService: SupabaseService) {
-    this.supabase = this.supabaseService.getClient();
+    this.supabase = this.supabaseService.getAdminClient();
   }
 
   public async buildTree(id: string, maxDepth: number, user: any): Promise<GenealogiaNodeDto | null> {

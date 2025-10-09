@@ -10,13 +10,13 @@ export class RegistrosService {
   private readonly tableName = 'alimregistro';
 
   async create(dto: CreateRegistroAlimentacaoDto) {
-    const { data, error } = await this.supabase.getClient().from(this.tableName).insert(dto).select().single();
+    const { data, error } = await this.supabase.getAdminClient().from(this.tableName).insert(dto).select().single();
     if (error) throw new InternalServerErrorException('Falha ao criar registro de alimentação.');
     return data;
   }
 
   async findAll() {
-    const { data, error } = await this.supabase.getClient().from(this.tableName).select('*').order('created_at', { ascending: false });
+    const { data, error } = await this.supabase.getAdminClient().from(this.tableName).select('*').order('created_at', { ascending: false });
     if (error) {
       if ((error as any).code === 'PGRST116') {
         return [];
@@ -28,7 +28,7 @@ export class RegistrosService {
 
   async findByPropriedade(idPropriedade: string) {
     const { data, error } = await this.supabase
-      .getClient()
+      .getAdminClient()
       .from(this.tableName)
       .select(
         `
@@ -51,21 +51,21 @@ export class RegistrosService {
   }
 
   async findOne(id_registro: string) {
-    const { data, error } = await this.supabase.getClient().from(this.tableName).select('*').eq('id_registro', id_registro).single();
+    const { data, error } = await this.supabase.getAdminClient().from(this.tableName).select('*').eq('id_registro', id_registro).single();
     if (error) throw new NotFoundException('Registro de alimentação não encontrado.');
     return data;
   }
 
   async update(id_registro: string, dto: UpdateRegistroAlimentacaoDto) {
     await this.findOne(id_registro);
-    const { data, error } = await this.supabase.getClient().from(this.tableName).update(dto).eq('id_registro', id_registro).select().single();
+    const { data, error } = await this.supabase.getAdminClient().from(this.tableName).update(dto).eq('id_registro', id_registro).select().single();
     if (error) throw new InternalServerErrorException('Falha ao atualizar registro de alimentação.');
     return data;
   }
 
   async remove(id_registro: string) {
     await this.findOne(id_registro);
-    const { error } = await this.supabase.getClient().from(this.tableName).delete().eq('id_registro', id_registro);
+    const { error } = await this.supabase.getAdminClient().from(this.tableName).delete().eq('id_registro', id_registro);
     if (error) throw new InternalServerErrorException('Falha ao remover registro de alimentação.');
     return { message: 'Registro removido com sucesso' };
   }

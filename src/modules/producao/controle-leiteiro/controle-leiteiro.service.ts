@@ -19,7 +19,7 @@ export class ControleLeiteiroService {
     private readonly geminiService: GeminiService,
     private readonly customLogger: LoggerService,
   ) {
-    this.supabase = this.supabaseService.getClient();
+    this.supabase = this.supabaseService.getAdminClient();
   }
 
   /**

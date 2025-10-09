@@ -13,7 +13,7 @@ export class GrupoService {
     private readonly supabaseService: SupabaseService,
     private readonly logger: LoggerService,
   ) {
-    this.supabase = this.supabaseService.getClient();
+    this.supabase = this.supabaseService.getAdminClient();
   }
 
   async create(createGrupoDto: CreateGrupoDto) {

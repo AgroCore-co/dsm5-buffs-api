@@ -16,7 +16,7 @@ export class FuncionarioService {
     private readonly usuarioService: UsuarioService,
     private readonly logger: LoggerService,
   ) {
-    this.supabase = this.supabaseService.getClient();
+    this.supabase = this.supabaseService.getAdminClient();
     this.adminSupabase = this.supabaseService.getAdminClient();
   }
 

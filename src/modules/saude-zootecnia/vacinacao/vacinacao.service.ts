@@ -18,7 +18,7 @@ export class VacinacaoService {
 
     // 1. Tentar encontrar usuário por auth_id
     const { data, error } = await this.supabase
-      .getClient()
+      .getAdminClient()
       .from('usuario')
       .select('id_usuario, nome, email, auth_id')
       .eq('auth_id', authUuid)
@@ -41,7 +41,7 @@ export class VacinacaoService {
 
     if (userEmail) {
       const { data: emailUser, error: emailError } = await this.supabase
-        .getClient()
+        .getAdminClient()
         .from('usuario')
         .select('id_usuario, nome, email, auth_id')
         .eq('email', userEmail)
@@ -53,7 +53,7 @@ export class VacinacaoService {
         // 3. Sincronizar auth_id automaticamente
         console.log(`🔄 Sincronizando auth_id para usuário ${emailUser.nome}...`);
 
-        await this.supabase.getClient().from('usuario').update({ auth_id: authUuid }).eq('id_usuario', emailUser.id_usuario);
+        await this.supabase.getAdminClient().from('usuario').update({ auth_id: authUuid }).eq('id_usuario', emailUser.id_usuario);
 
         console.log(`✅ Usuário encontrado por email e sincronizado: ${emailUser.nome} (ID: ${emailUser.id_usuario})`);
         return emailUser.id_usuario;
@@ -61,7 +61,7 @@ export class VacinacaoService {
     }
 
     // 4. Se não encontrar nada, mostrar todos usuários para debug
-    const { data: allUsers, error: allError } = await this.supabase.getClient().from('usuario').select('id_usuario, nome, email, auth_id').limit(5);
+    const { data: allUsers, error: allError } = await this.supabase.getAdminClient().from('usuario').select('id_usuario, nome, email, auth_id').limit(5);
 
     console.log(`📋 Todos os usuários no sistema:`, allUsers);
 
@@ -88,7 +88,7 @@ export class VacinacaoService {
       dt_retorno: dto.dt_retorno,
     };
 
-    const { data, error } = await this.supabase.getClient().from(this.tableName).insert(insertData).select().single();
+    const { data, error } = await this.supabase.getAdminClient().from(this.tableName).insert(insertData).select().single();
 
     if (error) {
       throw new InternalServerErrorException(`Falha ao criar registo de vacinação: ${error.message}`);
@@ -98,7 +98,7 @@ export class VacinacaoService {
 
   async findAllByBufalo(id_bufalo: string) {
     const { data, error } = await this.supabase
-      .getClient()
+      .getAdminClient()
       .from(this.tableName)
       .select(
         `
@@ -126,7 +126,7 @@ export class VacinacaoService {
 
   async findOne(id_sanit: string) {
     const { data, error } = await this.supabase
-      .getClient()
+      .getAdminClient()
       .from(this.tableName)
       .select(
         `
@@ -156,7 +156,7 @@ export class VacinacaoService {
     await this.findOne(id_sanit);
 
     const { data, error } = await this.supabase
-      .getClient()
+      .getAdminClient()
       .from(this.tableName)
       .update({
         id_medicao: dto.id_medicacao, // Campo correto na tabela é id_medicao
@@ -181,7 +181,7 @@ export class VacinacaoService {
   async remove(id_sanit: string) {
     await this.findOne(id_sanit);
 
-    const { error } = await this.supabase.getClient().from(this.tableName).delete().eq('id_sanit', id_sanit);
+    const { error } = await this.supabase.getAdminClient().from(this.tableName).delete().eq('id_sanit', id_sanit);
 
     if (error) {
       throw new InternalServerErrorException(`Falha ao remover registo de vacinação: ${error.message}`);
@@ -194,7 +194,7 @@ export class VacinacaoService {
    */
   async findVacinasByBufaloId(id_bufalo: string) {
     const { data, error } = await this.supabase
-      .getClient()
+      .getAdminClient()
       .from(this.tableName)
       .select(
         `

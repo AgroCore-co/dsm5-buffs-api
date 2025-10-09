@@ -10,7 +10,7 @@ export class MedicamentosService {
   private readonly tableName = 'medicacoes';
 
   async create(dto: CreateMedicacaoDto) {
-    const { data, error } = await this.supabase.getClient().from(this.tableName).insert(dto).select().single();
+    const { data, error } = await this.supabase.getAdminClient().from(this.tableName).insert(dto).select().single();
 
     if (error) {
       throw new InternalServerErrorException(`Falha ao criar medicação: ${error.message}`);
@@ -19,7 +19,7 @@ export class MedicamentosService {
   }
 
   async findAll() {
-    const { data, error } = await this.supabase.getClient().from(this.tableName).select('*').order('created_at', { ascending: false });
+    const { data, error } = await this.supabase.getAdminClient().from(this.tableName).select('*').order('created_at', { ascending: false });
 
     if (error) {
       throw new InternalServerErrorException(`Falha ao buscar medicações: ${error.message}`);
@@ -28,7 +28,7 @@ export class MedicamentosService {
   }
 
   async findOne(id_medicacao: string) {
-    const { data, error } = await this.supabase.getClient().from(this.tableName).select('*').eq('id_medicacao', id_medicacao).single();
+    const { data, error } = await this.supabase.getAdminClient().from(this.tableName).select('*').eq('id_medicacao', id_medicacao).single();
 
     if (error || !data) {
       throw new NotFoundException(`Medicação com ID ${id_medicacao} não encontrada.`);
@@ -39,7 +39,7 @@ export class MedicamentosService {
   async update(id_medicacao: string, dto: UpdateMedicacaoDto) {
     await this.findOne(id_medicacao); // Garante que existe
 
-    const { data, error } = await this.supabase.getClient().from(this.tableName).update(dto).eq('id_medicacao', id_medicacao).select().single();
+    const { data, error } = await this.supabase.getAdminClient().from(this.tableName).update(dto).eq('id_medicacao', id_medicacao).select().single();
 
     if (error) {
       throw new InternalServerErrorException(`Falha ao atualizar medicação: ${error.message}`);
@@ -50,7 +50,7 @@ export class MedicamentosService {
   async remove(id_medicacao: string) {
     await this.findOne(id_medicacao); // Garante que existe
 
-    const { error } = await this.supabase.getClient().from(this.tableName).delete().eq('id_medicacao', id_medicacao);
+    const { error } = await this.supabase.getAdminClient().from(this.tableName).delete().eq('id_medicacao', id_medicacao);
 
     if (error) {
       throw new InternalServerErrorException(`Falha ao remover medicação: ${error.message}`);

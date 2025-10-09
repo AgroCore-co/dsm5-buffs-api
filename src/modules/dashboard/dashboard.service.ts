@@ -10,7 +10,7 @@ export class DashboardService {
    * Retorna estatísticas do dashboard para uma propriedade específica
    */
   async getStats(id_propriedade: string): Promise<DashboardStatsDto> {
-    const supabase = this.supabaseService.getClient();
+    const supabase = this.supabaseService.getAdminClient();
 
     try {
       // Verifica se a propriedade existe

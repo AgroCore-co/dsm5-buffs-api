@@ -17,7 +17,7 @@ export class DadosSanitariosService {
    * a partir do UUID de autenticação do Supabase (o 'sub' do JWT).
    */
   private async getInternalUserId(authUuid: string): Promise<number> {
-    const { data, error } = await this.supabase.getClient().from('usuario').select('id_usuario').eq('auth_id', authUuid).single();
+    const { data, error } = await this.supabase.getAdminClient().from('usuario').select('id_usuario').eq('auth_id', authUuid).single();
 
     if (error || !data) {
       throw new UnauthorizedException(
@@ -34,7 +34,7 @@ export class DadosSanitariosService {
   async create(dto: CreateDadosSanitariosDto, auth_uuid: string) {
     // 1. Validar se a medicação existe
     const { data: medicacao, error: errorMedicacao } = await this.supabase
-      .getClient()
+      .getAdminClient()
       .from(this.tableMedicacoes)
       .select('id_medicacao')
       .eq('id_medicacao', dto.id_medicao)
@@ -49,7 +49,7 @@ export class DadosSanitariosService {
 
     // 3. Inserir no banco de dados usando o ID numérico (bigint) correto
     const { data, error } = await this.supabase
-      .getClient()
+      .getAdminClient()
       .from(this.tableName)
       .insert({
         // O DTO não contém mais id_usuario, então espalhamos apenas os campos válidos
@@ -70,14 +70,14 @@ export class DadosSanitariosService {
     const { offset } = calculatePaginationParams(page, limit);
 
     // Primeiro, busca o total de registros
-    const { count, error: countError } = await this.supabase.getClient().from(this.tableName).select('*', { count: 'exact', head: true });
+    const { count, error: countError } = await this.supabase.getAdminClient().from(this.tableName).select('*', { count: 'exact', head: true });
 
     if (countError) {
       throw new InternalServerErrorException(`Falha ao contar registros sanitários: ${countError.message}`);
     }
 
     const { data, error } = await this.supabase
-      .getClient()
+      .getAdminClient()
       .from(this.tableName)
       .select(
         `
@@ -102,7 +102,7 @@ export class DadosSanitariosService {
 
     // Primeiro, busca o total de registros para o búfalo
     const { count, error: countError } = await this.supabase
-      .getClient()
+      .getAdminClient()
       .from(this.tableName)
       .select('*', { count: 'exact', head: true })
       .eq('id_bufalo', id_bufalo);
@@ -112,7 +112,7 @@ export class DadosSanitariosService {
     }
 
     const { data, error } = await this.supabase
-      .getClient()
+      .getAdminClient()
       .from(this.tableName)
       .select(
         `
@@ -133,7 +133,7 @@ export class DadosSanitariosService {
 
   async findOne(id_sanit: string) {
     const { data, error } = await this.supabase
-      .getClient()
+      .getAdminClient()
       .from(this.tableName)
       .select(
         `
@@ -155,7 +155,7 @@ export class DadosSanitariosService {
 
     if (dto.id_medicao) {
       const { data: medicacao, error: errorMedicacao } = await this.supabase
-        .getClient()
+        .getAdminClient()
         .from(this.tableMedicacoes)
         .select('id_medicacao')
         .eq('id_medicao', dto.id_medicao)
@@ -166,7 +166,7 @@ export class DadosSanitariosService {
       }
     }
 
-    const { data, error } = await this.supabase.getClient().from(this.tableName).update(dto).eq('id_sanit', id_sanit).select().single();
+    const { data, error } = await this.supabase.getAdminClient().from(this.tableName).update(dto).eq('id_sanit', id_sanit).select().single();
 
     if (error) {
       throw new InternalServerErrorException(`Falha ao atualizar dado sanitário: ${error.message}`);
@@ -177,7 +177,7 @@ export class DadosSanitariosService {
   async remove(id_sanit: string) {
     await this.findOne(id_sanit);
 
-    const { error } = await this.supabase.getClient().from(this.tableName).delete().eq('id_sanit', id_sanit);
+    const { error } = await this.supabase.getAdminClient().from(this.tableName).delete().eq('id_sanit', id_sanit);
 
     if (error) {
       throw new InternalServerErrorException(`Falha ao remover dado sanitário: ${error.message}`);

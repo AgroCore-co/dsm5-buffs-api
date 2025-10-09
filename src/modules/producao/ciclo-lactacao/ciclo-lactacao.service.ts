@@ -46,7 +46,7 @@ export class CicloLactacaoService {
     });
 
     const { data, error } = await this.supabase
-      .getClient()
+      .getAdminClient()
       .from(this.tableName)
       .insert({
         ...dto,
@@ -84,7 +84,7 @@ export class CicloLactacaoService {
     const { limit: limitValue, offset } = calculatePaginationParams(page, limit);
 
     // Contar total de registros
-    const { count, error: countError } = await this.supabase.getClient().from(this.tableName).select('*', { count: 'exact', head: true });
+    const { count, error: countError } = await this.supabase.getAdminClient().from(this.tableName).select('*', { count: 'exact', head: true });
 
     if (countError) {
       this.logger.logError(countError, {
@@ -96,7 +96,7 @@ export class CicloLactacaoService {
 
     // Buscar registros com paginação
     const { data, error } = await this.supabase
-      .getClient()
+      .getAdminClient()
       .from(this.tableName)
       .select('*, bufala:Bufalo(nome)')
       .order('dt_parto', { ascending: false })
@@ -126,7 +126,7 @@ export class CicloLactacaoService {
     });
 
     const { data, error } = await this.supabase
-      .getClient()
+      .getAdminClient()
       .from(this.tableName)
       .select('*, bufala:Bufalo(nome)')
       .eq('id_ciclo_lactacao', id_ciclo_lactacao)
@@ -172,7 +172,7 @@ export class CicloLactacaoService {
     });
 
     const { data, error } = await this.supabase
-      .getClient()
+      .getAdminClient()
       .from(this.tableName)
       .update({
         ...dto,
@@ -209,7 +209,7 @@ export class CicloLactacaoService {
 
     await this.findOne(id_ciclo_lactacao);
 
-    const { error } = await this.supabase.getClient().from(this.tableName).delete().eq('id_ciclo_lactacao', id_ciclo_lactacao);
+    const { error } = await this.supabase.getAdminClient().from(this.tableName).delete().eq('id_ciclo_lactacao', id_ciclo_lactacao);
 
     if (error) {
       this.logger.logError(error, {

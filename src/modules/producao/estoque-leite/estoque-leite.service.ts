@@ -25,7 +25,7 @@ export class EstoqueLeiteService {
     });
 
     const { data, error } = await this.supabase
-      .getClient()
+      .getAdminClient()
       .from(this.tableName)
       .insert({
         ...dto,
@@ -63,7 +63,7 @@ export class EstoqueLeiteService {
     const { limit: limitValue, offset } = calculatePaginationParams(page, limit);
 
     // Contar total de registros
-    const { count, error: countError } = await this.supabase.getClient().from(this.tableName).select('*', { count: 'exact', head: true });
+    const { count, error: countError } = await this.supabase.getAdminClient().from(this.tableName).select('*', { count: 'exact', head: true });
 
     if (countError) {
       this.logger.logError(countError, {
@@ -75,7 +75,7 @@ export class EstoqueLeiteService {
 
     // Buscar registros com paginação
     const { data, error } = await this.supabase
-      .getClient()
+      .getAdminClient()
       .from(this.tableName)
       .select('*, propriedade:Propriedade(nome), usuario:Usuario(nome)')
       .order('dt_registro', { ascending: false })
@@ -105,7 +105,7 @@ export class EstoqueLeiteService {
     });
 
     const { data, error } = await this.supabase
-      .getClient()
+      .getAdminClient()
       .from(this.tableName)
       .select('*, propriedade:Propriedade(nome), usuario:Usuario(nome)')
       .eq('id_estoque', id_estoque)
@@ -137,7 +137,7 @@ export class EstoqueLeiteService {
 
     await this.findOne(id_estoque);
 
-    const { data, error } = await this.supabase.getClient().from(this.tableName).update(dto).eq('id_estoque', id_estoque).select().single();
+    const { data, error } = await this.supabase.getAdminClient().from(this.tableName).update(dto).eq('id_estoque', id_estoque).select().single();
 
     if (error) {
       this.logger.logError(error, {
@@ -165,7 +165,7 @@ export class EstoqueLeiteService {
 
     await this.findOne(id_estoque);
 
-    const { error } = await this.supabase.getClient().from(this.tableName).delete().eq('id_estoque', id_estoque);
+    const { error } = await this.supabase.getAdminClient().from(this.tableName).delete().eq('id_estoque', id_estoque);
 
     if (error) {
       this.logger.logError(error, {

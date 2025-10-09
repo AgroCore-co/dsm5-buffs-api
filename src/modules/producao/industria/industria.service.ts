@@ -20,7 +20,7 @@ export class IndustriaService {
       nome: dto.nome,
     });
 
-    const { data, error } = await this.supabase.getClient().from(this.tableName).insert(dto).select().single();
+    const { data, error } = await this.supabase.getAdminClient().from(this.tableName).insert(dto).select().single();
     if (error) {
       this.logger.logError(error, {
         module: 'IndustriaService',
@@ -45,7 +45,7 @@ export class IndustriaService {
       method: 'findAll',
     });
 
-    const { data, error } = await this.supabase.getClient().from(this.tableName).select('*').order('nome', { ascending: true });
+    const { data, error } = await this.supabase.getAdminClient().from(this.tableName).select('*').order('nome', { ascending: true });
     if (error) {
       this.logger.logError(error, {
         module: 'IndustriaService',
@@ -68,7 +68,7 @@ export class IndustriaService {
       industriaId: id_industria,
     });
 
-    const { data, error } = await this.supabase.getClient().from(this.tableName).select('*').eq('id_industria', id_industria).single();
+    const { data, error } = await this.supabase.getAdminClient().from(this.tableName).select('*').eq('id_industria', id_industria).single();
     if (error || !data) {
       this.logger.warn('Indústria não encontrada', {
         module: 'IndustriaService',
@@ -94,7 +94,7 @@ export class IndustriaService {
     });
 
     await this.findOne(id_industria);
-    const { data, error } = await this.supabase.getClient().from(this.tableName).update(dto).eq('id_industria', id_industria).select().single();
+    const { data, error } = await this.supabase.getAdminClient().from(this.tableName).update(dto).eq('id_industria', id_industria).select().single();
     if (error) {
       this.logger.logError(error, {
         module: 'IndustriaService',
@@ -120,7 +120,7 @@ export class IndustriaService {
     });
 
     await this.findOne(id_industria);
-    const { error } = await this.supabase.getClient().from(this.tableName).delete().eq('id_industria', id_industria);
+    const { error } = await this.supabase.getAdminClient().from(this.tableName).delete().eq('id_industria', id_industria);
     if (error) {
       this.logger.logError(error, {
         module: 'IndustriaService',

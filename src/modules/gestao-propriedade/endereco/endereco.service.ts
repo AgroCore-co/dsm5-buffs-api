@@ -9,7 +9,7 @@ export class EnderecoService {
   private supabase: SupabaseClient;
 
   constructor(private readonly supabaseService: SupabaseService) {
-    this.supabase = this.supabaseService.getClient();
+    this.supabase = this.supabaseService.getAdminClient();
   }
 
   async create(createEnderecoDto: CreateEnderecoDto) {
