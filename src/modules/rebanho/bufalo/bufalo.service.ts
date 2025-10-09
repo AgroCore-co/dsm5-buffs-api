@@ -246,6 +246,56 @@ export class BufaloService {
     return data;
   }
 
+  async findByPropriedade(id_propriedade: string, user: any, paginationDto: PaginationDto = {}): Promise<PaginatedResponse<any>> {
+    const { page = 1, limit = 10 } = paginationDto;
+    const { offset } = calculatePaginationParams(page, limit);
+
+    const userId = await this.getUserId(user);
+
+    // Valida se o usuário tem acesso à propriedade
+    const propriedadesUsuario = await this.getUserPropriedades(userId);
+    
+    if (!propriedadesUsuario.includes(id_propriedade)) {
+      throw new NotFoundException(`Propriedade com ID ${id_propriedade} não encontrada ou você não tem acesso a ela.`);
+    }
+
+    // Busca total de búfalos na propriedade
+    const { count, error: countError } = await this.supabase
+      .from(this.tableName)
+      .select('*', { count: 'exact', head: true })
+      .eq('id_propriedade', id_propriedade);
+
+    if (countError) {
+      throw new InternalServerErrorException('Falha ao contar os búfalos da propriedade.');
+    }
+
+    // Busca búfalos da propriedade com paginação
+    const { data, error } = await this.supabase
+      .from(this.tableName)
+      .select(
+        `
+        *,
+        raca:id_raca(nome),
+        grupo:id_grupo(nome_grupo),
+        propriedade:id_propriedade(nome)
+      `,
+      )
+      .eq('id_propriedade', id_propriedade)
+      .order('status', { ascending: false })
+      .order('dt_nascimento', { ascending: true })
+      .range(offset, offset + limit - 1);
+
+    if (error) {
+      throw new InternalServerErrorException('Falha ao buscar os búfalos da propriedade.');
+    }
+
+    // Atualiza maturidade automaticamente para búfalos ativos
+    const bufalosAtivos = (data || []).filter((bufalo) => bufalo.status === true);
+    await this.updateMaturityIfNeeded(bufalosAtivos);
+
+    return createPaginatedResponse(data || [], count || 0, page, limit);
+  }
+
   async findByMicrochip(microchip: string) {
     const { data, error } = await this.supabase
       .from(this.tableName)

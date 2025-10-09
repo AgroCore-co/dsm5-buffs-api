@@ -71,6 +71,26 @@ export class BufaloController {
     return this.bufaloService.findByCategoria(categoria, user);
   }
 
+  @Get('propriedade/:id_propriedade')
+  @UseInterceptors(CacheInterceptor)
+  @CacheTTL(300000) // 5 minutos
+  @ApiOperation({
+    summary: 'Lista todos os búfalos de uma propriedade específica com paginação',
+    description: 'Retorna búfalos de uma propriedade ordenados por status (ativos primeiro) e data de nascimento (mais antigos primeiro)',
+  })
+  @ApiParam({ name: 'id_propriedade', description: 'ID da propriedade (UUID)', type: String })
+  @ApiQuery({ name: 'page', required: false, type: Number, description: 'Número da página (começa em 1)' })
+  @ApiQuery({ name: 'limit', required: false, type: Number, description: 'Número de itens por página (máximo 100)' })
+  @ApiResponse({ status: 200, description: 'Lista paginada de búfalos da propriedade retornada com sucesso.' })
+  @ApiResponse({ status: 404, description: 'Propriedade não encontrada ou você não tem acesso a ela.' })
+  findByPropriedade(
+    @Param('id_propriedade', ParseUUIDPipe) id_propriedade: string,
+    @User() user: any,
+    @Query() paginationDto: PaginationDto,
+  ) {
+    return this.bufaloService.findByPropriedade(id_propriedade, user, paginationDto);
+  }
+
   @Get('microchip/:microchip')
   @UseInterceptors(CacheInterceptor)
   @CacheTTL(300000) // 5 minutos
