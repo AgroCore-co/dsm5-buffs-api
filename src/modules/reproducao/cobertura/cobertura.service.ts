@@ -12,25 +12,11 @@ export class CoberturaService {
 
   private readonly tableName = 'dadosreproducao';
 
-  private async getInternalUserId(authUuid: string): Promise<number> {
-    const { data, error } = await this.supabase.getAdminClient().from('usuario').select('id_usuario').eq('auth_id', authUuid).single();
-
-    if (error || !data) {
-      throw new InternalServerErrorException(
-        `Falha na sincronização do usuário. O usuário (auth: ${authUuid}) não foi encontrado no registro local 'Usuario'.`,
-      );
-    }
-
-    return data.id_usuario;
-  }
-
   async create(dto: CreateCoberturaDto, auth_uuid: string) {
-    const internalUserId = await this.getInternalUserId(auth_uuid);
-
+    // Don't include id_usuario - it doesn't exist in dadosreproducao table
     const dtoComStatus = {
       ...dto,
       status: dto.status || 'Em andamento',
-      id_usuario: internalUserId,
     };
 
     const { data, error } = await this.supabase.getAdminClient().from(this.tableName).insert(dtoComStatus).select().single();
@@ -84,7 +70,7 @@ export class CoberturaService {
     const { data, error } = await this.supabase
       .getAdminClient()
       .from(this.tableName)
-      .select('*, id_propriedade:propriedade!inner(nome), id_receptora:bufalo!inner(nome, brinco)')
+      .select('*')
       .eq('id_propriedade', id_propriedade)
       .order('dt_evento', { ascending: false })
       .range(offset, offset + limitValue - 1);

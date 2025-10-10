@@ -12,7 +12,7 @@ export class CreateCoberturaDto {
   id_propriedade: string;
 
   @ApiProperty({
-    example: 1,
+    example: 'f47ac10b-58cc-4372-a567-0e02b2c3d479',
     description: 'ID do material genético do sêmen (para IA ou TE)',
     required: false,
   })
@@ -22,7 +22,7 @@ export class CreateCoberturaDto {
   id_semen?: string;
 
   @ApiProperty({
-    example: 2,
+    example: 'f47ac10b-58cc-4372-a567-0e02b2c3d479',
     description: 'ID do material genético da doadora (óvulo/embrião para TE)',
     required: false,
   })
@@ -31,10 +31,10 @@ export class CreateCoberturaDto {
   @Transform(({ value }) => (value === '' ? undefined : value))
   id_doadora?: string;
 
-  @ApiProperty({ example: 15, description: 'ID da fêmea receptora (quem está sendo coberta)' })
+  @ApiProperty({ example: 'f47ac10b-58cc-4372-a567-0e02b2c3d479', description: 'ID da fêmea receptora (quem está sendo coberta)' })
   @IsUUID()
   @IsNotEmpty()
-  id_receptora: string;
+  id_bufala: string;
 
   @ApiProperty({ example: 'IA', description: 'Tipo de inseminação', enum: tiposInseminacao })
   @IsString()
@@ -45,7 +45,7 @@ export class CreateCoberturaDto {
   @ApiProperty({ example: '2025-08-18', description: 'Data do evento (inseminação ou monta)' })
   @IsDateString()
   @IsNotEmpty()
-  dt_evento: Date;
+  dt_evento: string;
 
   @ApiProperty({
     example: 'Em andamento',
