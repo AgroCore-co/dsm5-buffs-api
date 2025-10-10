@@ -98,6 +98,55 @@ export class MaterialGeneticoService {
     }
   }
 
+  async findByPropriedade(id_propriedade: string, paginationDto: PaginationDto = {}): Promise<PaginatedResponse<any>> {
+    this.logger.log('[INICIO] Buscando materiais genéticos por propriedade com paginação');
+
+    try {
+      const { page = 1, limit = 10 } = paginationDto;
+      const { limit: limitValue, offset } = calculatePaginationParams(page, limit);
+
+      const { count, error: countError } = await this.supabase
+        .getAdminClient()
+        .from(this.tableName)
+        .select('*', { count: 'exact', head: true })
+        .eq('id_propriedade', id_propriedade);
+
+      if (countError) {
+        this.logger.error(`[ERRO] Falha ao contar materiais da propriedade: ${countError.message}`);
+        throw new InternalServerErrorException(`Erro ao contar material genético: ${countError.message}`);
+      }
+
+      const { data, error } = await this.supabase
+        .getAdminClient()
+        .from(this.tableName)
+        .select(
+          `
+          *,
+          raca:id_raca(
+            id_raca,
+            nome_raca
+          ),
+          propriedade:Propriedade(nome)
+        `,
+        )
+        .eq('id_propriedade', id_propriedade)
+        .order('created_at', { ascending: false })
+        .range(offset, offset + limitValue - 1);
+
+      if (error) {
+        this.logger.error(`[ERRO] Falha na consulta por propriedade: ${error.message}`);
+        throw new InternalServerErrorException(`Erro ao buscar material genético: ${error.message}`);
+      }
+
+      this.logger.log(`[SUCESSO] ${data?.length || 0} materiais genéticos encontrados na propriedade (página ${page})`);
+
+      return createPaginatedResponse(data || [], count || 0, page, limitValue);
+    } catch (error) {
+      this.logger.error(`[ERRO_GERAL] ${error.message}`);
+      throw new InternalServerErrorException(`Erro ao buscar material genético: ${error.message}`);
+    }
+  }
+
   async findOne(id_material: string) {
     const { data, error } = await this.supabase
       .getAdminClient()

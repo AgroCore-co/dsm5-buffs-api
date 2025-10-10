@@ -4,6 +4,9 @@ import { SupabaseService } from '../../../core/supabase/supabase.service';
 import { CreateMovLoteDto } from './dto/create-mov-lote.dto';
 import { UpdateMovLoteDto } from './dto/update-mov-lote.dto';
 import { LoggerService } from '../../../core/logger/logger.service';
+import { PaginationDto } from '../../../core/dto/pagination.dto';
+import { PaginatedResponse } from '../../../core/dto/pagination.dto';
+import { createPaginatedResponse, calculatePaginationParams } from '../../../core/utils/pagination.utils';
 
 @Injectable()
 export class MovLoteService {
@@ -136,6 +139,7 @@ export class MovLoteService {
         id_grupo,
         id_lote_anterior,
         id_lote_atual,
+        id_propriedade: createDto.id_propriedade,
         dt_entrada,
         dt_saida: null,
         id_usuario,
@@ -219,6 +223,55 @@ export class MovLoteService {
       throw new InternalServerErrorException('Falha ao buscar as movimentações de lote.');
     }
     return data ?? [];
+  }
+
+  async findByPropriedade(id_propriedade: string, paginationDto: PaginationDto = {}): Promise<PaginatedResponse<any>> {
+    this.logger.log('Iniciando busca de movimentações por propriedade', {
+      module: 'MovLoteService',
+      method: 'findByPropriedade',
+      propriedadeId: id_propriedade,
+    });
+
+    const { page = 1, limit = 10 } = paginationDto;
+    const { limit: limitValue, offset } = calculatePaginationParams(page, limit);
+
+    const { count, error: countError } = await this.supabase
+      .from('movlote')
+      .select('*', { count: 'exact', head: true })
+      .eq('id_propriedade', id_propriedade);
+
+    if (countError) {
+      this.logger.error(`[ERRO] Falha ao contar movimentações da propriedade: ${countError.message}`);
+      throw new InternalServerErrorException(`Falha ao contar movimentações da propriedade: ${countError.message}`);
+    }
+
+    const { data, error } = await this.supabase
+      .from('movlote')
+      .select(
+        `
+        *,
+        grupo:id_grupo(nome_grupo),
+        lote_atual:id_lote_atual(nome_lote),
+        lote_anterior:id_lote_anterior(nome_lote),
+        usuario:id_usuario(nome),
+        propriedade:Propriedade(nome)
+      `,
+      )
+      .eq('id_propriedade', id_propriedade)
+      .order('dt_entrada', { ascending: false })
+      .range(offset, offset + limitValue - 1);
+
+    if (error) {
+      this.logger.error(`[ERRO] Falha ao buscar movimentações da propriedade: ${error.message}`);
+      throw new InternalServerErrorException(`Falha ao buscar movimentações da propriedade: ${error.message}`);
+    }
+
+    this.logger.log(`Busca concluída - ${data?.length || 0} movimentações encontradas (página ${page})`, {
+      module: 'MovLoteService',
+      method: 'findByPropriedade',
+    });
+
+    return createPaginatedResponse(data || [], count || 0, page, limitValue);
   }
 
   async findOne(id: string, user: any) {

@@ -118,6 +118,54 @@ export class CicloLactacaoService {
     return createPaginatedResponse(data, count || 0, page, limitValue);
   }
 
+  async findByPropriedade(id_propriedade: string, paginationDto: PaginationDto = {}): Promise<PaginatedResponse<any>> {
+    this.logger.log('Iniciando busca de ciclos por propriedade', {
+      module: 'CicloLactacaoService',
+      method: 'findByPropriedade',
+      propriedadeId: id_propriedade,
+    });
+
+    const { page = 1, limit = 10 } = paginationDto;
+    const { limit: limitValue, offset } = calculatePaginationParams(page, limit);
+
+    const { count, error: countError } = await this.supabase
+      .getAdminClient()
+      .from(this.tableName)
+      .select('*', { count: 'exact', head: true })
+      .eq('id_propriedade', id_propriedade);
+
+    if (countError) {
+      this.logger.logError(countError, {
+        module: 'CicloLactacaoService',
+        method: 'findByPropriedade',
+      });
+      throw new InternalServerErrorException(`Falha ao contar ciclos da propriedade: ${countError.message}`);
+    }
+
+    const { data, error } = await this.supabase
+      .getAdminClient()
+      .from(this.tableName)
+      .select('*, bufala:Bufalo(nome), propriedade:Propriedade(nome)')
+      .eq('id_propriedade', id_propriedade)
+      .order('dt_parto', { ascending: false })
+      .range(offset, offset + limitValue - 1);
+
+    if (error) {
+      this.logger.logError(error, {
+        module: 'CicloLactacaoService',
+        method: 'findByPropriedade',
+      });
+      throw new InternalServerErrorException(`Falha ao buscar ciclos da propriedade: ${error.message}`);
+    }
+
+    this.logger.log(`Busca concluída - ${data.length} ciclos encontrados (página ${page})`, {
+      module: 'CicloLactacaoService',
+      method: 'findByPropriedade',
+    });
+
+    return createPaginatedResponse(data, count || 0, page, limitValue);
+  }
+
   async findOne(id_ciclo_lactacao: string) {
     this.logger.log('Iniciando busca de ciclo de lactação por ID', {
       module: 'CicloLactacaoService',

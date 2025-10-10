@@ -3,6 +3,11 @@ import { IsNotEmpty, IsOptional, IsDateString, ValidateIf, IsString, MaxLength, 
 import { Transform } from 'class-transformer';
 
 export class CreateMovLoteDto {
+  @ApiProperty({ example: 'b8c4a72d-1234-4567-8901-234567890123', description: 'ID da propriedade (UUID)' })
+  @IsUUID()
+  @IsNotEmpty()
+  id_propriedade: string;
+
   @ApiProperty({ example: 'b8c4a72d-1234-4567-8901-234567890123', description: 'ID do grupo de animais que está sendo movido' })
   @IsUUID()
   id_grupo: string;
