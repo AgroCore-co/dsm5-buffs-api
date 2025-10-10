@@ -24,15 +24,7 @@ export class ColetaService {
       industriaId: dto.id_industria,
     });
 
-    const { data, error } = await this.supabase
-      .getAdminClient()
-      .from(this.tableName)
-      .insert({
-        ...dto,
-        id_funcionario: id_funcionario,
-      })
-      .select()
-      .single();
+    const { data, error } = await this.supabase.getAdminClient().from(this.tableName).insert(dto).select().single();
 
     if (error) {
       this.logger.logError(error, {
@@ -76,7 +68,7 @@ export class ColetaService {
     const { data, error } = await this.supabase
       .getAdminClient()
       .from(this.tableName)
-      .select('*, industria:Industria(nome), funcionario:Usuario(nome)')
+      .select('*')
       .order('dt_coleta', { ascending: false })
       .range(offset, offset + limitValue - 1);
 
@@ -123,7 +115,7 @@ export class ColetaService {
     const { data, error } = await this.supabase
       .getAdminClient()
       .from(this.tableName)
-      .select('*, id_industria:industria!inner(nome), id_funcionario:usuario!inner(nome), id_propriedade:propriedade!inner(nome)')
+      .select('*')
       .eq('id_propriedade', id_propriedade)
       .order('dt_coleta', { ascending: false })
       .range(offset, offset + limitValue - 1);
@@ -151,12 +143,7 @@ export class ColetaService {
       coletaId: id_coleta,
     });
 
-    const { data, error } = await this.supabase
-      .getAdminClient()
-      .from(this.tableName)
-      .select('*, industria:Industria(nome, representante), funcionario:Usuario(nome, cargo)')
-      .eq('id_coleta', id_coleta)
-      .single();
+    const { data, error } = await this.supabase.getAdminClient().from(this.tableName).select('*').eq('id_coleta', id_coleta).single();
 
     if (error || !data) {
       this.logger.warn('Coleta não encontrada', {

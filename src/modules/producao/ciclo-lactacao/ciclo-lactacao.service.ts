@@ -98,7 +98,7 @@ export class CicloLactacaoService {
     const { data, error } = await this.supabase
       .getAdminClient()
       .from(this.tableName)
-      .select('*, bufala:Bufalo(nome)')
+      .select('*')
       .order('dt_parto', { ascending: false })
       .range(offset, offset + limitValue - 1);
 
@@ -145,7 +145,7 @@ export class CicloLactacaoService {
     const { data, error } = await this.supabase
       .getAdminClient()
       .from(this.tableName)
-      .select('*, id_bufala:bufalo!inner(nome), id_propriedade:propriedade!inner(nome)')
+      .select('*')
       .eq('id_propriedade', id_propriedade)
       .order('dt_parto', { ascending: false })
       .range(offset, offset + limitValue - 1);
@@ -173,12 +173,7 @@ export class CicloLactacaoService {
       cicloId: id_ciclo_lactacao,
     });
 
-    const { data, error } = await this.supabase
-      .getAdminClient()
-      .from(this.tableName)
-      .select('*, bufala:Bufalo(nome)')
-      .eq('id_ciclo_lactacao', id_ciclo_lactacao)
-      .single();
+    const { data, error } = await this.supabase.getAdminClient().from(this.tableName).select('*').eq('id_ciclo_lactacao', id_ciclo_lactacao).single();
 
     if (error || !data) {
       this.logger.warn('Ciclo de lactação não encontrado', {

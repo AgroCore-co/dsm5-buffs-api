@@ -29,8 +29,7 @@ export class EstoqueLeiteService {
       .from(this.tableName)
       .insert({
         ...dto,
-        id_usuario: id_usuario,
-        dt_registro: dto.dt_registro || new Date(),
+        dt_registro: dto.dt_registro || new Date().toISOString(),
       })
       .select()
       .single();
@@ -77,7 +76,7 @@ export class EstoqueLeiteService {
     const { data, error } = await this.supabase
       .getAdminClient()
       .from(this.tableName)
-      .select('*, propriedade:Propriedade(nome), usuario:Usuario(nome)')
+      .select('*')
       .order('dt_registro', { ascending: false })
       .range(offset, offset + limitValue - 1);
 
@@ -124,7 +123,7 @@ export class EstoqueLeiteService {
     const { data, error } = await this.supabase
       .getAdminClient()
       .from(this.tableName)
-      .select('*, id_propriedade:propriedade!inner(nome), id_usuario:usuario!inner(nome)')
+      .select('*')
       .eq('id_propriedade', id_propriedade)
       .order('dt_registro', { ascending: false })
       .range(offset, offset + limitValue - 1);
@@ -152,12 +151,7 @@ export class EstoqueLeiteService {
       estoqueId: id_estoque,
     });
 
-    const { data, error } = await this.supabase
-      .getAdminClient()
-      .from(this.tableName)
-      .select('*, propriedade:Propriedade(nome), usuario:Usuario(nome)')
-      .eq('id_estoque', id_estoque)
-      .single();
+    const { data, error } = await this.supabase.getAdminClient().from(this.tableName).select('*').eq('id_estoque', id_estoque).single();
 
     if (error || !data) {
       this.logger.warn('Registro de estoque não encontrado', {

@@ -7,7 +7,7 @@ export enum StatusCicloLactacao {
 }
 
 export class CreateCicloLactacaoDto {
-  @ApiProperty({ description: 'ID da búfala', example: 5 })
+  @ApiProperty({ description: 'ID da búfala', example: 'f47ac10b-58cc-4372-a567-0e02b2c3d479' })
   @IsUUID()
   id_bufala: string;
 
