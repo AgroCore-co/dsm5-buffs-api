@@ -1,5 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsNotEmpty, IsOptional, IsDateString, ValidateIf, IsString, MaxLength, IsUUID } from 'class-validator';
+import { IsNotEmpty, IsOptional, IsDateString, ValidateIf, IsUUID } from 'class-validator';
 import { Transform } from 'class-transformer';
 
 export class CreateMovLoteDto {
@@ -29,17 +29,6 @@ export class CreateMovLoteDto {
   @ApiProperty({ example: '2025-01-15T08:00:00Z', description: 'Data e hora de entrada do grupo no novo lote' })
   @IsDateString()
   dt_entrada: string;
-
-  @ApiProperty({
-    example: 'Mudança para pasto com melhor qualidade de capim',
-    description: 'Motivo da movimentação (opcional)',
-    required: false,
-    maxLength: 255,
-  })
-  @IsString()
-  @IsOptional()
-  @MaxLength(255)
-  motivo?: string;
 
   @ApiProperty({
     example: '2025-09-20',
