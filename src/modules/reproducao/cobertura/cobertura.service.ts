@@ -84,7 +84,7 @@ export class CoberturaService {
     const { data, error } = await this.supabase
       .getAdminClient()
       .from(this.tableName)
-      .select('*, propriedade:Propriedade(nome), receptora:Bufalo!id_receptora(nome, brinco)')
+      .select('*, id_propriedade:propriedade!inner(nome), id_receptora:bufalo!inner(nome, brinco)')
       .eq('id_propriedade', id_propriedade)
       .order('dt_evento', { ascending: false })
       .range(offset, offset + limitValue - 1);

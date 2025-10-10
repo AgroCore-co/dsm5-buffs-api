@@ -123,7 +123,7 @@ export class ColetaService {
     const { data, error } = await this.supabase
       .getAdminClient()
       .from(this.tableName)
-      .select('*, industria:Industria(nome), funcionario:Usuario(nome), propriedade:Propriedade(nome)')
+      .select('*, id_industria:industria!inner(nome), id_funcionario:usuario!inner(nome), id_propriedade:propriedade!inner(nome)')
       .eq('id_propriedade', id_propriedade)
       .order('dt_coleta', { ascending: false })
       .range(offset, offset + limitValue - 1);

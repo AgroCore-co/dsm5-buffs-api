@@ -122,11 +122,11 @@ export class MaterialGeneticoService {
         .select(
           `
           *,
-          raca:id_raca(
+          id_raca:raca!inner(
             id_raca,
             nome_raca
           ),
-          propriedade:Propriedade(nome)
+          id_propriedade:propriedade!inner(nome)
         `,
         )
         .eq('id_propriedade', id_propriedade)

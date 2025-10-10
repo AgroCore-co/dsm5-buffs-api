@@ -124,7 +124,7 @@ export class EstoqueLeiteService {
     const { data, error } = await this.supabase
       .getAdminClient()
       .from(this.tableName)
-      .select('*, propriedade:Propriedade(nome), usuario:Usuario(nome)')
+      .select('*, id_propriedade:propriedade!inner(nome), id_usuario:usuario!inner(nome)')
       .eq('id_propriedade', id_propriedade)
       .order('dt_registro', { ascending: false })
       .range(offset, offset + limitValue - 1);

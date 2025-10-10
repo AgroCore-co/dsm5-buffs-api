@@ -145,7 +145,7 @@ export class CicloLactacaoService {
     const { data, error } = await this.supabase
       .getAdminClient()
       .from(this.tableName)
-      .select('*, bufala:Bufalo(nome), propriedade:Propriedade(nome)')
+      .select('*, id_bufala:bufalo!inner(nome), id_propriedade:propriedade!inner(nome)')
       .eq('id_propriedade', id_propriedade)
       .order('dt_parto', { ascending: false })
       .range(offset, offset + limitValue - 1);

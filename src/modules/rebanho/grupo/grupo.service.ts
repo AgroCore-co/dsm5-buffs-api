@@ -72,7 +72,7 @@ export class GrupoService {
 
     const { data, error } = await this.supabase
       .from('grupo')
-      .select('*, propriedade:Propriedade(nome)')
+      .select('*, id_propriedade:propriedade!inner(nome)')
       .eq('id_propriedade', id_propriedade)
       .order('nome_grupo', { ascending: true })
       .range(offset, offset + limitValue - 1);

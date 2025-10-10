@@ -250,11 +250,11 @@ export class MovLoteService {
       .select(
         `
         *,
-        grupo:id_grupo(nome_grupo),
-        lote_atual:id_lote_atual(nome_lote),
-        lote_anterior:id_lote_anterior(nome_lote),
-        usuario:id_usuario(nome),
-        propriedade:Propriedade(nome)
+        id_grupo:grupo!inner(nome_grupo),
+        id_lote_atual:lote!inner(nome_lote),
+        id_lote_anterior:lote(nome_lote),
+        id_usuario:usuario!inner(nome),
+        id_propriedade:propriedade!inner(nome)
       `,
       )
       .eq('id_propriedade', id_propriedade)
