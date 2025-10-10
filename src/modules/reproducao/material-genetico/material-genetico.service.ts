@@ -20,6 +20,7 @@ export class MaterialGeneticoService {
     try {
       // IMPORTANTE: Garantir que NÃO enviamos id_material - deixa o banco gerar automaticamente
       const dadosLimpos = {
+        id_propriedade: createMaterialGeneticoDto.id_propriedade,
         tipo: createMaterialGeneticoDto.tipo,
         origem: createMaterialGeneticoDto.origem,
         ...(createMaterialGeneticoDto.id_bufalo_origem && { id_bufalo_origem: createMaterialGeneticoDto.id_bufalo_origem }),
@@ -68,19 +69,11 @@ export class MaterialGeneticoService {
         throw new InternalServerErrorException(`Erro ao contar material genético: ${countError.message}`);
       }
 
-      // Buscar registros com paginação
+      // Buscar registros com paginação - sem relacionamentos para evitar erros de FK
       const { data, error } = await this.supabase
         .getAdminClient()
         .from(this.tableName)
-        .select(
-          `
-          *,
-          raca:id_raca(
-            id_raca,
-            nome_raca
-          )
-        `,
-        )
+        .select('*')
         .order('created_at', { ascending: false })
         .range(offset, offset + limitValue - 1);
 
@@ -116,19 +109,11 @@ export class MaterialGeneticoService {
         throw new InternalServerErrorException(`Erro ao contar material genético: ${countError.message}`);
       }
 
+      // Buscar sem relacionamentos para evitar erros de FK
       const { data, error } = await this.supabase
         .getAdminClient()
         .from(this.tableName)
-        .select(
-          `
-          *,
-          id_raca:raca!inner(
-            id_raca,
-            nome_raca
-          ),
-          id_propriedade:propriedade!inner(nome)
-        `,
-        )
+        .select('*')
         .eq('id_propriedade', id_propriedade)
         .order('created_at', { ascending: false })
         .range(offset, offset + limitValue - 1);
@@ -148,12 +133,7 @@ export class MaterialGeneticoService {
   }
 
   async findOne(id_material: string) {
-    const { data, error } = await this.supabase
-      .getAdminClient()
-      .from(this.tableName)
-      .select('*, bufalo_origem:Bufalo(id_bufalo, nome, brinco)')
-      .eq('id_material', id_material)
-      .single();
+    const { data, error } = await this.supabase.getAdminClient().from(this.tableName).select('*').eq('id_material', id_material).single();
 
     if (error || !data) {
       throw new NotFoundException(`Material genético com ID ${id_material} não encontrado.`);
