@@ -122,14 +122,10 @@ export class ControleLeiteiroService {
         bufalaId: createDto.id_bufala,
       });
 
+      // Buscar informações do búfalo sem relacionamentos complexos
       const { data: bufaloInfo, error: bufaloError } = await this.supabase
         .from('bufalo')
-        .select(
-          `
-          grupo:Grupo ( nome_grupo ),
-          propriedade:Propriedade ( nome )
-        `,
-        )
+        .select('id_bufalo, id_grupo, id_propriedade, nome')
         .eq('id_bufalo', createDto.id_bufala)
         .single();
 
@@ -151,6 +147,26 @@ export class ControleLeiteiroService {
         throw new Error('Informações do búfalo não encontradas.');
       }
 
+      // Buscar informações do grupo se existir
+      let grupoNome = 'Sem grupo';
+      if (bufaloInfo.id_grupo) {
+        const { data: grupoData } = await this.supabase.from('grupo').select('nome_grupo').eq('id_grupo', bufaloInfo.id_grupo).single();
+
+        if (grupoData) {
+          grupoNome = grupoData.nome_grupo;
+        }
+      }
+
+      // Buscar informações da propriedade
+      let propriedadeNome = 'Não informada';
+      if (bufaloInfo.id_propriedade) {
+        const { data: propData } = await this.supabase.from('propriedade').select('nome').eq('id_propriedade', bufaloInfo.id_propriedade).single();
+
+        if (propData) {
+          propriedadeNome = propData.nome;
+        }
+      }
+
       this.customLogger.log('Classificando prioridade da ocorrência com IA', {
         module: 'ControleLeiteiroService',
         method: 'processarAlertaOcorrencia',
@@ -170,8 +186,8 @@ export class ControleLeiteiroService {
 
       const alertaDto: CreateAlertaDto = {
         animal_id: createDto.id_bufala,
-        grupo: (bufaloInfo.grupo as any)?.nome_grupo || 'Não informado',
-        localizacao: (bufaloInfo.propriedade as any)?.nome || 'Não informada',
+        grupo: grupoNome,
+        localizacao: propriedadeNome,
         id_propriedade: createDto.id_propriedade,
         motivo: createDto.ocorrencia!,
         nicho: NichoAlerta.CLINICO,
