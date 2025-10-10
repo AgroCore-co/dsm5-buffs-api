@@ -79,13 +79,7 @@ export class DadosSanitariosService {
     const { data, error } = await this.supabase
       .getAdminClient()
       .from(this.tableName)
-      .select(
-        `
-        *,
-        medicacao:Medicacoes!inner(id_medicacao, tipo_tratamento, medicacao, descricao),
-        bufalo:id_bufalo(nome, brinco)
-      `,
-      )
+      .select('*')
       .order('dt_aplicacao', { ascending: false })
       .range(offset, offset + limit - 1);
 
@@ -114,12 +108,7 @@ export class DadosSanitariosService {
     const { data, error } = await this.supabase
       .getAdminClient()
       .from(this.tableName)
-      .select(
-        `
-        *,
-        medicacao:Medicacoes!inner(id_medicacao, tipo_tratamento, medicacao, descricao)
-      `,
-      )
+      .select('*')
       .eq('id_bufalo', id_bufalo)
       .order('dt_aplicacao', { ascending: false })
       .range(offset, offset + limit - 1);
@@ -132,17 +121,7 @@ export class DadosSanitariosService {
   }
 
   async findOne(id_sanit: string) {
-    const { data, error } = await this.supabase
-      .getAdminClient()
-      .from(this.tableName)
-      .select(
-        `
-        *,
-        medicacao:Medicacoes!inner(id_medicacao, tipo_tratamento, medicacao, descricao)
-      `,
-      )
-      .eq('id_sanit', id_sanit)
-      .single();
+    const { data, error } = await this.supabase.getAdminClient().from(this.tableName).select('*').eq('id_sanit', id_sanit).single();
 
     if (error || !data) {
       throw new NotFoundException(`Dado sanitário com ID ${id_sanit} não encontrado.`);
