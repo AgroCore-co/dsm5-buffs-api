@@ -11,7 +11,10 @@ export class RegistrosService {
 
   async create(dto: CreateRegistroAlimentacaoDto) {
     const { data, error } = await this.supabase.getAdminClient().from(this.tableName).insert(dto).select().single();
-    if (error) throw new InternalServerErrorException('Falha ao criar registro de alimentação.');
+    if (error) {
+      console.error('Erro ao criar registro de alimentação:', error);
+      throw new InternalServerErrorException(`Falha ao criar registro de alimentação: ${error.message}`);
+    }
     return data;
   }
 
@@ -33,9 +36,9 @@ export class RegistrosService {
       .select(
         `
         *,
-        alimentacao_def:AlimentacaoDef!id_aliment_def(tipo_alimentacao, descricao),
-        grupo:Grupo!id_grupo(nome_grupo, nivel_maturidade),
-        usuario:Usuario!id_usuario(nome)
+        alimentacao_def:alimentacaodef!id_aliment_def(tipo_alimentacao, descricao),
+        grupo:grupo!id_grupo(nome_grupo, nivel_maturidade),
+        usuario:usuario!id_usuario(nome)
       `,
       )
       .eq('id_propriedade', idPropriedade)
