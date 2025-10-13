@@ -58,11 +58,22 @@ export class AlimentacaoDefController {
   @Post()
   @ApiOperation({
     summary: 'Cria uma nova alimentação definida',
-    description: 'Cria um novo registro de alimentação definida no banco de dados. Retorna a alimentação completa com o ID gerado.',
+    description: `Cria um novo registro de alimentação definida no banco de dados. 
+    
+    Uma definição de alimentação é um tipo de alimento que pode ser reutilizado em múltiplos registros.
+    
+    **Campos obrigatórios:**
+    - id_propriedade: UUID da propriedade
+    - tipo_alimentacao: Tipo do alimento (ex: Concentrado, Volumoso, Suplemento Mineral)
+    
+    **Campos opcionais:**
+    - descricao: Descrição detalhada do alimento
+    
+    **Retorna:** O objeto completo da definição criada, incluindo o id_aliment_def gerado.`,
   })
   @ApiResponse({ status: 201, description: 'Alimentação definida criada com sucesso.' })
-  @ApiResponse({ status: 400, description: 'Dados inválidos.' })
-  @ApiResponse({ status: 401, description: 'Não autorizado.' })
+  @ApiResponse({ status: 400, description: 'Dados inválidos. Verifique os campos obrigatórios e formatos.' })
+  @ApiResponse({ status: 401, description: 'Não autorizado. Token de autenticação inválido ou ausente.' })
   create(@Body() createAlimentacaoDefDto: CreateAlimentacaoDefDto) {
     return this.alimentacaoDefService.create(createAlimentacaoDefDto);
   }
