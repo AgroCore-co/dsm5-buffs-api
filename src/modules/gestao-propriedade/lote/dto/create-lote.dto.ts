@@ -1,5 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { IsObject, IsString, IsNotEmpty, IsOptional, IsUUID, IsInt, IsPositive } from 'class-validator';
+import { Transform } from 'class-transformer';
 
 export class CreateLoteDto {
   @ApiProperty({
@@ -16,6 +17,16 @@ export class CreateLoteDto {
   })
   @IsUUID()
   id_propriedade: string;
+
+  @ApiProperty({
+    description: 'ID do grupo de búfalos associado a este lote (UUID). Opcional.',
+    example: 'f47ac10b-58cc-4372-a567-0e02b2c3d479',
+    required: false,
+  })
+  @IsUUID()
+  @IsOptional()
+  @Transform(({ value }) => (value === '' ? undefined : value))
+  id_grupo?: string;
 
   @ApiProperty({
     description: 'Tipo do lote (ex: pasto, curral, etc).',

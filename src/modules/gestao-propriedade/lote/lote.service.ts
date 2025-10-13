@@ -52,9 +52,35 @@ export class LoteService {
     }
   }
 
+  /**
+   * Valida se o grupo existe e pertence à mesma propriedade do lote
+   */
+  private async validateGrupoOwnership(grupoId: string, propriedadeId: string) {
+    if (!grupoId) return; // Se não há grupo, não precisa validar
+
+    const { data: grupo, error } = await this.supabase
+      .from('grupo')
+      .select('id_grupo, id_propriedade')
+      .eq('id_grupo', grupoId)
+      .single();
+
+    if (error || !grupo) {
+      throw new NotFoundException(`Grupo com ID ${grupoId} não encontrado.`);
+    }
+
+    if (grupo.id_propriedade !== propriedadeId) {
+      throw new BadRequestException(`O grupo selecionado não pertence à mesma propriedade do lote.`);
+    }
+  }
+
   async create(createLoteDto: CreateLoteDto, user: any) {
     const userId = await this.getUserId(user);
     await this.validateOwnership(createLoteDto.id_propriedade, userId);
+
+    // Valida se o grupo pertence à mesma propriedade (se informado)
+    if (createLoteDto.id_grupo) {
+      await this.validateGrupoOwnership(createLoteDto.id_grupo, createLoteDto.id_propriedade);
+    }
 
     // Inserção direta; geo_mapa já é objeto JSON
     const loteToInsert = {
@@ -80,7 +106,12 @@ export class LoteService {
 
     const { data, error } = await this.supabase
       .from('lote')
-      .select('*')
+      .select(
+        `
+        *,
+        grupo:id_grupo(id_grupo, nome_grupo, color, nivel_maturidade)
+      `,
+      )
       .eq('id_propriedade', id_propriedade)
       .order('created_at', { ascending: false });
 
@@ -99,7 +130,8 @@ export class LoteService {
       .select(
         `
         *,
-        Propriedade(id_dono)
+        propriedade:id_propriedade(id_dono),
+        grupo:id_grupo(id_grupo, nome_grupo, color, nivel_maturidade)
       `,
       )
       .eq('id_lote', id)
@@ -110,8 +142,8 @@ export class LoteService {
     }
 
     // Verifica se o usuário é dono da propriedade
-    if (data.Propriedade?.id_dono === userId) {
-      delete (data as any).Propriedade;
+    if (data.propriedade?.id_dono === userId) {
+      delete (data as any).propriedade;
       return this.parseGeoMapa(data);
     }
 
@@ -127,20 +159,28 @@ export class LoteService {
       throw new NotFoundException(`Lote com ID ${id} não encontrado ou não pertence a este usuário.`);
     }
 
-    delete (data as any).Propriedade;
+    delete (data as any).propriedade;
     return this.parseGeoMapa(data);
   }
 
   async update(id: string, updateLoteDto: UpdateLoteDto, user: any) {
-    await this.findOne(id, user); // Valida a posse do lote que será atualizado
+    const loteExistente = await this.findOne(id, user); // Valida a posse do lote que será atualizado
 
     // Atualização direta; geo_mapa já é objeto JSON
     const loteToUpdate: any = { ...updateLoteDto };
+
+    // Determina a propriedade a ser validada (nova ou existente)
+    const propriedadeParaValidar = loteToUpdate.id_propriedade || loteExistente.id_propriedade;
 
     // Se a propriedade estiver sendo alterada, valida a posse da nova propriedade
     if (loteToUpdate.id_propriedade) {
       const userId = await this.getUserId(user);
       await this.validateOwnership(loteToUpdate.id_propriedade, userId);
+    }
+
+    // Valida se o grupo pertence à mesma propriedade (se informado)
+    if (loteToUpdate.id_grupo !== undefined) {
+      await this.validateGrupoOwnership(loteToUpdate.id_grupo, propriedadeParaValidar);
     }
 
     const { data, error } = await this.supabase
