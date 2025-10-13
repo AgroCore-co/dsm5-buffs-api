@@ -36,19 +36,8 @@ export class AlertasScheduler {
 
       // Busca tratamentos que precisam de retorno na data alvo
       const { data: tratamentos, error } = await this.supabase
-        .from('DadosSanitarios')
-        .select(
-          `
-          id_sanit,
-          dt_retorno,
-          doenca,
-          bufalo:Bufalo (
-            id_bufalo,
-            grupo:Grupo ( nome_grupo ),
-            propriedade:Propriedade ( nome )
-          )
-        `,
-        )
+        .from('dadossanitarios')
+        .select('id_sanit, dt_retorno, doenca, id_bufalo, id_propriedade')
         .eq('necessita_retorno', true)
         .eq('dt_retorno', dataAlvoString);
 
@@ -67,19 +56,51 @@ export class AlertasScheduler {
 
       for (const tratamento of tratamentos) {
         try {
-          const bufaloInfo = tratamento.bufalo as any;
-
-          if (!bufaloInfo || !bufaloInfo.id_bufalo) {
-            this.logger.warn(`Dados do búfalo não encontrados para tratamento ${tratamento.id_sanit}`);
+          if (!tratamento.id_bufalo) {
+            this.logger.warn(`ID do búfalo não encontrado para tratamento ${tratamento.id_sanit}`);
             alertasComErro++;
             continue;
           }
 
+          // Buscar informações do búfalo
+          const { data: bufaloData } = await this.supabase
+            .from('bufalo')
+            .select('id_bufalo, id_grupo, id_propriedade')
+            .eq('id_bufalo', tratamento.id_bufalo)
+            .single();
+
+          if (!bufaloData) {
+            this.logger.warn(`Búfalo não encontrado para tratamento ${tratamento.id_sanit}`);
+            alertasComErro++;
+            continue;
+          }
+
+          // Buscar nome do grupo se existir
+          let grupoNome = 'Não informado';
+          if (bufaloData.id_grupo) {
+            const { data: grupoData } = await this.supabase.from('grupo').select('nome_grupo').eq('id_grupo', bufaloData.id_grupo).single();
+
+            if (grupoData) {
+              grupoNome = grupoData.nome_grupo;
+            }
+          }
+
+          // Buscar nome da propriedade
+          let propriedadeNome = 'Não informada';
+          const propriedadeId = tratamento.id_propriedade || bufaloData.id_propriedade;
+          if (propriedadeId) {
+            const { data: propData } = await this.supabase.from('propriedade').select('nome').eq('id_propriedade', propriedadeId).single();
+
+            if (propData) {
+              propriedadeNome = propData.nome;
+            }
+          }
+
           const alertaDto: CreateAlertaDto = {
-            animal_id: bufaloInfo.id_bufalo,
-            grupo: bufaloInfo.grupo?.nome_grupo || 'Não informado',
-            localizacao: bufaloInfo.propriedade?.nome || 'Não informada',
-            id_propriedade: bufaloInfo.propriedade?.id_propriedade || bufaloInfo.id_propriedade,
+            animal_id: bufaloData.id_bufalo,
+            grupo: grupoNome,
+            localizacao: propriedadeNome,
+            id_propriedade: propriedadeId,
             motivo: `Retorno de tratamento para "${tratamento.doenca}" agendado.`,
             nicho: NichoAlerta.SANITARIO,
             data_alerta: tratamento.dt_retorno,
@@ -112,18 +133,8 @@ export class AlertasScheduler {
 
     try {
       const { data: reproducoes, error } = await this.supabase
-        .from('DadosReproducao')
-        .select(
-          `
-          id_reproducao,
-          dt_evento,
-          bufala:Bufalo (
-            id_bufalo,
-            grupo:Grupo ( nome_grupo ),
-            propriedade:Propriedade ( nome )
-          )
-        `,
-        )
+        .from('dadosreproducao')
+        .select('id_reproducao, dt_evento, id_bufala, id_propriedade')
         .eq('status', 'Confirmada'); // Apenas para gestações confirmadas
 
       if (error) {
@@ -157,19 +168,51 @@ export class AlertasScheduler {
 
           // Gera o alerta apenas quando a data estiver no intervalo de antecedência
           if (diffDays > 0 && diffDays <= ANTECEDENCIA_PARTO_DIAS) {
-            const bufalaInfo = rep.bufala as any;
-
-            if (!bufalaInfo || !bufalaInfo.id_bufalo) {
-              this.logger.warn(`Dados da búfala não encontrados para reprodução ${rep.id_reproducao}`);
+            if (!rep.id_bufala) {
+              this.logger.warn(`ID da búfala não encontrado para reprodução ${rep.id_reproducao}`);
               alertasComErro++;
               continue;
             }
 
+            // Buscar informações da búfala
+            const { data: bufalaData } = await this.supabase
+              .from('bufalo')
+              .select('id_bufalo, id_grupo, id_propriedade')
+              .eq('id_bufalo', rep.id_bufala)
+              .single();
+
+            if (!bufalaData) {
+              this.logger.warn(`Búfala não encontrada para reprodução ${rep.id_reproducao}`);
+              alertasComErro++;
+              continue;
+            }
+
+            // Buscar nome do grupo se existir
+            let grupoNome = 'Não informado';
+            if (bufalaData.id_grupo) {
+              const { data: grupoData } = await this.supabase.from('grupo').select('nome_grupo').eq('id_grupo', bufalaData.id_grupo).single();
+
+              if (grupoData) {
+                grupoNome = grupoData.nome_grupo;
+              }
+            }
+
+            // Buscar nome da propriedade
+            let propriedadeNome = 'Não informada';
+            const propriedadeId = rep.id_propriedade || bufalaData.id_propriedade;
+            if (propriedadeId) {
+              const { data: propData } = await this.supabase.from('propriedade').select('nome').eq('id_propriedade', propriedadeId).single();
+
+              if (propData) {
+                propriedadeNome = propData.nome;
+              }
+            }
+
             const alertaDto: CreateAlertaDto = {
-              animal_id: bufalaInfo.id_bufalo,
-              grupo: bufalaInfo.grupo?.nome_grupo || 'Não informado',
-              localizacao: bufalaInfo.propriedade?.nome || 'Não informada',
-              id_propriedade: bufalaInfo.propriedade?.id_propriedade || bufalaInfo.id_propriedade,
+              animal_id: bufalaData.id_bufalo,
+              grupo: grupoNome,
+              localizacao: propriedadeNome,
+              id_propriedade: propriedadeId,
               motivo: `Previsão de parto para ${dataPrevistaParto.toLocaleDateString('pt-BR')}.`,
               nicho: NichoAlerta.REPRODUCAO,
               data_alerta: dataPrevistaParto.toISOString().split('T')[0],

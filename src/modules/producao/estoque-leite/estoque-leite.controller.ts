@@ -43,6 +43,21 @@ export class EstoqueLeiteController {
     return this.service.findAll(paginationDto);
   }
 
+  @Get('propriedade/:id_propriedade')
+  @ApiOperation({ summary: 'Lista registros de estoque por propriedade com paginação' })
+  @ApiParam({ name: 'id_propriedade', description: 'ID da propriedade', type: 'string' })
+  @ApiQuery({ name: 'page', required: false, type: Number, description: 'Número da página (padrão: 1)' })
+  @ApiQuery({ name: 'limit', required: false, type: Number, description: 'Itens por página (padrão: 10)' })
+  @ApiResponse({ status: 200, description: 'Lista de registros retornada com sucesso.' })
+  findByPropriedade(@Param('id_propriedade', ParseUUIDPipe) id_propriedade: string, @Query() paginationDto: PaginationDto) {
+    this.logger.logApiRequest('GET', `/estoque-leite/propriedade/${id_propriedade}`, undefined, {
+      module: 'EstoqueLeiteController',
+      method: 'findByPropriedade',
+      propriedadeId: id_propriedade,
+    });
+    return this.service.findByPropriedade(id_propriedade, paginationDto);
+  }
+
   @Get(':id')
   @ApiOperation({ summary: 'Busca um registro de estoque pelo ID' })
   @ApiParam({ name: 'id', description: 'ID do registro de estoque', type: 'string' })

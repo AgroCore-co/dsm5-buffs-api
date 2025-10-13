@@ -4,6 +4,9 @@ import { SupabaseService } from '../../../core/supabase/supabase.service';
 import { CreateMovLoteDto } from './dto/create-mov-lote.dto';
 import { UpdateMovLoteDto } from './dto/update-mov-lote.dto';
 import { LoggerService } from '../../../core/logger/logger.service';
+import { PaginationDto } from '../../../core/dto/pagination.dto';
+import { PaginatedResponse } from '../../../core/dto/pagination.dto';
+import { createPaginatedResponse, calculatePaginationParams } from '../../../core/utils/pagination.utils';
 
 @Injectable()
 export class MovLoteService {
@@ -18,15 +21,6 @@ export class MovLoteService {
     this.logger = logger;
   }
 
-  private async getUserId(user: any): Promise<number> {
-    const { data: perfilUsuario, error } = await this.supabase.from('usuario').select('id_usuario').eq('email', user.email).single();
-
-    if (error || !perfilUsuario) {
-      throw new NotFoundException('Perfil de usuário não encontrado.');
-    }
-    return perfilUsuario.id_usuario;
-  }
-
   /**
    * Valida apenas se as referências (lotes, grupo) existem no banco.
    */
@@ -36,7 +30,7 @@ export class MovLoteService {
     }
 
     const checkIfExists = async (tableName: string, columnName: string, id: string) => {
-      const { data, error } = await this.supabase.from(tableName).select('id').eq(columnName, id).maybeSingle();
+      const { data, error } = await this.supabase.from(tableName).select(columnName).eq(columnName, id).maybeSingle();
       if (error || !data) throw new NotFoundException(`${tableName} com ID ${id} não encontrado.`);
     };
 
@@ -46,15 +40,11 @@ export class MovLoteService {
   }
 
   async create(createDto: CreateMovLoteDto, user: any) {
-    const { id_grupo, id_lote_atual, dt_entrada, motivo } = createDto;
+    const { id_grupo, id_lote_atual, dt_entrada } = createDto;
     let { id_lote_anterior } = createDto;
 
-    const id_usuario = await this.getUserId(user);
-
     // Log inicial da operação
-    this.logger.log(
-      `[INICIO] Movimentacao fisica iniciada - Usuario: ${id_usuario}, Grupo: ${id_grupo}, Lote destino: ${id_lote_atual}, Data entrada: ${dt_entrada}`,
-    );
+    this.logger.log(`[INICIO] Movimentacao fisica iniciada - Grupo: ${id_grupo}, Lote destino: ${id_lote_atual}, Data entrada: ${dt_entrada}`);
 
     try {
       // Validação inicial
@@ -72,13 +62,7 @@ export class MovLoteService {
 
       const { data: registroAtual, error: findError } = await this.supabase
         .from('movlote')
-        .select(
-          `
-          *,
-          lote_atual:id_lote_atual(nome_lote),
-          grupo:id_grupo(nome_grupo)
-        `,
-        )
+        .select('*')
         .eq('id_grupo', id_grupo)
         .is('dt_saida', null)
         .maybeSingle();
@@ -92,7 +76,7 @@ export class MovLoteService {
 
       if (registroAtual) {
         this.logger.log(
-          `[REGISTRO_ENCONTRADO] Grupo ${id_grupo} atualmente no lote "${registroAtual.lote_atual?.nome}" desde ${registroAtual.dt_entrada}`,
+          `[REGISTRO_ENCONTRADO] Grupo ${id_grupo} atualmente no lote ${registroAtual.id_lote_atual} desde ${registroAtual.dt_entrada}`,
         );
 
         // Validação de data
@@ -103,7 +87,7 @@ export class MovLoteService {
 
         // Calcula tempo de permanência no lote anterior
         const diasPermanencia = Math.ceil((new Date(dt_entrada).getTime() - new Date(registroAtual.dt_entrada).getTime()) / (1000 * 60 * 60 * 24));
-        this.logger.log(`[PERMANENCIA] Grupo ${id_grupo} permaneceu ${diasPermanencia} dias no lote "${registroAtual.lote_atual?.nome}"`);
+        this.logger.log(`[PERMANENCIA] Grupo ${id_grupo} permaneceu ${diasPermanencia} dias no lote ${registroAtual.id_lote_atual}`);
 
         // Finaliza o registro anterior
         this.logger.debug(`[FINALIZANDO_REGISTRO] Fechando registro ${registroAtual.id_movimento} com data de saida: ${dt_entrada}`);
@@ -136,27 +120,14 @@ export class MovLoteService {
         id_grupo,
         id_lote_anterior,
         id_lote_atual,
+        id_propriedade: createDto.id_propriedade,
         dt_entrada,
         dt_saida: null,
-        id_usuario,
-        motivo: motivo || null,
       };
 
       this.logger.debug(`[CRIANDO_REGISTRO] Inserindo novo registro de movimentacao`, { dtoToInsert });
 
-      const { data: novoRegistro, error: insertError } = await this.supabase
-        .from('movlote')
-        .insert(dtoToInsert)
-        .select(
-          `
-          *,
-          grupo:id_grupo(nome_grupo),
-          lote_atual:id_lote_atual(nome),
-          lote_anterior:id_lote_anterior(nome),
-          usuario:id_usuario(nome)
-        `,
-        )
-        .single();
+      const { data: novoRegistro, error: insertError } = await this.supabase.from('movlote').insert(dtoToInsert).select('*').single();
 
       if (insertError) {
         this.logger.error(`[ERRO_INSERCAO] Falha ao inserir novo registro: ${insertError.message}`);
@@ -165,52 +136,33 @@ export class MovLoteService {
 
       // Log de sucesso detalhado
       this.logger.log(`[SUCESSO] Movimentacao registrada com sucesso - ID: ${novoRegistro.id_movimento}`);
-      this.logger.log(
-        `[DETALHES_SUCESSO] Grupo: "${(novoRegistro.grupo as any).nome_grupo}" | De: "${(loteAnterior as any)?.nome_lote || 'Primeira movimentação'}" | Para: "${(novoRegistro.lote_atual as any).nome_lote}" | Responsavel: "${(novoRegistro.usuario as any).nome}"`,
-      );
+      this.logger.log(`[DETALHES_SUCESSO] Grupo ID: ${id_grupo} movido para lote ID: ${id_lote_atual}`);
 
       // Log final da operação
-      this.logger.log(
-        `[FINALIZACAO] Operacao de movimentacao fisica concluida - Usuario: ${id_usuario}, Grupo: ${id_grupo}, Novo lote: ${id_lote_atual}`,
-      );
+      this.logger.log(`[FINALIZACAO] Operacao de movimentacao fisica concluida - Grupo: ${id_grupo}, Novo lote: ${id_lote_atual}`);
 
       return {
-        message: `Grupo "${(novoRegistro.grupo as any).nome_grupo}" movido com sucesso para o lote "${(novoRegistro.lote_atual as any).nome_lote}".`,
+        message: `Grupo movido com sucesso para o novo lote.`,
         movimentacao: {
           id: novoRegistro.id_movimento,
-          grupo: (novoRegistro.grupo as any).nome_grupo,
-          lote_anterior: (loteAnterior as any)?.nome_lote || 'Primeira movimentação',
-          lote_atual: (novoRegistro.lote_atual as any).nome_lote,
+          id_grupo: novoRegistro.id_grupo,
+          id_lote_anterior: novoRegistro.id_lote_anterior,
+          id_lote_atual: novoRegistro.id_lote_atual,
           dt_entrada: novoRegistro.dt_entrada,
-          motivo: novoRegistro.motivo,
-          responsavel: (novoRegistro.usuario as any).nome,
+          dt_saida: novoRegistro.dt_saida,
           dias_lote_anterior: registroAtual
             ? Math.ceil((new Date(dt_entrada).getTime() - new Date(registroAtual.dt_entrada).getTime()) / (1000 * 60 * 60 * 24))
             : null,
         },
       };
     } catch (error) {
-      this.logger.error(
-        `[ERRO_GERAL] Falha na movimentacao fisica - Usuario: ${id_usuario}, Grupo: ${id_grupo}, Erro: ${error.message}`,
-        error.stack,
-      );
+      this.logger.error(`[ERRO_GERAL] Falha na movimentacao fisica - Grupo: ${id_grupo}, Erro: ${error.message}`, error.stack);
       throw error;
     }
   }
 
   async findAll() {
-    const { data, error } = await this.supabase
-      .from('movlote')
-      .select(
-        `
-        *,
-        grupo:id_grupo(nome_grupo),
-        lote_atual:id_lote_atual(nome_lote),
-        lote_anterior:id_lote_anterior(nome_lote),
-        usuario:id_usuario(nome)
-      `,
-      )
-      .order('dt_entrada', { ascending: false });
+    const { data, error } = await this.supabase.from('movlote').select('*').order('dt_entrada', { ascending: false });
 
     if (error) {
       if (error.code === 'PGRST116') {
@@ -221,25 +173,57 @@ export class MovLoteService {
     return data ?? [];
   }
 
-  async findOne(id: string, user: any) {
-    const userId = await this.getUserId(user);
+  async findByPropriedade(id_propriedade: string, paginationDto: PaginationDto = {}): Promise<PaginatedResponse<any>> {
+    this.logger.log('Iniciando busca de movimentações por propriedade', {
+      module: 'MovLoteService',
+      method: 'findByPropriedade',
+      propriedadeId: id_propriedade,
+    });
+
+    const { page = 1, limit = 10 } = paginationDto;
+    const { limit: limitValue, offset } = calculatePaginationParams(page, limit);
+
+    const { count, error: countError } = await this.supabase
+      .from('movlote')
+      .select('*', { count: 'exact', head: true })
+      .eq('id_propriedade', id_propriedade);
+
+    if (countError) {
+      this.logger.error(`[ERRO] Falha ao contar movimentações da propriedade: ${countError.message}`);
+      throw new InternalServerErrorException(`Falha ao contar movimentações da propriedade: ${countError.message}`);
+    }
 
     const { data, error } = await this.supabase
       .from('movlote')
       .select('*')
-      .eq('id_movimento', id)
-      .eq('id_usuario', userId) // Checagem de posse direta
-      .single();
+      .eq('id_propriedade', id_propriedade)
+      .order('dt_entrada', { ascending: false })
+      .range(offset, offset + limitValue - 1);
+
+    if (error) {
+      this.logger.error(`[ERRO] Falha ao buscar movimentações da propriedade: ${error.message}`);
+      throw new InternalServerErrorException(`Falha ao buscar movimentações da propriedade: ${error.message}`);
+    }
+
+    this.logger.log(`Busca concluída - ${data?.length || 0} movimentações encontradas (página ${page})`, {
+      module: 'MovLoteService',
+      method: 'findByPropriedade',
+    });
+
+    return createPaginatedResponse(data || [], count || 0, page, limitValue);
+  }
+
+  async findOne(id: string) {
+    const { data, error } = await this.supabase.from('movlote').select('*').eq('id_movimento', id).single();
 
     if (error || !data) {
-      throw new NotFoundException(`Movimentação com ID ${id} não encontrada ou não pertence a este usuário.`);
+      throw new NotFoundException(`Movimentação com ID ${id} não encontrada.`);
     }
     return data;
   }
 
-  async update(id: string, updateDto: UpdateMovLoteDto, user: any) {
-    await this.validateReferences(updateDto);
-    await this.findOne(id, user); // Garante que a movimentação existe e pertence ao usuário
+  async update(id: string, updateDto: UpdateMovLoteDto) {
+    await this.findOne(id); // Garante que a movimentação existe
     await this.validateReferences(updateDto); // Valida as novas referências no DTO
 
     const { data, error } = await this.supabase.from('movlote').update(updateDto).eq('id_movimento', id).select().single();
@@ -250,8 +234,8 @@ export class MovLoteService {
     return data;
   }
 
-  async remove(id: string, user: any) {
-    await this.findOne(id, user); // Garante que a movimentação existe e pertence ao usuário
+  async remove(id: string) {
+    await this.findOne(id); // Garante que a movimentação existe
 
     const { error } = await this.supabase.from('movlote').delete().eq('id_movimento', id);
 
@@ -262,19 +246,7 @@ export class MovLoteService {
   }
 
   async findHistoricoByGrupo(id_grupo: string) {
-    const { data, error } = await this.supabase
-      .from('movlote')
-      .select(
-        `
-        *,
-        grupo:id_grupo(nome_grupo),
-        lote_atual:id_lote_atual(nome_lote),
-        lote_anterior:id_lote_anterior(nome_lote),
-        usuario:id_usuario(nome)
-      `,
-      )
-      .eq('id_grupo', id_grupo)
-      .order('dt_entrada', { ascending: false });
+    const { data, error } = await this.supabase.from('movlote').select('*').eq('id_grupo', id_grupo).order('dt_entrada', { ascending: false });
 
     if (error) {
       throw new InternalServerErrorException(`Falha ao buscar histórico: ${error.message}`);
@@ -282,38 +254,23 @@ export class MovLoteService {
 
     return {
       grupo_id: id_grupo,
-      grupo_nome: data[0]?.grupo?.nome_grupo || 'Desconhecido',
       total_movimentacoes: data.length,
       historico: data.map((mov) => ({
         id_movimento: mov.id_movimento,
-        lote_anterior: mov.lote_anterior?.nome_lote || 'Primeira movimentação',
-        lote_atual: mov.lote_atual.nome_lote,
+        id_lote_anterior: mov.id_lote_anterior,
+        id_lote_atual: mov.id_lote_atual,
         dt_entrada: mov.dt_entrada,
         dt_saida: mov.dt_saida,
         dias_permanencia: mov.dt_saida
           ? Math.ceil((new Date(mov.dt_saida).getTime() - new Date(mov.dt_entrada).getTime()) / (1000 * 60 * 60 * 24))
           : Math.ceil((new Date().getTime() - new Date(mov.dt_entrada).getTime()) / (1000 * 60 * 60 * 24)),
         status: mov.dt_saida ? 'Finalizado' : 'Atual',
-        motivo: mov.motivo,
-        responsavel: mov.usuario.nome,
       })),
     };
   }
 
   async findStatusAtual(id_grupo: string) {
-    const { data, error } = await this.supabase
-      .from('movlote')
-      .select(
-        `
-        *,
-        grupo:id_grupo(nome_grupo),
-        lote_atual:id_lote_atual(nome_lote),
-        usuario:id_usuario(nome)
-      `,
-      )
-      .eq('id_grupo', id_grupo)
-      .is('dt_saida', null)
-      .single();
+    const { data, error } = await this.supabase.from('movlote').select('*').eq('id_grupo', id_grupo).is('dt_saida', null).single();
 
     if (error) {
       if (error.code === 'PGRST116') {
@@ -325,17 +282,12 @@ export class MovLoteService {
     const diasNoLocal = Math.ceil((new Date().getTime() - new Date(data.dt_entrada).getTime()) / (1000 * 60 * 60 * 24));
 
     return {
-      grupo: {
-        id: id_grupo,
-        nome: data.grupo.nome_grupo,
-      },
+      grupo_id: id_grupo,
       localizacao_atual: {
-        lote: data.lote_atual.nome_lote,
+        id_lote: data.id_lote_atual,
         desde: data.dt_entrada,
         dias_no_local: diasNoLocal,
-        motivo_chegada: data.motivo,
       },
-      responsavel_movimentacao: data.usuario.nome,
     };
   }
 }

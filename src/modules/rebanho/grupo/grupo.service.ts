@@ -4,6 +4,9 @@ import { SupabaseService } from '../../../core/supabase/supabase.service';
 import { LoggerService } from '../../../core/logger/logger.service';
 import { CreateGrupoDto } from './dto/create-grupo.dto';
 import { UpdateGrupoDto } from './dto/update-grupo.dto';
+import { PaginationDto } from '../../../core/dto/pagination.dto';
+import { PaginatedResponse } from '../../../core/dto/pagination.dto';
+import { createPaginatedResponse, calculatePaginationParams } from '../../../core/utils/pagination.utils';
 
 @Injectable()
 export class GrupoService {
@@ -42,6 +45,52 @@ export class GrupoService {
 
     this.logger.log(`Busca de grupos concluída - ${data.length} grupos encontrados`, { module: 'GrupoService', method: 'findAll' });
     return data;
+  }
+
+  async findByPropriedade(id_propriedade: string, paginationDto: PaginationDto = {}): Promise<PaginatedResponse<any>> {
+    this.logger.log('Iniciando busca de grupos por propriedade', {
+      module: 'GrupoService',
+      method: 'findByPropriedade',
+      propriedadeId: id_propriedade,
+    });
+
+    const { page = 1, limit = 10 } = paginationDto;
+    const { limit: limitValue, offset } = calculatePaginationParams(page, limit);
+
+    const { count, error: countError } = await this.supabase
+      .from('grupo')
+      .select('*', { count: 'exact', head: true })
+      .eq('id_propriedade', id_propriedade);
+
+    if (countError) {
+      this.logger.logError(countError, {
+        module: 'GrupoService',
+        method: 'findByPropriedade',
+      });
+      throw new InternalServerErrorException(`Falha ao contar grupos da propriedade: ${countError.message}`);
+    }
+
+    const { data, error } = await this.supabase
+      .from('grupo')
+      .select('*, id_propriedade:propriedade!inner(nome)')
+      .eq('id_propriedade', id_propriedade)
+      .order('nome_grupo', { ascending: true })
+      .range(offset, offset + limitValue - 1);
+
+    if (error) {
+      this.logger.logError(error, {
+        module: 'GrupoService',
+        method: 'findByPropriedade',
+      });
+      throw new InternalServerErrorException(`Falha ao buscar grupos da propriedade: ${error.message}`);
+    }
+
+    this.logger.log(`Busca concluída - ${data.length} grupos encontrados (página ${page})`, {
+      module: 'GrupoService',
+      method: 'findByPropriedade',
+    });
+
+    return createPaginatedResponse(data, count || 0, page, limitValue);
   }
 
   async findOne(id: string) {

@@ -2,7 +2,7 @@ import { ApiProperty } from '@nestjs/swagger';
 import { IsUUID, IsNotEmpty, IsOptional, IsDateString, IsBoolean, IsString, IsNumber, MaxLength, IsPositive } from 'class-validator';
 
 export class CreateColetaDto {
-  @ApiProperty({ example: 1, description: 'ID da indústria que realizou a coleta' })
+  @ApiProperty({ example: 'f47ac10b-58cc-4372-a567-0e02b2c3d479', description: 'ID da indústria que realizou a coleta' })
   @IsUUID()
   @IsNotEmpty()
   id_industria: string;

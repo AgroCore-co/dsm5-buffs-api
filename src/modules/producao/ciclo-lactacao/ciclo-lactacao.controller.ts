@@ -44,6 +44,23 @@ export class CicloLactacaoController {
     return this.service.findAll(paginationDto);
   }
 
+  @Get('propriedade/:id_propriedade')
+  @UseInterceptors(CacheInterceptor)
+  @CacheTTL(900)
+  @ApiOperation({ summary: 'Lista ciclos de lactação por propriedade com paginação' })
+  @ApiParam({ name: 'id_propriedade', description: 'ID da propriedade', type: 'string' })
+  @ApiQuery({ name: 'page', required: false, type: Number, description: 'Número da página (padrão: 1)' })
+  @ApiQuery({ name: 'limit', required: false, type: Number, description: 'Itens por página (padrão: 10)' })
+  @ApiResponse({ status: 200, description: 'Lista retornada com sucesso.' })
+  findByPropriedade(@Param('id_propriedade', ParseUUIDPipe) id_propriedade: string, @Query() paginationDto: PaginationDto) {
+    this.logger.logApiRequest('GET', `/ciclos-lactacao/propriedade/${id_propriedade}`, undefined, {
+      module: 'CicloLactacaoController',
+      method: 'findByPropriedade',
+      propriedadeId: id_propriedade,
+    });
+    return this.service.findByPropriedade(id_propriedade, paginationDto);
+  }
+
   @Get(':id')
   @UseInterceptors(CacheInterceptor)
   @CacheTTL(900)

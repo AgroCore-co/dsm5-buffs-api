@@ -20,6 +20,7 @@ export class MaterialGeneticoService {
     try {
       // IMPORTANTE: Garantir que NÃO enviamos id_material - deixa o banco gerar automaticamente
       const dadosLimpos = {
+        id_propriedade: createMaterialGeneticoDto.id_propriedade,
         tipo: createMaterialGeneticoDto.tipo,
         origem: createMaterialGeneticoDto.origem,
         ...(createMaterialGeneticoDto.id_bufalo_origem && { id_bufalo_origem: createMaterialGeneticoDto.id_bufalo_origem }),
@@ -68,19 +69,11 @@ export class MaterialGeneticoService {
         throw new InternalServerErrorException(`Erro ao contar material genético: ${countError.message}`);
       }
 
-      // Buscar registros com paginação
+      // Buscar registros com paginação - sem relacionamentos para evitar erros de FK
       const { data, error } = await this.supabase
         .getAdminClient()
         .from(this.tableName)
-        .select(
-          `
-          *,
-          raca:id_raca(
-            id_raca,
-            nome_raca
-          )
-        `,
-        )
+        .select('*')
         .order('created_at', { ascending: false })
         .range(offset, offset + limitValue - 1);
 
@@ -98,13 +91,49 @@ export class MaterialGeneticoService {
     }
   }
 
+  async findByPropriedade(id_propriedade: string, paginationDto: PaginationDto = {}): Promise<PaginatedResponse<any>> {
+    this.logger.log('[INICIO] Buscando materiais genéticos por propriedade com paginação');
+
+    try {
+      const { page = 1, limit = 10 } = paginationDto;
+      const { limit: limitValue, offset } = calculatePaginationParams(page, limit);
+
+      const { count, error: countError } = await this.supabase
+        .getAdminClient()
+        .from(this.tableName)
+        .select('*', { count: 'exact', head: true })
+        .eq('id_propriedade', id_propriedade);
+
+      if (countError) {
+        this.logger.error(`[ERRO] Falha ao contar materiais da propriedade: ${countError.message}`);
+        throw new InternalServerErrorException(`Erro ao contar material genético: ${countError.message}`);
+      }
+
+      // Buscar sem relacionamentos para evitar erros de FK
+      const { data, error } = await this.supabase
+        .getAdminClient()
+        .from(this.tableName)
+        .select('*')
+        .eq('id_propriedade', id_propriedade)
+        .order('created_at', { ascending: false })
+        .range(offset, offset + limitValue - 1);
+
+      if (error) {
+        this.logger.error(`[ERRO] Falha na consulta por propriedade: ${error.message}`);
+        throw new InternalServerErrorException(`Erro ao buscar material genético: ${error.message}`);
+      }
+
+      this.logger.log(`[SUCESSO] ${data?.length || 0} materiais genéticos encontrados na propriedade (página ${page})`);
+
+      return createPaginatedResponse(data || [], count || 0, page, limitValue);
+    } catch (error) {
+      this.logger.error(`[ERRO_GERAL] ${error.message}`);
+      throw new InternalServerErrorException(`Erro ao buscar material genético: ${error.message}`);
+    }
+  }
+
   async findOne(id_material: string) {
-    const { data, error } = await this.supabase
-      .getAdminClient()
-      .from(this.tableName)
-      .select('*, bufalo_origem:Bufalo(id_bufalo, nome, brinco)')
-      .eq('id_material', id_material)
-      .single();
+    const { data, error } = await this.supabase.getAdminClient().from(this.tableName).select('*').eq('id_material', id_material).single();
 
     if (error || !data) {
       throw new NotFoundException(`Material genético com ID ${id_material} não encontrado.`);

@@ -1,10 +1,11 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, ParseUUIDPipe, UseGuards, HttpCode, Logger } from '@nestjs/common';
-import { ApiBearerAuth, ApiTags, ApiOperation, ApiResponse, ApiParam } from '@nestjs/swagger';
+import { Controller, Get, Post, Body, Patch, Param, Delete, ParseUUIDPipe, UseGuards, HttpCode, Logger, Query } from '@nestjs/common';
+import { ApiBearerAuth, ApiTags, ApiOperation, ApiResponse, ApiParam, ApiQuery } from '@nestjs/swagger';
 import { SupabaseAuthGuard } from '../../auth/guards/auth.guard';
 import { User } from '../../auth/decorators/user.decorator';
 import { MovLoteService } from './mov-lote.service';
 import { CreateMovLoteDto } from './dto/create-mov-lote.dto';
 import { UpdateMovLoteDto } from './dto/update-mov-lote.dto';
+import { PaginationDto } from '../../../core/dto/pagination.dto';
 
 @ApiBearerAuth('JWT-auth')
 @UseGuards(SupabaseAuthGuard)
@@ -51,22 +52,32 @@ export class MovLoteController {
     return this.service.findAll();
   }
 
+  @Get('propriedade/:id_propriedade')
+  @ApiOperation({ summary: 'Lista movimentações de lotes por propriedade com paginação' })
+  @ApiParam({ name: 'id_propriedade', description: 'ID da propriedade', type: 'string' })
+  @ApiQuery({ name: 'page', required: false, type: Number, description: 'Número da página (padrão: 1)' })
+  @ApiQuery({ name: 'limit', required: false, type: Number, description: 'Itens por página (padrão: 10)' })
+  @ApiResponse({ status: 200, description: 'Lista retornada com sucesso.' })
+  findByPropriedade(@Param('id_propriedade', ParseUUIDPipe) id_propriedade: string, @Query() paginationDto: PaginationDto) {
+    return this.service.findByPropriedade(id_propriedade, paginationDto);
+  }
+
   @Get(':id')
   @ApiOperation({ summary: 'Busca uma movimentação pelo ID' })
   @ApiParam({ name: 'id', description: 'ID da movimentação' })
   @ApiResponse({ status: 200, description: 'Registro encontrado.' })
-  @ApiResponse({ status: 404, description: 'Movimentação não encontrada ou não pertence ao usuário.' })
-  findOne(@Param('id', ParseUUIDPipe) id: string, @User() user: any) {
-    return this.service.findOne(id, user);
+  @ApiResponse({ status: 404, description: 'Movimentação não encontrada.' })
+  findOne(@Param('id', ParseUUIDPipe) id: string) {
+    return this.service.findOne(id);
   }
 
   @Patch(':id')
   @ApiOperation({ summary: 'Atualiza uma movimentação' })
   @ApiParam({ name: 'id', description: 'ID da movimentação a ser atualizada' })
   @ApiResponse({ status: 200, description: 'Registro atualizado com sucesso.' })
-  @ApiResponse({ status: 404, description: 'Movimentação não encontrada ou não pertence ao usuário.' })
-  update(@Param('id', ParseUUIDPipe) id: string, @Body() dto: UpdateMovLoteDto, @User() user: any) {
-    return this.service.update(id, dto, user);
+  @ApiResponse({ status: 404, description: 'Movimentação não encontrada.' })
+  update(@Param('id', ParseUUIDPipe) id: string, @Body() dto: UpdateMovLoteDto) {
+    return this.service.update(id, dto);
   }
 
   @Delete(':id')
@@ -74,9 +85,9 @@ export class MovLoteController {
   @ApiOperation({ summary: 'Remove o registro de uma movimentação' })
   @ApiParam({ name: 'id', description: 'ID da movimentação a ser removida' })
   @ApiResponse({ status: 204, description: 'Registro removido com sucesso.' })
-  @ApiResponse({ status: 404, description: 'Movimentação não encontrada ou não pertence ao usuário.' })
-  remove(@Param('id', ParseUUIDPipe) id: string, @User() user: any) {
-    return this.service.remove(id, user);
+  @ApiResponse({ status: 404, description: 'Movimentação não encontrada.' })
+  remove(@Param('id', ParseUUIDPipe) id: string) {
+    return this.service.remove(id);
   }
 
   @Get('historico/grupo/:id_grupo')

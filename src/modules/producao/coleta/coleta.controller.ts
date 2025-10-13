@@ -46,6 +46,23 @@ export class ColetaController {
     return this.service.findAll(paginationDto);
   }
 
+  @Get('propriedade/:id_propriedade')
+  @UseInterceptors(CacheInterceptor)
+  @CacheTTL(300)
+  @ApiOperation({ summary: 'Lista coletas por propriedade com paginação' })
+  @ApiParam({ name: 'id_propriedade', description: 'ID da propriedade', type: 'string' })
+  @ApiQuery({ name: 'page', required: false, type: Number, description: 'Número da página (padrão: 1)' })
+  @ApiQuery({ name: 'limit', required: false, type: Number, description: 'Itens por página (padrão: 10)' })
+  @ApiResponse({ status: 200, description: 'Lista de coletas retornada com sucesso.' })
+  findByPropriedade(@Param('id_propriedade', ParseUUIDPipe) id_propriedade: string, @Query() paginationDto: PaginationDto) {
+    this.logger.logApiRequest('GET', `/coletas/propriedade/${id_propriedade}`, undefined, {
+      module: 'ColetaController',
+      method: 'findByPropriedade',
+      propriedadeId: id_propriedade,
+    });
+    return this.service.findByPropriedade(id_propriedade, paginationDto);
+  }
+
   @Get(':id')
   @UseInterceptors(CacheInterceptor)
   @CacheTTL(300)

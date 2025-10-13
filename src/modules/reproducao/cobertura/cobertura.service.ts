@@ -12,10 +12,11 @@ export class CoberturaService {
 
   private readonly tableName = 'dadosreproducao';
 
-  async create(dto: CreateCoberturaDto) {
+  async create(dto: CreateCoberturaDto, auth_uuid: string) {
+    // Don't include id_usuario - it doesn't exist in dadosreproducao table
     const dtoComStatus = {
       ...dto,
-      status: dto.status || 'Em andamento', // Garante um status inicial
+      status: dto.status || 'Em andamento',
     };
 
     const { data, error } = await this.supabase.getAdminClient().from(this.tableName).insert(dtoComStatus).select().single();
@@ -47,6 +48,35 @@ export class CoberturaService {
 
     if (error) {
       throw new InternalServerErrorException(`Falha ao buscar dados de reprodução: ${error.message}`);
+    }
+
+    return createPaginatedResponse(data, count || 0, page, limitValue);
+  }
+
+  async findByPropriedade(id_propriedade: string, paginationDto: PaginationDto = {}): Promise<PaginatedResponse<any>> {
+    const { page = 1, limit = 10 } = paginationDto;
+    const { limit: limitValue, offset } = calculatePaginationParams(page, limit);
+
+    const { count, error: countError } = await this.supabase
+      .getAdminClient()
+      .from(this.tableName)
+      .select('*', { count: 'exact', head: true })
+      .eq('id_propriedade', id_propriedade);
+
+    if (countError) {
+      throw new InternalServerErrorException(`Falha ao contar dados de reprodução da propriedade: ${countError.message}`);
+    }
+
+    const { data, error } = await this.supabase
+      .getAdminClient()
+      .from(this.tableName)
+      .select('*')
+      .eq('id_propriedade', id_propriedade)
+      .order('dt_evento', { ascending: false })
+      .range(offset, offset + limitValue - 1);
+
+    if (error) {
+      throw new InternalServerErrorException(`Falha ao buscar dados de reprodução da propriedade: ${error.message}`);
     }
 
     return createPaginatedResponse(data, count || 0, page, limitValue);

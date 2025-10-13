@@ -92,10 +92,7 @@ export class AlertasService {
       const { limit: limitValue, offset } = calculatePaginationParams(page, limit);
 
       let countQuery = this.supabase.from('alertas').select('*', { count: 'exact', head: true });
-      let dataQuery = this.supabase.from('alertas').select(`
-        *,
-        animal:Bufalo ( id_bufalo, nome, brinco )
-      `);
+      let dataQuery = this.supabase.from('alertas').select('*');
 
       // Aplicar os mesmos filtros em ambas as queries
       if (tipo) {
@@ -126,7 +123,7 @@ export class AlertasService {
         throw new InternalServerErrorException(`Falha ao contar alertas: ${countError.message}`);
       }
 
-      // Buscar dados com paginação
+      // Buscar dados com paginação - sem relacionamentos para evitar erros de FK
       const { data, error } = await dataQuery
         .order('data_alerta', { ascending: true })
         .order('prioridade', { ascending: false })
@@ -134,6 +131,53 @@ export class AlertasService {
 
       if (error) {
         throw new InternalServerErrorException(`Falha ao buscar os alertas: ${error.message}`);
+      }
+
+      return createPaginatedResponse(data, count || 0, page, limitValue);
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  /**
+   * Retorna alertas de uma propriedade específica.
+   * @param id_propriedade - ID da propriedade.
+   * @param incluirVistos - Se `true`, inclui alertas já marcados como vistos.
+   * @param paginationDto - Parâmetros de paginação.
+   * @returns Um resultado paginado de alertas da propriedade.
+   */
+  async findByPropriedade(
+    id_propriedade: string,
+    incluirVistos: boolean = false,
+    paginationDto: PaginationDto = {},
+  ): Promise<PaginatedResponse<any>> {
+    try {
+      const { page = 1, limit = 10 } = paginationDto;
+      const { limit: limitValue, offset } = calculatePaginationParams(page, limit);
+
+      let countQuery = this.supabase.from('alertas').select('*', { count: 'exact', head: true }).eq('id_propriedade', id_propriedade);
+
+      let dataQuery = this.supabase.from('alertas').select('*').eq('id_propriedade', id_propriedade);
+
+      if (!incluirVistos) {
+        countQuery = countQuery.eq('visto', false);
+        dataQuery = dataQuery.eq('visto', false);
+      }
+
+      // Contar total
+      const { count, error: countError } = await countQuery;
+      if (countError) {
+        throw new InternalServerErrorException(`Falha ao contar alertas da propriedade: ${countError.message}`);
+      }
+
+      // Buscar dados com paginação
+      const { data, error } = await dataQuery
+        .order('data_alerta', { ascending: true })
+        .order('prioridade', { ascending: false })
+        .range(offset, offset + limitValue - 1);
+
+      if (error) {
+        throw new InternalServerErrorException(`Falha ao buscar alertas da propriedade: ${error.message}`);
       }
 
       return createPaginatedResponse(data, count || 0, page, limitValue);

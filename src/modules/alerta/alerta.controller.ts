@@ -114,6 +114,35 @@ export class AlertasController {
     return this.alertasService.findAll(tipo, antecendencia, incluirVistos, paginationDto);
   }
 
+  @Get('propriedade/:id_propriedade')
+  @UseInterceptors(CacheInterceptor)
+  @CacheTTL(30)
+  @ApiOperation({
+    summary: 'Lista alertas por propriedade',
+    description: 'Retorna todos os alertas de uma propriedade específica com paginação.',
+  })
+  @ApiParam({ name: 'id_propriedade', description: 'ID da propriedade', type: 'string' })
+  @ApiQuery({ name: 'page', required: false, type: Number, description: 'Número da página (padrão: 1)' })
+  @ApiQuery({ name: 'limit', required: false, type: Number, description: 'Itens por página (padrão: 10)' })
+  @ApiQuery({
+    name: 'incluirVistos',
+    required: false,
+    description: 'Se true, inclui alertas já visualizados',
+    type: Boolean,
+    example: false,
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Lista de alertas da propriedade retornada com sucesso.',
+  })
+  findByPropriedade(
+    @Param('id_propriedade', ParseUUIDPipe) id_propriedade: string,
+    @Query('incluirVistos', new ParseBoolPipe({ optional: true })) incluirVistos?: boolean,
+    @Query() paginationDto?: PaginationDto,
+  ) {
+    return this.alertasService.findByPropriedade(id_propriedade, incluirVistos, paginationDto);
+  }
+
   @Get(':id')
   @UseInterceptors(CacheInterceptor)
   @CacheTTL(30)

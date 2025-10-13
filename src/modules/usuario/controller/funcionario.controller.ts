@@ -25,8 +25,8 @@ export class FuncionarioController {
   @ApiResponse({ status: 201, description: 'Funcionário criado com sucesso.' })
   @ApiResponse({ status: 403, description: 'Acesso negado.' })
   @ApiResponse({ status: 409, description: 'Email já existe no sistema.' })
-  createFuncionario(@Body() createFuncionarioDto: CreateFuncionarioDto, @User() user: any) {
-    return this.funcionarioService.createFuncionario(createFuncionarioDto, user.email);
+  createFuncionario(@Body() createFuncionarioDto: CreateFuncionarioDto, @User('sub') authId: string) {
+    return this.funcionarioService.createFuncionario(createFuncionarioDto, authId);
   }
 
   @Get()
@@ -37,8 +37,8 @@ export class FuncionarioController {
     description: 'Lista todos os funcionários de todas as propriedades do proprietário/gerente logado.',
   })
   @ApiResponse({ status: 200, description: 'Lista de funcionários retornada com sucesso.' })
-  listarMeusFuncionarios(@User() user: any) {
-    return this.funcionarioService.listarMeusFuncionarios(user.email);
+  listarMeusFuncionarios(@User('sub') authId: string) {
+    return this.funcionarioService.listarMeusFuncionarios(authId);
   }
 
   @Get('propriedade/:idPropriedade')
@@ -48,8 +48,8 @@ export class FuncionarioController {
   })
   @ApiResponse({ status: 200, description: 'Lista de funcionários da propriedade retornada.' })
   @ApiResponse({ status: 403, description: 'Acesso negado. Você não é proprietário desta propriedade.' })
-  listarFuncionariosPorPropriedade(@Param('idPropriedade', ParseUUIDPipe) idPropriedade: string, @User() user: any) {
-    return this.funcionarioService.listarFuncionariosPorPropriedade(idPropriedade, user.email);
+  listarFuncionariosPorPropriedade(@Param('idPropriedade', ParseUUIDPipe) idPropriedade: string, @User('sub') authId: string) {
+    return this.funcionarioService.listarFuncionariosPorPropriedade(idPropriedade, authId);
   }
 
   @Delete(':idUsuario/propriedade/:idPropriedade')
@@ -63,8 +63,8 @@ export class FuncionarioController {
   desvincularFuncionario(
     @Param('idUsuario', ParseUUIDPipe) idUsuario: string,
     @Param('idPropriedade', ParseUUIDPipe) idPropriedade: string,
-    @User() user: any,
+    @User('sub') authId: string,
   ) {
-    return this.funcionarioService.desvincularFuncionario(idUsuario, idPropriedade, user.email);
+    return this.funcionarioService.desvincularFuncionario(idUsuario, idPropriedade, authId);
   }
 }

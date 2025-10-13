@@ -1,6 +1,7 @@
 import { Controller, Get, Post, Body, Patch, Param, Delete, ParseUUIDPipe, UseGuards, Query } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiResponse, ApiTags, ApiParam, ApiBody, ApiQuery } from '@nestjs/swagger';
 import { SupabaseAuthGuard } from '../../auth/guards/auth.guard';
+import { User } from '../../auth/decorators/user.decorator';
 import { CoberturaService } from './cobertura.service';
 import { CreateCoberturaDto } from './dto/create-cobertura.dto';
 import { UpdateCoberturaDto } from './dto/update-cobertura.dto';
@@ -18,8 +19,8 @@ export class CoberturaController {
   @ApiBody({ type: CreateCoberturaDto })
   @ApiResponse({ status: 201, description: 'Registro de reprodução criado com sucesso.' })
   @ApiResponse({ status: 400, description: 'Dados inválidos.' })
-  create(@Body() dto: CreateCoberturaDto) {
-    return this.service.create(dto);
+  create(@Body() dto: CreateCoberturaDto, @User('sub') id_usuario: string) {
+    return this.service.create(dto, id_usuario);
   }
 
   @Get()
@@ -29,6 +30,16 @@ export class CoberturaController {
   @ApiResponse({ status: 200, description: 'Lista de registros retornada com sucesso.' })
   findAll(@Query() paginationDto: PaginationDto) {
     return this.service.findAll(paginationDto);
+  }
+
+  @Get('propriedade/:id_propriedade')
+  @ApiOperation({ summary: 'Lista coberturas por propriedade com paginação' })
+  @ApiParam({ name: 'id_propriedade', description: 'ID da propriedade', type: 'string' })
+  @ApiQuery({ name: 'page', required: false, type: Number, description: 'Número da página (padrão: 1)' })
+  @ApiQuery({ name: 'limit', required: false, type: Number, description: 'Itens por página (padrão: 10)' })
+  @ApiResponse({ status: 200, description: 'Lista retornada com sucesso.' })
+  findByPropriedade(@Param('id_propriedade', ParseUUIDPipe) id_propriedade: string, @Query() paginationDto: PaginationDto) {
+    return this.service.findByPropriedade(id_propriedade, paginationDto);
   }
 
   @Get(':id')

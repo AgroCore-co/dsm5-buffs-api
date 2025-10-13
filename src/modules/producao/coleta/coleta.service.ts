@@ -24,15 +24,7 @@ export class ColetaService {
       industriaId: dto.id_industria,
     });
 
-    const { data, error } = await this.supabase
-      .getAdminClient()
-      .from(this.tableName)
-      .insert({
-        ...dto,
-        id_funcionario: id_funcionario,
-      })
-      .select()
-      .single();
+    const { data, error } = await this.supabase.getAdminClient().from(this.tableName).insert(dto).select().single();
 
     if (error) {
       this.logger.logError(error, {
@@ -76,7 +68,7 @@ export class ColetaService {
     const { data, error } = await this.supabase
       .getAdminClient()
       .from(this.tableName)
-      .select('*, industria:Industria(nome), funcionario:Usuario(nome)')
+      .select('*')
       .order('dt_coleta', { ascending: false })
       .range(offset, offset + limitValue - 1);
 
@@ -96,6 +88,54 @@ export class ColetaService {
     return createPaginatedResponse(data, count || 0, page, limitValue);
   }
 
+  async findByPropriedade(id_propriedade: string, paginationDto: PaginationDto = {}): Promise<PaginatedResponse<any>> {
+    this.logger.log('Iniciando busca de coletas por propriedade', {
+      module: 'ColetaService',
+      method: 'findByPropriedade',
+      propriedadeId: id_propriedade,
+    });
+
+    const { page = 1, limit = 10 } = paginationDto;
+    const { limit: limitValue, offset } = calculatePaginationParams(page, limit);
+
+    const { count, error: countError } = await this.supabase
+      .getAdminClient()
+      .from(this.tableName)
+      .select('*', { count: 'exact', head: true })
+      .eq('id_propriedade', id_propriedade);
+
+    if (countError) {
+      this.logger.logError(countError, {
+        module: 'ColetaService',
+        method: 'findByPropriedade',
+      });
+      throw new InternalServerErrorException(`Falha ao contar coletas da propriedade: ${countError.message}`);
+    }
+
+    const { data, error } = await this.supabase
+      .getAdminClient()
+      .from(this.tableName)
+      .select('*')
+      .eq('id_propriedade', id_propriedade)
+      .order('dt_coleta', { ascending: false })
+      .range(offset, offset + limitValue - 1);
+
+    if (error) {
+      this.logger.logError(error, {
+        module: 'ColetaService',
+        method: 'findByPropriedade',
+      });
+      throw new InternalServerErrorException(`Falha ao buscar coletas da propriedade: ${error.message}`);
+    }
+
+    this.logger.log(`Busca concluída - ${data.length} coletas encontradas (página ${page})`, {
+      module: 'ColetaService',
+      method: 'findByPropriedade',
+    });
+
+    return createPaginatedResponse(data, count || 0, page, limitValue);
+  }
+
   async findOne(id_coleta: string) {
     this.logger.log('Iniciando busca de coleta por ID', {
       module: 'ColetaService',
@@ -103,12 +143,7 @@ export class ColetaService {
       coletaId: id_coleta,
     });
 
-    const { data, error } = await this.supabase
-      .getAdminClient()
-      .from(this.tableName)
-      .select('*, industria:Industria(nome, representante), funcionario:Usuario(nome, cargo)')
-      .eq('id_coleta', id_coleta)
-      .single();
+    const { data, error } = await this.supabase.getAdminClient().from(this.tableName).select('*').eq('id_coleta', id_coleta).single();
 
     if (error || !data) {
       this.logger.warn('Coleta não encontrada', {

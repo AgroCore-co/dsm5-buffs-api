@@ -29,8 +29,7 @@ export class EstoqueLeiteService {
       .from(this.tableName)
       .insert({
         ...dto,
-        id_usuario: id_usuario,
-        dt_registro: dto.dt_registro || new Date(),
+        dt_registro: dto.dt_registro || new Date().toISOString(),
       })
       .select()
       .single();
@@ -77,7 +76,7 @@ export class EstoqueLeiteService {
     const { data, error } = await this.supabase
       .getAdminClient()
       .from(this.tableName)
-      .select('*, propriedade:Propriedade(nome), usuario:Usuario(nome)')
+      .select('*')
       .order('dt_registro', { ascending: false })
       .range(offset, offset + limitValue - 1);
 
@@ -97,6 +96,54 @@ export class EstoqueLeiteService {
     return createPaginatedResponse(data, count || 0, page, limitValue);
   }
 
+  async findByPropriedade(id_propriedade: string, paginationDto: PaginationDto = {}): Promise<PaginatedResponse<any>> {
+    this.logger.log('Iniciando busca de estoque por propriedade', {
+      module: 'EstoqueLeiteService',
+      method: 'findByPropriedade',
+      propriedadeId: id_propriedade,
+    });
+
+    const { page = 1, limit = 10 } = paginationDto;
+    const { limit: limitValue, offset } = calculatePaginationParams(page, limit);
+
+    const { count, error: countError } = await this.supabase
+      .getAdminClient()
+      .from(this.tableName)
+      .select('*', { count: 'exact', head: true })
+      .eq('id_propriedade', id_propriedade);
+
+    if (countError) {
+      this.logger.logError(countError, {
+        module: 'EstoqueLeiteService',
+        method: 'findByPropriedade',
+      });
+      throw new InternalServerErrorException(`Falha ao contar estoque da propriedade: ${countError.message}`);
+    }
+
+    const { data, error } = await this.supabase
+      .getAdminClient()
+      .from(this.tableName)
+      .select('*')
+      .eq('id_propriedade', id_propriedade)
+      .order('dt_registro', { ascending: false })
+      .range(offset, offset + limitValue - 1);
+
+    if (error) {
+      this.logger.logError(error, {
+        module: 'EstoqueLeiteService',
+        method: 'findByPropriedade',
+      });
+      throw new InternalServerErrorException(`Falha ao buscar estoque da propriedade: ${error.message}`);
+    }
+
+    this.logger.log(`Busca concluída - ${data.length} registros encontrados (página ${page})`, {
+      module: 'EstoqueLeiteService',
+      method: 'findByPropriedade',
+    });
+
+    return createPaginatedResponse(data, count || 0, page, limitValue);
+  }
+
   async findOne(id_estoque: string) {
     this.logger.log('Iniciando busca de registro de estoque por ID', {
       module: 'EstoqueLeiteService',
@@ -104,12 +151,7 @@ export class EstoqueLeiteService {
       estoqueId: id_estoque,
     });
 
-    const { data, error } = await this.supabase
-      .getAdminClient()
-      .from(this.tableName)
-      .select('*, propriedade:Propriedade(nome), usuario:Usuario(nome)')
-      .eq('id_estoque', id_estoque)
-      .single();
+    const { data, error } = await this.supabase.getAdminClient().from(this.tableName).select('*').eq('id_estoque', id_estoque).single();
 
     if (error || !data) {
       this.logger.warn('Registro de estoque não encontrado', {
