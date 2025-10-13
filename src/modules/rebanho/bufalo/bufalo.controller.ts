@@ -48,8 +48,7 @@ export class BufaloController {
   }
 
   @Get()
-  @UseInterceptors(CacheInterceptor)
-  @CacheTTL(300000) // 5 minutos
+  // Cache removido: dados de búfalos mudam frequentemente (criação, atualização, mudanças automáticas de maturidade)
   @ApiOperation({
     summary: 'Lista todos os búfalos do usuário logado com paginação',
     description: 'Retorna búfalos ordenados por data de nascimento (mais antigos primeiro), priorizando animais com status = true',
