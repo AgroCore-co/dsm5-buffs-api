@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, ParseUUIDPipe, UseGuards, Query } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, ParseUUIDPipe, UseGuards, Query, ParseBoolPipe, DefaultValuePipe } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiResponse, ApiTags, ApiParam, ApiQuery } from '@nestjs/swagger';
 import { SupabaseAuthGuard } from '../../auth/guards/auth.guard';
 import { User } from '../../auth/decorators/user.decorator';
@@ -6,6 +6,7 @@ import { DadosSanitariosService } from './dados-sanitarios.service';
 import { CreateDadosSanitariosDto } from './dto/create-dados-sanitarios.dto';
 import { UpdateDadosSanitariosDto } from './dto/update-dados-sanitarios.dto';
 import { PaginationDto } from '../../../core/dto/pagination.dto';
+import { FrequenciaDoencasResponseDto } from './dto/frequencia-doencas.dto';
 
 @ApiBearerAuth('JWT-auth')
 @UseGuards(SupabaseAuthGuard)
@@ -15,10 +16,54 @@ export class DadosSanitariosController {
   constructor(private readonly service: DadosSanitariosService) {}
 
   @Post()
-  @ApiOperation({ summary: 'Cria um novo registro sanitário' })
+  @ApiOperation({
+    summary: 'Cria um novo registro sanitário',
+    description: `
+      Cria um novo registro sanitário. O nome da doença será automaticamente 
+      normalizado e corrigido se houver erros de digitação conhecidos.
+      
+      Exemplos de correção automática:
+      - "Verminose" → "verminose"
+      - "vverminose" → "verminose"
+      - "mastiti" → "mastite"
+    `,
+  })
   @ApiResponse({ status: 201, description: 'Registro criado com sucesso.' })
   create(@Body() dto: CreateDadosSanitariosDto, @User('sub') id_usuario: string) {
     return this.service.create(dto, id_usuario);
+  }
+
+  @Get('doencas/sugestoes')
+  @ApiOperation({
+    summary: 'Retorna sugestões de nomes de doenças',
+    description: `
+      Útil para autocomplete no frontend. Retorna doenças similares ao termo pesquisado.
+      Se nenhum termo for fornecido, retorna as doenças mais comuns.
+    `,
+  })
+  @ApiQuery({
+    name: 'termo',
+    required: false,
+    type: String,
+    description: 'Termo de busca parcial',
+    example: 'verm',
+  })
+  @ApiQuery({
+    name: 'limit',
+    required: false,
+    type: Number,
+    description: 'Número máximo de sugestões (padrão: 5)',
+    example: 5,
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Lista de sugestões retornada com sucesso.',
+    schema: {
+      example: ['verminose', 'verminos', 'verme'],
+    },
+  })
+  getSugestoesDoencas(@Query('termo') termo?: string, @Query('limit', new DefaultValuePipe(5)) limit?: number) {
+    return this.service.getSugestoesDoencas(termo, limit);
   }
 
   @Get()
@@ -61,6 +106,56 @@ export class DadosSanitariosController {
     return this.service.findByPropriedade(id_propriedade, paginationDto);
   }
 
+  @Get('propriedade/:id_propriedade/frequencia-doencas')
+  @ApiOperation({
+    summary: 'Retorna a frequência de doenças registradas na propriedade',
+    description: `
+      Analisa todos os registros sanitários da propriedade e retorna a frequência 
+      de cada doença registrada. Os nomes das doenças são normalizados (lowercase) 
+      para evitar duplicatas por diferença de capitalização.
+      
+      Ordenado por frequência (mais comum primeiro).
+      
+      OPCIONAL: Pode agrupar doenças com nomes similares (ex: erros de digitação) 
+      usando o parâmetro 'agruparSimilares=true'.
+    `,
+  })
+  @ApiParam({
+    name: 'id_propriedade',
+    description: 'ID da propriedade',
+    type: 'string',
+  })
+  @ApiQuery({
+    name: 'agruparSimilares',
+    required: false,
+    type: Boolean,
+    description: 'Se true, agrupa doenças com nomes similares (detecta erros de digitação)',
+    example: false,
+  })
+  @ApiQuery({
+    name: 'limiarSimilaridade',
+    required: false,
+    type: Number,
+    description: 'Limiar de similaridade para agrupamento (0-1). Quanto maior, mais restritivo. Padrão: 0.8',
+    example: 0.8,
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Frequência de doenças retornada com sucesso.',
+    type: FrequenciaDoencasResponseDto,
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Propriedade não encontrada.',
+  })
+  async getFrequenciaDoencas(
+    @Param('id_propriedade', ParseUUIDPipe) id_propriedade: string,
+    @Query('agruparSimilares', new DefaultValuePipe(false), ParseBoolPipe) agruparSimilares: boolean,
+    @Query('limiarSimilaridade', new DefaultValuePipe(0.8)) limiarSimilaridade: number,
+  ): Promise<FrequenciaDoencasResponseDto> {
+    return this.service.getFrequenciaDoencas(id_propriedade, agruparSimilares, limiarSimilaridade);
+  }
+
   @Get(':id')
   @ApiOperation({ summary: 'Busca um registro sanitário pelo ID' })
   @ApiParam({ name: 'id', description: 'ID do registro sanitário', type: 'string' })
@@ -68,6 +163,43 @@ export class DadosSanitariosController {
   @ApiResponse({ status: 404, description: 'Registro não encontrado.' })
   findOne(@Param('id', ParseUUIDPipe) id: string) {
     return this.service.findOne(id);
+  }
+
+  @Post('migrar-doencas')
+  @ApiOperation({
+    summary: '[ADMIN] Normaliza todas as doenças existentes',
+    description: `
+      **ATENÇÃO: Execute este endpoint UMA VEZ após implementar a normalização automática.**
+      
+      Atualiza todos os registros existentes aplicando a normalização automática de doenças.
+      
+      Exemplos de normalização:
+      - "Verminose" → "verminose"
+      - "vverminose" → "verminose"
+      - "MASTITE" → "mastite"
+      - "mastiti" → "mastite"
+      
+      Após executar, você pode deletar este endpoint do código.
+    `,
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Doenças normalizadas com sucesso',
+    schema: {
+      example: {
+        message: 'Migração concluída',
+        total: 8,
+        atualizados: 5,
+        sem_alteracao: 3,
+        detalhes: [
+          { id: 'uuid-1', de: 'Verminose', para: 'verminose' },
+          { id: 'uuid-2', de: 'vverminose', para: 'verminose' },
+        ],
+      },
+    },
+  })
+  migrarDoencas() {
+    return this.service.migrarNormalizacaoDoencas();
   }
 
   @Patch(':id')
