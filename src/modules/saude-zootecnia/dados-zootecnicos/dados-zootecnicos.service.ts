@@ -93,6 +93,42 @@ export class DadosZootecnicosService {
     return createPaginatedResponse(data, count || 0, page, limitValue);
   }
 
+  async findAllByPropriedade(id_propriedade: string, paginationDto: PaginationDto = {}): Promise<PaginatedResponse<any>> {
+    const { page = 1, limit = 10 } = paginationDto;
+    const { limit: limitValue, offset } = calculatePaginationParams(page, limit);
+
+    // Primeiro, busca o total de registros para a propriedade (através do JOIN com búfalos)
+    const { count, error: countError } = await this.supabase
+      .getAdminClient()
+      .from(this.tableName)
+      .select('id_zootec, bufalo!inner(id_propriedade)', { count: 'exact', head: true })
+      .eq('bufalo.id_propriedade', id_propriedade);
+
+    if (countError) {
+      throw new InternalServerErrorException(`Falha ao contar dados zootécnicos da propriedade: ${countError.message}`);
+    }
+
+    // Buscar registros com informações do búfalo
+    const { data, error } = await this.supabase
+      .getAdminClient()
+      .from(this.tableName)
+      .select(
+        `
+        *,
+        bufalo:id_bufalo(id_bufalo, nome, brinco, id_propriedade)
+      `,
+      )
+      .eq('bufalo.id_propriedade', id_propriedade)
+      .order('dt_registro', { ascending: false })
+      .range(offset, offset + limitValue - 1);
+
+    if (error) {
+      throw new InternalServerErrorException(`Falha ao buscar dados zootécnicos da propriedade: ${error.message}`);
+    }
+
+    return createPaginatedResponse(data, count || 0, page, limitValue);
+  }
+
   async findOne(id_zootec: string) {
     const { data, error } = await this.supabase.getAdminClient().from(this.tableName).select('*').eq('id_zootec', id_zootec).single();
 

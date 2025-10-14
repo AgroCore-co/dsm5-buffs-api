@@ -120,6 +120,42 @@ export class DadosSanitariosService {
     return createPaginatedResponse(data || [], count || 0, page, limit);
   }
 
+  async findByPropriedade(id_propriedade: string, paginationDto: PaginationDto = {}): Promise<PaginatedResponse<any>> {
+    const { page = 1, limit = 10 } = paginationDto;
+    const { offset } = calculatePaginationParams(page, limit);
+
+    // Primeiro, busca o total de registros para a propriedade (através do JOIN com búfalos)
+    const { count, error: countError } = await this.supabase
+      .getAdminClient()
+      .from(this.tableName)
+      .select('id_sanit, bufalo!inner(id_propriedade)', { count: 'exact', head: true })
+      .eq('bufalo.id_propriedade', id_propriedade);
+
+    if (countError) {
+      throw new InternalServerErrorException(`Falha ao contar registros sanitários da propriedade: ${countError.message}`);
+    }
+
+    // Busca os registros com informações do búfalo
+    const { data, error } = await this.supabase
+      .getAdminClient()
+      .from(this.tableName)
+      .select(
+        `
+        *,
+        bufalo:id_bufalo(id_bufalo, nome, brinco, id_propriedade)
+      `,
+      )
+      .eq('bufalo.id_propriedade', id_propriedade)
+      .order('dt_aplicacao', { ascending: false })
+      .range(offset, offset + limit - 1);
+
+    if (error) {
+      throw new InternalServerErrorException(`Falha ao buscar dados sanitários da propriedade: ${error.message}`);
+    }
+
+    return createPaginatedResponse(data || [], count || 0, page, limit);
+  }
+
   async findOne(id_sanit: string) {
     const { data, error } = await this.supabase.getAdminClient().from(this.tableName).select('*').eq('id_sanit', id_sanit).single();
 

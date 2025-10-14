@@ -47,6 +47,20 @@ export class DadosSanitariosController {
     return this.service.findByBufalo(id_bufalo, paginationDto);
   }
 
+  @Get('propriedade/:id_propriedade')
+  @ApiOperation({
+    summary: 'Busca todos os registros sanitários de uma propriedade com paginação',
+    description:
+      'Retorna todos os registros sanitários dos búfalos de uma propriedade específica, ordenados por data de aplicação (mais recentes primeiro)',
+  })
+  @ApiParam({ name: 'id_propriedade', description: 'ID da propriedade', type: 'string' })
+  @ApiQuery({ name: 'page', required: false, type: Number, description: 'Número da página (começa em 1)' })
+  @ApiQuery({ name: 'limit', required: false, type: Number, description: 'Número de itens por página (máximo 100)' })
+  @ApiResponse({ status: 200, description: 'Registros encontrados.' })
+  findByPropriedade(@Param('id_propriedade', ParseUUIDPipe) id_propriedade: string, @Query() paginationDto: PaginationDto) {
+    return this.service.findByPropriedade(id_propriedade, paginationDto);
+  }
+
   @Get(':id')
   @ApiOperation({ summary: 'Busca um registro sanitário pelo ID' })
   @ApiParam({ name: 'id', description: 'ID do registro sanitário', type: 'string' })

@@ -48,6 +48,19 @@ export class DadosZootecnicosController {
     return this.service.findAllByBufalo(id_bufalo, paginationDto);
   }
 
+  @Get('/propriedade/:id_propriedade')
+  @ApiOperation({
+    summary: 'Lista todos os registros zootécnicos de uma propriedade com paginação',
+    description: 'Retorna o histórico completo de dados zootécnicos para todos os búfalos de uma propriedade específica.',
+  })
+  @ApiParam({ name: 'id_propriedade', description: 'ID da propriedade para consultar os registros', type: 'string' })
+  @ApiQuery({ name: 'page', required: false, type: Number, description: 'Número da página (padrão: 1)' })
+  @ApiQuery({ name: 'limit', required: false, type: Number, description: 'Itens por página (padrão: 10)' })
+  @ApiResponse({ status: 200, description: 'Lista de registros retornada com sucesso.' })
+  findAllByPropriedade(@Param('id_propriedade', ParseUUIDPipe) id_propriedade: string, @Query() paginationDto: PaginationDto) {
+    return this.service.findAllByPropriedade(id_propriedade, paginationDto);
+  }
+
   // --- ROTAS DIRETAS PARA UM REGISTRO ESPECÍFICO ---
 
   @Get(':id_zootec')
