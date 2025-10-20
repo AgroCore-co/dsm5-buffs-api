@@ -1,5 +1,13 @@
 import { ApiProperty } from '@nestjs/swagger';
 
+class BufalosPorRacaDto {
+  @ApiProperty({ description: 'Nome da raça', example: 'Murrah' })
+  raca: string;
+
+  @ApiProperty({ description: 'Quantidade de búfalos desta raça', example: 45 })
+  quantidade: number;
+}
+
 export class DashboardStatsDto {
   @ApiProperty({ description: 'Quantidade de machos ativos', example: 25 })
   qtd_macho_ativos: number;
@@ -30,4 +38,16 @@ export class DashboardStatsDto {
 
   @ApiProperty({ description: 'Quantidade de usuários', example: 5 })
   qtd_usuarios: number;
+
+  @ApiProperty({
+    description: 'Total de búfalos por raça',
+    example: [
+      { raca: 'Murrah', quantidade: 45 },
+      { raca: 'Jafarabadi', quantidade: 38 },
+      { raca: 'Mediterrâneo', quantidade: 31 },
+      { raca: 'Carabao', quantidade: 14 },
+    ],
+    type: [BufalosPorRacaDto],
+  })
+  bufalosPorRaca: BufalosPorRacaDto[];
 }

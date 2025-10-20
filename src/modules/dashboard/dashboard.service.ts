@@ -24,10 +24,10 @@ export class DashboardService {
         throw new NotFoundException(`Propriedade com ID ${id_propriedade} não encontrada.`);
       }
 
-      // Busca estatísticas dos búfalos
+      // Busca estatísticas dos búfalos com informação da raça
       const { data: bufalosStats, error: bufalosError } = await supabase
         .from('bufalo')
-        .select('sexo, nivel_maturidade, status')
+        .select('sexo, nivel_maturidade, status, id_raca, raca:id_raca(nome)')
         .eq('id_propriedade', id_propriedade);
 
       if (bufalosError) {
@@ -69,6 +69,18 @@ export class DashboardService {
       const bufalos = bufalosStats || [];
       const bufalosAtivos = bufalos.filter((b) => b.status === true);
 
+      // Processa búfalos por raça
+      const racaMap = new Map<string, number>();
+      
+      bufalos.forEach((bufalo: any) => {
+        const nomeRaca = bufalo.raca?.nome || 'Sem Raça';
+        racaMap.set(nomeRaca, (racaMap.get(nomeRaca) || 0) + 1);
+      });
+
+      const bufalosPorRaca = Array.from(racaMap.entries())
+        .map(([raca, quantidade]) => ({ raca, quantidade }))
+        .sort((a, b) => b.quantidade - a.quantidade); // Ordena por quantidade decrescente
+
       const stats: DashboardStatsDto = {
         qtd_macho_ativos: bufalosAtivos.filter((b) => b.sexo === 'M').length,
         qtd_femeas_ativas: bufalosAtivos.filter((b) => b.sexo === 'F').length,
@@ -80,6 +92,7 @@ export class DashboardService {
         qtd_bufalas_lactando: bufalasLactando?.length || 0,
         qtd_lotes: qtdLotes || 0,
         qtd_usuarios: qtdUsuarios || 0,
+        bufalosPorRaca,
       };
 
       return stats;

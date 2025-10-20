@@ -19,7 +19,7 @@ export class CreateLoteDto {
   id_propriedade: string;
 
   @ApiProperty({
-    description: 'ID do grupo de búfalos associado a este lote (UUID). Opcional.',
+    description: 'ID do grupo de búfalos associado a este lote (UUID). Quando informado, o grupo deve pertencer à mesma propriedade do lote.',
     example: 'f47ac10b-58cc-4372-a567-0e02b2c3d479',
     required: false,
   })

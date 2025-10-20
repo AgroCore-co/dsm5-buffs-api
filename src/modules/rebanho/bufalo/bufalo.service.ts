@@ -234,7 +234,18 @@ export class BufaloService {
     // Valida acesso antes de buscar os dados completos
     await this.validateBufaloAccess(id, userId);
 
-    const { data, error } = await this.supabase.from(this.tableName).select('*').eq('id_bufalo', id).single();
+    const { data, error } = await this.supabase
+      .from(this.tableName)
+      .select(
+        `
+        *,
+        raca:id_raca(nome),
+        grupo:id_grupo(nome_grupo),
+        propriedade:id_propriedade(nome)
+      `,
+      )
+      .eq('id_bufalo', id)
+      .single();
 
     if (error || !data) {
       throw new NotFoundException(`Búfalo com ID ${id} não encontrado.`);
