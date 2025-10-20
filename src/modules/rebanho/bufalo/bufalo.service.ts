@@ -167,15 +167,19 @@ export class BufaloService {
 
     console.log('BufaloService.create - Búfalo criado com sucesso:', data);
 
-    // Processa categoria ABCB em background
+    // Processa categoria ABCB em background (não bloqueia a resposta)
     if (data?.id_bufalo) {
-      setTimeout(async () => {
+      setImmediate(async () => {
         try {
+          this.logger.log(`Iniciando processamento de categoria ABCB em background para búfalo ${data.id_bufalo}`);
           await this.processarCategoriaABCB(data.id_bufalo);
+          this.logger.log(`Categoria ABCB processada com sucesso para búfalo ${data.id_bufalo}`);
         } catch (error) {
-          console.error('Erro ao processar categoria ABCB em background:', error);
+          // Não propaga o erro para não afetar a criação principal
+          this.logger.error(`Erro ao processar categoria ABCB em background para búfalo ${data.id_bufalo}:`, error);
+          console.error('Stack trace completo:', error);
         }
-      }, 1000);
+      });
     }
 
     return data;
@@ -361,14 +365,19 @@ export class BufaloService {
       throw new InternalServerErrorException(`Falha ao atualizar o búfalo: ${error.message}`);
     }
 
-    // Processa categoria ABCB em background
-    setTimeout(async () => {
+    // Processa categoria ABCB em background (não bloqueia a resposta)
+    // Usa setImmediate ao invés de setTimeout para melhor performance
+    setImmediate(async () => {
       try {
+        this.logger.log(`Iniciando processamento de categoria ABCB em background para búfalo ${id}`);
         await this.processarCategoriaABCB(id);
+        this.logger.log(`Categoria ABCB processada com sucesso para búfalo ${id}`);
       } catch (error) {
-        console.error('Erro ao processar categoria ABCB em background:', error);
+        // Não propaga o erro para não afetar a atualização principal
+        this.logger.error(`Erro ao processar categoria ABCB em background para búfalo ${id}:`, error);
+        console.error('Stack trace completo:', error);
       }
-    }, 1000);
+    });
 
     return data;
   }
@@ -645,7 +654,19 @@ export class BufaloService {
         return null;
       }
 
-      console.log(`Búfalo encontrado: ${bufalo.nome}, Raça: ${bufalo.id_raca}, Propriedade ABCB: ${bufalo.Propriedade?.p_abcb}`);
+      // Validação crítica: verifica se a propriedade foi carregada
+      if (!bufalo.propriedade) {
+        console.error(`ERRO: Propriedade não carregada para búfalo ${bufaloId}`);
+        console.error('Estrutura do búfalo:', JSON.stringify(bufalo, null, 2));
+        throw new InternalServerErrorException(
+          `Não foi possível carregar os dados da propriedade para o búfalo ${bufalo.nome}. Verifique se a relação id_propriedade está correta.`
+        );
+      }
+
+      // Acessa a propriedade com o alias correto do Supabase (minúsculo)
+      const propriedadeABCB = bufalo.propriedade?.p_abcb ?? false;
+      
+      console.log(`Búfalo encontrado: ${bufalo.nome}, Raça: ${bufalo.id_raca}, Propriedade ABCB: ${propriedadeABCB}`);
 
       // Se não tem raça definida, tenta sugerir com Gemini
       if (!bufalo.id_raca) {
@@ -677,9 +698,9 @@ export class BufaloService {
 
       // Calcula categoria
       console.log(`Calculando categoria ABCB para ${bufalo.nome}...`);
-      console.log(`Parâmetros: propriedadeABCB=${bufalo.Propriedade.p_abcb}, temRaca=${Boolean(bufalo.id_raca)}`);
+      console.log(`Parâmetros: propriedadeABCB=${propriedadeABCB}, temRaca=${Boolean(bufalo.id_raca)}`);
 
-      const categoria = CategoriaABCBUtil.calcularCategoria(arvore, bufalo.Propriedade.p_abcb, Boolean(bufalo.id_raca));
+      const categoria = CategoriaABCBUtil.calcularCategoria(arvore, propriedadeABCB, Boolean(bufalo.id_raca));
 
       console.log(`Categoria calculada para ${bufalo.nome}: ${categoria}`);
 
@@ -763,7 +784,7 @@ export class BufaloService {
         .select(
           `
           *,
-          propriedade!inner (
+          propriedade:id_propriedade (
             p_abcb,
             endereco (estado)
           )
@@ -774,7 +795,19 @@ export class BufaloService {
 
       if (error) {
         console.error(`Erro ao buscar dados completos do búfalo ${bufaloId}:`, error);
+        console.error('Detalhes do erro:', JSON.stringify(error, null, 2));
         throw new InternalServerErrorException(`Falha ao buscar dados do búfalo: ${error.message}`);
+      }
+
+      if (!data) {
+        console.warn(`Búfalo ${bufaloId} não encontrado no banco de dados`);
+        return null;
+      }
+
+      // Validação adicional para garantir que temos os dados necessários
+      if (!data.propriedade) {
+        console.warn(`Propriedade não carregada para o búfalo ${bufaloId}`);
+        console.warn('Dados do búfalo:', JSON.stringify(data, null, 2));
       }
 
       return data;
