@@ -69,10 +69,10 @@ export class DashboardService {
       const bufalos = bufalosStats || [];
       const bufalosAtivos = bufalos.filter((b) => b.status === true);
 
-      // Processa búfalos por raça
+      // Processa búfalos por raça (APENAS ATIVOS)
       const racaMap = new Map<string, number>();
-      
-      bufalos.forEach((bufalo: any) => {
+
+      bufalosAtivos.forEach((bufalo: any) => {
         const nomeRaca = bufalo.raca?.nome || 'Sem Raça';
         racaMap.set(nomeRaca, (racaMap.get(nomeRaca) || 0) + 1);
       });
