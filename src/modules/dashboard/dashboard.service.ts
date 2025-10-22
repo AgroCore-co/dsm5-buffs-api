@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException, InternalServerErrorException } from '@nestjs/common';
 import { SupabaseService } from '../../core/supabase/supabase.service';
 import { DashboardStatsDto } from './dto/dashboard-stats.dto';
+import { DashboardLactacaoDto, CicloLactacaoMetricaDto } from './dto/dashboard-lactacao.dto';
 
 @Injectable()
 export class DashboardService {
@@ -101,6 +102,124 @@ export class DashboardService {
         throw error;
       }
       throw new InternalServerErrorException(`Erro inesperado ao gerar estatísticas: ${error.message}`);
+    }
+  }
+
+  /**
+   * Retorna métricas de lactação por ciclo de uma propriedade em um ano específico
+   */
+  async getLactacaoMetricas(id_propriedade: string, ano: number): Promise<DashboardLactacaoDto> {
+    const supabase = this.supabaseService.getAdminClient();
+
+    try {
+      // Verifica se a propriedade existe
+      const { data: propriedadeExists, error: propError } = await supabase
+        .from('propriedade')
+        .select('id_propriedade')
+        .eq('id_propriedade', id_propriedade)
+        .single();
+
+      if (propError || !propriedadeExists) {
+        throw new NotFoundException(`Propriedade com ID ${id_propriedade} não encontrada.`);
+      }
+
+      // Busca ciclos de lactação da propriedade no ano especificado
+      const { data: ciclosRaw, error: fetchError } = await supabase
+        .from('ciclolactacao')
+        .select(
+          `
+          id_ciclo_lactacao,
+          id_bufala,
+          dt_parto,
+          dt_secagem_real,
+          bufalo:id_bufala(nome, sexo),
+          dadoslactacao(qt_ordenha)
+        `,
+        )
+        .eq('id_propriedade', id_propriedade)
+        .not('dt_secagem_real', 'is', null);
+
+      if (fetchError) {
+        throw new InternalServerErrorException(`Erro ao buscar dados de lactação: ${fetchError.message}`);
+      }
+
+      // Filtrar apenas fêmeas e do ano especificado
+      const ciclosFiltered = (ciclosRaw || []).filter((c: any) => {
+        const anoSecagem = new Date(c.dt_secagem_real).getFullYear();
+        return c.bufalo?.sexo === 'F' && anoSecagem === ano;
+      });
+
+      // Agrupar ciclos por búfala para calcular número do parto
+      const ciclosPorBufala = new Map<string, any[]>();
+      ciclosFiltered.forEach((ciclo: any) => {
+        const id = ciclo.id_bufala;
+        if (!ciclosPorBufala.has(id)) {
+          ciclosPorBufala.set(id, []);
+        }
+        ciclosPorBufala.get(id)!.push(ciclo);
+      });
+
+      // Processar dados de cada ciclo
+      const ciclosProcessados: CicloLactacaoMetricaDto[] = [];
+
+      ciclosPorBufala.forEach((ciclosDaBufala) => {
+        ciclosDaBufala.sort((a, b) => new Date(a.dt_parto).getTime() - new Date(b.dt_parto).getTime());
+
+        ciclosDaBufala.forEach((ciclo: any, index: number) => {
+          const diasLactacao = Math.floor((new Date(ciclo.dt_secagem_real).getTime() - new Date(ciclo.dt_parto).getTime()) / (1000 * 60 * 60 * 24));
+
+          const lactacaoTotal = (ciclo.dadoslactacao || []).reduce((sum: number, d: any) => sum + (d.qt_ordenha || 0), 0);
+
+          const mediaLactacao = diasLactacao > 0 ? lactacaoTotal / diasLactacao : 0;
+
+          ciclosProcessados.push({
+            id_ciclo_lactacao: ciclo.id_ciclo_lactacao,
+            id_bufala: ciclo.id_bufala,
+            nome_bufala: ciclo.bufalo?.nome,
+            numero_parto: index + 1,
+            dt_parto: new Date(ciclo.dt_parto).toISOString().split('T')[0],
+            dt_secagem_real: new Date(ciclo.dt_secagem_real).toISOString().split('T')[0],
+            dias_em_lactacao: diasLactacao,
+            media_lactacao: Math.round(mediaLactacao * 1000) / 1000,
+            lactacao_total: Math.round(lactacaoTotal * 1000) / 1000,
+            classificacao: '', // Será preenchido abaixo
+          });
+        });
+      });
+
+      // Calcular média do rebanho para o ano
+      const mediaRebanho =
+        ciclosProcessados.length > 0 ? ciclosProcessados.reduce((sum, c) => sum + c.lactacao_total, 0) / ciclosProcessados.length : 0;
+
+      // Classificar e ordenar
+      const ciclosClassificados = ciclosProcessados
+        .map((ciclo: any) => ({
+          ...ciclo,
+          classificacao:
+            ciclo.lactacao_total >= mediaRebanho * 1.2
+              ? 'Ótima'
+              : ciclo.lactacao_total >= mediaRebanho
+                ? 'Boa'
+                : ciclo.lactacao_total >= mediaRebanho * 0.8
+                  ? 'Mediana'
+                  : 'Ruim',
+        }))
+        .sort((a, b) => {
+          const classOrder = { Ótima: 1, Boa: 2, Mediana: 3, Ruim: 4 };
+          const classCompare = classOrder[a.classificacao as keyof typeof classOrder] - classOrder[b.classificacao as keyof typeof classOrder];
+          return classCompare !== 0 ? classCompare : b.lactacao_total - a.lactacao_total;
+        });
+
+      return {
+        ano,
+        media_rebanho_ano: Math.round(mediaRebanho * 1000) / 1000,
+        ciclos: ciclosClassificados,
+      };
+    } catch (error) {
+      if (error instanceof NotFoundException || error instanceof InternalServerErrorException) {
+        throw error;
+      }
+      throw new InternalServerErrorException(`Erro inesperado ao gerar métricas de lactação: ${error.message}`);
     }
   }
 }
