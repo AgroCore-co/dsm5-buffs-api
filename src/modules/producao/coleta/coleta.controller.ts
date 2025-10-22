@@ -7,6 +7,7 @@ import { LoggerService } from '../../../core/logger/logger.service';
 import { ColetaService } from './coleta.service';
 import { CreateColetaDto } from './dto/create-coleta.dto';
 import { UpdateColetaDto } from './dto/update-coleta.dto';
+import { ColetaPropriedadeResponseDto } from './dto/coleta-propriedade.dto';
 import { PaginationDto } from '../../../core/dto/pagination.dto';
 
 @ApiBearerAuth('JWT-auth')
@@ -49,12 +50,19 @@ export class ColetaController {
   @Get('propriedade/:id_propriedade')
   @UseInterceptors(CacheInterceptor)
   @CacheTTL(300)
-  @ApiOperation({ summary: 'Lista coletas por propriedade com paginação' })
+  @ApiOperation({ summary: 'Lista coletas por propriedade com estatísticas' })
   @ApiParam({ name: 'id_propriedade', description: 'ID da propriedade', type: 'string' })
   @ApiQuery({ name: 'page', required: false, type: Number, description: 'Número da página (padrão: 1)' })
   @ApiQuery({ name: 'limit', required: false, type: Number, description: 'Itens por página (padrão: 10)' })
-  @ApiResponse({ status: 200, description: 'Lista de coletas retornada com sucesso.' })
-  findByPropriedade(@Param('id_propriedade', ParseUUIDPipe) id_propriedade: string, @Query() paginationDto: PaginationDto) {
+  @ApiResponse({
+    status: 200,
+    description: 'Lista de coletas com nome da empresa e estatísticas retornada com sucesso.',
+    type: ColetaPropriedadeResponseDto,
+  })
+  findByPropriedade(
+    @Param('id_propriedade', ParseUUIDPipe) id_propriedade: string,
+    @Query() paginationDto: PaginationDto,
+  ): Promise<ColetaPropriedadeResponseDto> {
     this.logger.logApiRequest('GET', `/coletas/propriedade/${id_propriedade}`, undefined, {
       module: 'ColetaController',
       method: 'findByPropriedade',

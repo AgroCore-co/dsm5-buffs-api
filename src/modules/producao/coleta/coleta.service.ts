@@ -88,7 +88,7 @@ export class ColetaService {
     return createPaginatedResponse(data, count || 0, page, limitValue);
   }
 
-  async findByPropriedade(id_propriedade: string, paginationDto: PaginationDto = {}): Promise<PaginatedResponse<any>> {
+  async findByPropriedade(id_propriedade: string, paginationDto: PaginationDto = {}): Promise<any> {
     this.logger.log('Iniciando busca de coletas por propriedade', {
       module: 'ColetaService',
       method: 'findByPropriedade',
@@ -98,6 +98,7 @@ export class ColetaService {
     const { page = 1, limit = 10 } = paginationDto;
     const { limit: limitValue, offset } = calculatePaginationParams(page, limit);
 
+    // Contar total de coletas da propriedade
     const { count, error: countError } = await this.supabase
       .getAdminClient()
       .from(this.tableName)
@@ -112,10 +113,11 @@ export class ColetaService {
       throw new InternalServerErrorException(`Falha ao contar coletas da propriedade: ${countError.message}`);
     }
 
+    // Buscar coletas com join na tabela de indústria
     const { data, error } = await this.supabase
       .getAdminClient()
       .from(this.tableName)
-      .select('*')
+      .select('*, industria:id_industria(nome)')
       .eq('id_propriedade', id_propriedade)
       .order('dt_coleta', { ascending: false })
       .range(offset, offset + limitValue - 1);
@@ -128,12 +130,55 @@ export class ColetaService {
       throw new InternalServerErrorException(`Falha ao buscar coletas da propriedade: ${error.message}`);
     }
 
+    // Contar coletas aprovadas e rejeitadas de TODA a propriedade
+    const { data: allColetasStats, error: statsError } = await this.supabase
+      .getAdminClient()
+      .from(this.tableName)
+      .select('resultado_teste', { count: 'exact', head: false })
+      .eq('id_propriedade', id_propriedade);
+
+    if (statsError) {
+      this.logger.logError(statsError, {
+        module: 'ColetaService',
+        method: 'findByPropriedade',
+      });
+      throw new InternalServerErrorException(`Falha ao buscar estatísticas de coletas: ${statsError.message}`);
+    }
+
+    const totalAprovadas = (allColetasStats || []).filter((c: any) => c.resultado_teste === true).length;
+    const totalRejeitadas = (allColetasStats || []).filter((c: any) => c.resultado_teste === false).length;
+
+    // Transformar dados para incluir nome_empresa
+    const dataTransformed = (data || []).map((coleta: any) => ({
+      ...coleta,
+      nome_empresa: coleta.industria?.nome || 'Indústria não identificada',
+      industria: undefined, // Remover o objeto industria da resposta
+    }));
+
+    // Montar resposta com meta enriquecido
+    const totalPages = Math.ceil((count || 0) / limitValue);
+    const response = {
+      data: dataTransformed,
+      meta: {
+        page,
+        limit: limitValue,
+        total: count || 0,
+        totalPages,
+        hasNextPage: page < totalPages,
+        hasPrevPage: page > 1,
+        totalAprovadas,
+        totalRejeitadas,
+      },
+    };
+
     this.logger.log(`Busca concluída - ${data.length} coletas encontradas (página ${page})`, {
       module: 'ColetaService',
       method: 'findByPropriedade',
+      totalAprovadas,
+      totalRejeitadas,
     });
 
-    return createPaginatedResponse(data, count || 0, page, limitValue);
+    return response;
   }
 
   async findOne(id_coleta: string) {
