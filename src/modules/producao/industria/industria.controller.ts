@@ -34,6 +34,20 @@ export class IndustriaController {
     return this.service.findAll();
   }
 
+  @Get('propriedade/:id_propriedade')
+  @ApiOperation({ summary: 'Lista as indústrias associadas a uma propriedade específica' })
+  @ApiParam({ name: 'id_propriedade', description: 'ID da propriedade (UUID)', type: 'string', example: 'f47ac10b-58cc-4372-a567-0e02b2c3d479' })
+  @ApiResponse({ status: 200, description: 'Lista de indústrias da propriedade retornada com sucesso.' })
+  @ApiResponse({ status: 404, description: 'Propriedade não encontrada.' })
+  findByPropriedade(@Param('id_propriedade', ParseUUIDPipe) id_propriedade: string) {
+    this.logger.logApiRequest('GET', `/industrias/propriedade/${id_propriedade}`, undefined, {
+      module: 'IndustriaController',
+      method: 'findByPropriedade',
+      propriedadeId: id_propriedade,
+    });
+    return this.service.findByPropriedade(id_propriedade);
+  }
+
   @Get(':id')
   @ApiOperation({ summary: 'Busca uma indústria pelo ID' })
   @ApiParam({ name: 'id', description: 'ID da indústria', type: 'string' })

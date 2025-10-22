@@ -61,6 +61,37 @@ export class IndustriaService {
     return data;
   }
 
+  async findByPropriedade(id_propriedade: string) {
+    this.logger.log('Iniciando busca de indústrias por propriedade', {
+      module: 'IndustriaService',
+      method: 'findByPropriedade',
+      propriedadeId: id_propriedade,
+    });
+
+    const { data, error } = await this.supabase
+      .getAdminClient()
+      .from(this.tableName)
+      .select('*')
+      .eq('id_propriedade', id_propriedade)
+      .order('nome', { ascending: true });
+
+    if (error) {
+      this.logger.logError(error, {
+        module: 'IndustriaService',
+        method: 'findByPropriedade',
+        propriedadeId: id_propriedade,
+      });
+      throw new InternalServerErrorException(`Falha ao buscar indústrias da propriedade: ${error.message}`);
+    }
+
+    this.logger.log(`Busca concluída - ${data.length} indústrias encontradas para a propriedade`, {
+      module: 'IndustriaService',
+      method: 'findByPropriedade',
+      propriedadeId: id_propriedade,
+    });
+    return data;
+  }
+
   async findOne(id_industria: string) {
     this.logger.log('Iniciando busca de indústria por ID', {
       module: 'IndustriaService',
