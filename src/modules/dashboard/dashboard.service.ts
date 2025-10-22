@@ -168,9 +168,11 @@ export class DashboardService {
         ciclosDaBufala.forEach((ciclo: any, index: number) => {
           const diasLactacao = Math.floor((new Date(ciclo.dt_secagem_real).getTime() - new Date(ciclo.dt_parto).getTime()) / (1000 * 60 * 60 * 24));
 
+          // Total de leite = soma das ordenhas
           const lactacaoTotal = (ciclo.dadoslactacao || []).reduce((sum: number, d: any) => sum + (d.qt_ordenha || 0), 0);
 
-          const mediaLactacao = diasLactacao > 0 ? lactacaoTotal / diasLactacao : 0;
+          // Média diária = total / quantidade de registros (primeiro até último)
+          const mediaLactacao = (ciclo.dadoslactacao || []).length > 0 ? lactacaoTotal / (ciclo.dadoslactacao || []).length : 0;
 
           ciclosProcessados.push({
             id_ciclo_lactacao: ciclo.id_ciclo_lactacao,
@@ -187,7 +189,7 @@ export class DashboardService {
         });
       });
 
-      // Calcular média do rebanho para o ano
+      // Calcular média do rebanho para o ano (MÉDIA DAS MÉDIAS, não soma/soma)
       const mediaRebanho =
         ciclosProcessados.length > 0 ? ciclosProcessados.reduce((sum, c) => sum + c.lactacao_total, 0) / ciclosProcessados.length : 0;
 
