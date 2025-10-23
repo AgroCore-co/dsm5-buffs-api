@@ -4,12 +4,12 @@ import { SupabaseService } from '../../../core/supabase/supabase.service';
 import { CreateBufaloDto } from './dto/create-bufalo.dto';
 import { UpdateBufaloDto } from './dto/update-bufalo.dto';
 import { UpdateGrupoBufaloDto } from './dto/update-grupo-bufalo.dto';
+import { FiltroBufaloDto } from './dto/filtro-bufalo.dto';
 import { BufaloMaturityUtils } from './utils/maturity.utils';
 import { BufaloAgeUtils } from './utils/age.utils';
 import { BufaloValidationUtils } from './utils/validation.utils';
 import { NivelMaturidade } from './dto/create-bufalo.dto';
 import { CategoriaABCBUtil } from './utils/categoria-abcb.util';
-import { GeminiRacaUtil } from './utils/gemini-raca.util';
 import { CategoriaABCB } from './dto/categoria-abcb.dto';
 import { GenealogiaService } from '../../reproducao/genealogia/genealogia.service';
 import { PaginationDto, PaginatedResponse } from '../../../core/dto/pagination.dto';
@@ -30,7 +30,6 @@ export class BufaloService {
 
   constructor(
     private readonly supabaseService: SupabaseService,
-    private readonly geminiRacaUtil: GeminiRacaUtil,
     private readonly genealogiaService: GenealogiaService,
   ) {
     this.supabase = this.supabaseService.getAdminClient();
@@ -269,7 +268,7 @@ export class BufaloService {
 
     // Valida se o usuário tem acesso à propriedade
     const propriedadesUsuario = await this.getUserPropriedades(userId);
-    
+
     if (!propriedadesUsuario.includes(id_propriedade)) {
       throw new NotFoundException(`Propriedade com ID ${id_propriedade} não encontrada ou você não tem acesso a ela.`);
     }
@@ -311,9 +310,714 @@ export class BufaloService {
     return createPaginatedResponse(data || [], count || 0, page, limit);
   }
 
+  /**
+   * Filtra búfalos por raça em uma propriedade específica
+   * Ordenação: status DESC, dt_nascimento ASC (mesma do findAll)
+   */
+  async findByRaca(id_raca: string, id_propriedade: string, user: any, paginationDto: PaginationDto = {}): Promise<PaginatedResponse<any>> {
+    const { page = 1, limit = 10 } = paginationDto;
+    const { offset } = calculatePaginationParams(page, limit);
+
+    const userId = await this.getUserId(user);
+    const propriedadesUsuario = await this.getUserPropriedades(userId);
+
+    if (!propriedadesUsuario.includes(id_propriedade)) {
+      throw new NotFoundException(`Propriedade com ID ${id_propriedade} não encontrada ou você não tem acesso a ela.`);
+    }
+
+    // Busca total
+    const { count, error: countError } = await this.supabase
+      .from(this.tableName)
+      .select('*', { count: 'exact', head: true })
+      .eq('id_propriedade', id_propriedade)
+      .eq('id_raca', id_raca);
+
+    if (countError) {
+      throw new InternalServerErrorException('Falha ao contar os búfalos filtrados por raça.');
+    }
+
+    // Busca com paginação e ordenação padrão
+    const { data, error } = await this.supabase
+      .from(this.tableName)
+      .select(
+        `
+        *,
+        raca:id_raca(nome),
+        grupo:id_grupo(nome_grupo),
+        propriedade:id_propriedade(nome)
+      `,
+      )
+      .eq('id_propriedade', id_propriedade)
+      .eq('id_raca', id_raca)
+      .order('status', { ascending: false })
+      .order('dt_nascimento', { ascending: true })
+      .range(offset, offset + limit - 1);
+
+    if (error) {
+      throw new InternalServerErrorException('Falha ao buscar búfalos filtrados por raça.');
+    }
+
+    // Atualiza maturidade de búfalos ativos
+    const bufalosAtivos = (data || []).filter((bufalo) => bufalo.status === true);
+    await this.updateMaturityIfNeeded(bufalosAtivos);
+
+    return createPaginatedResponse(data || [], count || 0, page, limit);
+  }
+
+  /**
+   * Filtra búfalos por raça e brinco (busca progressiva com ILIKE)
+   * Permite busca progressiva: "IZ" → "IZ-0" → "IZ-001"
+   * Ordenação: status DESC, dt_nascimento ASC (mesma do findAll)
+   */
+  async findByRacaAndBrinco(
+    id_raca: string,
+    id_propriedade: string,
+    brinco: string,
+    user: any,
+    paginationDto: PaginationDto = {},
+  ): Promise<PaginatedResponse<any>> {
+    const { page = 1, limit = 10 } = paginationDto;
+    const { offset } = calculatePaginationParams(page, limit);
+
+    const userId = await this.getUserId(user);
+    const propriedadesUsuario = await this.getUserPropriedades(userId);
+
+    if (!propriedadesUsuario.includes(id_propriedade)) {
+      throw new NotFoundException(`Propriedade com ID ${id_propriedade} não encontrada ou você não tem acesso a ela.`);
+    }
+
+    // Busca total com filtros
+    const { count, error: countError } = await this.supabase
+      .from(this.tableName)
+      .select('*', { count: 'exact', head: true })
+      .eq('id_propriedade', id_propriedade)
+      .eq('id_raca', id_raca)
+      .ilike('brinco', `${brinco}%`);
+
+    if (countError) {
+      throw new InternalServerErrorException('Falha ao contar búfalos filtrados por raça e brinco.');
+    }
+
+    // Busca com paginação e ordenação padrão
+    const { data, error } = await this.supabase
+      .from(this.tableName)
+      .select(
+        `
+        *,
+        raca:id_raca(nome),
+        grupo:id_grupo(nome_grupo),
+        propriedade:id_propriedade(nome)
+      `,
+      )
+      .eq('id_propriedade', id_propriedade)
+      .eq('id_raca', id_raca)
+      .ilike('brinco', `${brinco}%`)
+      .order('status', { ascending: false })
+      .order('dt_nascimento', { ascending: true })
+      .range(offset, offset + limit - 1);
+
+    if (error) {
+      throw new InternalServerErrorException('Falha ao buscar búfalos filtrados por raça e brinco.');
+    }
+
+    // Atualiza maturidade de búfalos ativos
+    const bufalosAtivos = (data || []).filter((bufalo) => bufalo.status === true);
+    await this.updateMaturityIfNeeded(bufalosAtivos);
+
+    return createPaginatedResponse(data || [], count || 0, page, limit);
+  }
+
+  /**
+   * Filtragem avançada por múltiplos critérios
+   * Suporta: raça, sexo, maturidade, status e brinco
+   * Ordenação: status DESC, dt_nascimento ASC (mesma do findAll)
+   */
+  async findByFiltros(
+    id_propriedade: string,
+    filtros: FiltroBufaloDto,
+    user: any,
+    paginationDto: PaginationDto = {},
+  ): Promise<PaginatedResponse<any>> {
+    const { page = 1, limit = 10 } = paginationDto;
+    const { offset } = calculatePaginationParams(page, limit);
+
+    const userId = await this.getUserId(user);
+    const propriedadesUsuario = await this.getUserPropriedades(userId);
+
+    if (!propriedadesUsuario.includes(id_propriedade)) {
+      throw new NotFoundException(`Propriedade com ID ${id_propriedade} não encontrada ou você não tem acesso a ela.`);
+    }
+
+    // Query base para contagem
+    let queryCount = this.supabase.from(this.tableName).select('*', { count: 'exact', head: true }).eq('id_propriedade', id_propriedade);
+
+    // Query base para dados
+    let queryData = this.supabase
+      .from(this.tableName)
+      .select(
+        `
+        *,
+        raca:id_raca(nome),
+        grupo:id_grupo(nome_grupo),
+        propriedade:id_propriedade(nome)
+      `,
+      )
+      .eq('id_propriedade', id_propriedade);
+
+    // Aplica filtros dinamicamente
+    if (filtros.id_raca) {
+      queryCount = queryCount.eq('id_raca', filtros.id_raca);
+      queryData = queryData.eq('id_raca', filtros.id_raca);
+    }
+
+    if (filtros.sexo) {
+      queryCount = queryCount.eq('sexo', filtros.sexo);
+      queryData = queryData.eq('sexo', filtros.sexo);
+    }
+
+    if (filtros.nivel_maturidade) {
+      queryCount = queryCount.eq('nivel_maturidade', filtros.nivel_maturidade);
+      queryData = queryData.eq('nivel_maturidade', filtros.nivel_maturidade);
+    }
+
+    if (filtros.status !== undefined) {
+      queryCount = queryCount.eq('status', filtros.status);
+      queryData = queryData.eq('status', filtros.status);
+    }
+
+    if (filtros.brinco) {
+      queryCount = queryCount.ilike('brinco', `${filtros.brinco}%`);
+      queryData = queryData.ilike('brinco', `${filtros.brinco}%`);
+    }
+
+    // Executa contagem
+    const { count, error: countError } = await queryCount;
+
+    if (countError) {
+      throw new InternalServerErrorException('Falha ao contar búfalos com filtros avançados.');
+    }
+
+    // Executa busca com ordenação padrão e paginação
+    const { data, error } = await queryData
+      .order('status', { ascending: false })
+      .order('dt_nascimento', { ascending: true })
+      .range(offset, offset + limit - 1);
+
+    if (error) {
+      throw new InternalServerErrorException('Falha ao buscar búfalos com filtros avançados.');
+    }
+
+    // Atualiza maturidade de búfalos ativos
+    const bufalosAtivos = (data || []).filter((bufalo) => bufalo.status === true);
+    await this.updateMaturityIfNeeded(bufalosAtivos);
+
+    return createPaginatedResponse(data || [], count || 0, page, limit);
+  }
+
+  /**
+   * Filtra búfalos por sexo em uma propriedade
+   */
+  async findBySexo(sexo: string, id_propriedade: string, user: any, paginationDto: PaginationDto = {}): Promise<PaginatedResponse<any>> {
+    const { page = 1, limit = 10 } = paginationDto;
+    const { offset } = calculatePaginationParams(page, limit);
+
+    const userId = await this.getUserId(user);
+    const propriedadesUsuario = await this.getUserPropriedades(userId);
+
+    if (!propriedadesUsuario.includes(id_propriedade)) {
+      throw new NotFoundException(`Propriedade com ID ${id_propriedade} não encontrada ou você não tem acesso a ela.`);
+    }
+
+    const { count, error: countError } = await this.supabase
+      .from(this.tableName)
+      .select('*', { count: 'exact', head: true })
+      .eq('id_propriedade', id_propriedade)
+      .eq('sexo', sexo);
+
+    if (countError) {
+      throw new InternalServerErrorException('Falha ao contar búfalos filtrados por sexo.');
+    }
+
+    const { data, error } = await this.supabase
+      .from(this.tableName)
+      .select(
+        `
+        *,
+        raca:id_raca(nome),
+        grupo:id_grupo(nome_grupo),
+        propriedade:id_propriedade(nome)
+      `,
+      )
+      .eq('id_propriedade', id_propriedade)
+      .eq('sexo', sexo)
+      .order('status', { ascending: false })
+      .order('dt_nascimento', { ascending: true })
+      .range(offset, offset + limit - 1);
+
+    if (error) {
+      throw new InternalServerErrorException('Falha ao buscar búfalos filtrados por sexo.');
+    }
+
+    const bufalosAtivos = (data || []).filter((bufalo) => bufalo.status === true);
+    await this.updateMaturityIfNeeded(bufalosAtivos);
+
+    return createPaginatedResponse(data || [], count || 0, page, limit);
+  }
+
+  /**
+   * Filtra búfalos por sexo e brinco
+   */
+  async findBySexoAndBrinco(
+    sexo: string,
+    id_propriedade: string,
+    brinco: string,
+    user: any,
+    paginationDto: PaginationDto = {},
+  ): Promise<PaginatedResponse<any>> {
+    const { page = 1, limit = 10 } = paginationDto;
+    const { offset } = calculatePaginationParams(page, limit);
+
+    const userId = await this.getUserId(user);
+    const propriedadesUsuario = await this.getUserPropriedades(userId);
+
+    if (!propriedadesUsuario.includes(id_propriedade)) {
+      throw new NotFoundException(`Propriedade com ID ${id_propriedade} não encontrada ou você não tem acesso a ela.`);
+    }
+
+    const { count, error: countError } = await this.supabase
+      .from(this.tableName)
+      .select('*', { count: 'exact', head: true })
+      .eq('id_propriedade', id_propriedade)
+      .eq('sexo', sexo)
+      .ilike('brinco', `${brinco}%`);
+
+    if (countError) {
+      throw new InternalServerErrorException('Falha ao contar búfalos filtrados por sexo e brinco.');
+    }
+
+    const { data, error } = await this.supabase
+      .from(this.tableName)
+      .select(
+        `
+        *,
+        raca:id_raca(nome),
+        grupo:id_grupo(nome_grupo),
+        propriedade:id_propriedade(nome)
+      `,
+      )
+      .eq('id_propriedade', id_propriedade)
+      .eq('sexo', sexo)
+      .ilike('brinco', `${brinco}%`)
+      .order('status', { ascending: false })
+      .order('dt_nascimento', { ascending: true })
+      .range(offset, offset + limit - 1);
+
+    if (error) {
+      throw new InternalServerErrorException('Falha ao buscar búfalos filtrados por sexo e brinco.');
+    }
+
+    const bufalosAtivos = (data || []).filter((bufalo) => bufalo.status === true);
+    await this.updateMaturityIfNeeded(bufalosAtivos);
+
+    return createPaginatedResponse(data || [], count || 0, page, limit);
+  }
+
+  /**
+   * Filtra búfalos por sexo e status
+   */
+  async findBySexoAndStatus(
+    sexo: string,
+    status: boolean,
+    id_propriedade: string,
+    user: any,
+    paginationDto: PaginationDto = {},
+  ): Promise<PaginatedResponse<any>> {
+    const { page = 1, limit = 10 } = paginationDto;
+    const { offset } = calculatePaginationParams(page, limit);
+
+    const userId = await this.getUserId(user);
+    const propriedadesUsuario = await this.getUserPropriedades(userId);
+
+    if (!propriedadesUsuario.includes(id_propriedade)) {
+      throw new NotFoundException(`Propriedade com ID ${id_propriedade} não encontrada ou você não tem acesso a ela.`);
+    }
+
+    const { count, error: countError } = await this.supabase
+      .from(this.tableName)
+      .select('*', { count: 'exact', head: true })
+      .eq('id_propriedade', id_propriedade)
+      .eq('sexo', sexo)
+      .eq('status', status);
+
+    if (countError) {
+      throw new InternalServerErrorException('Falha ao contar búfalos filtrados por sexo e status.');
+    }
+
+    const { data, error } = await this.supabase
+      .from(this.tableName)
+      .select(
+        `
+        *,
+        raca:id_raca(nome),
+        grupo:id_grupo(nome_grupo),
+        propriedade:id_propriedade(nome)
+      `,
+      )
+      .eq('id_propriedade', id_propriedade)
+      .eq('sexo', sexo)
+      .eq('status', status)
+      .order('status', { ascending: false })
+      .order('dt_nascimento', { ascending: true })
+      .range(offset, offset + limit - 1);
+
+    if (error) {
+      throw new InternalServerErrorException('Falha ao buscar búfalos filtrados por sexo e status.');
+    }
+
+    const bufalosAtivos = (data || []).filter((bufalo) => bufalo.status === true);
+    await this.updateMaturityIfNeeded(bufalosAtivos);
+
+    return createPaginatedResponse(data || [], count || 0, page, limit);
+  }
+
+  /**
+   * Filtra búfalos por maturidade em uma propriedade
+   */
+  async findByMaturidade(
+    nivel_maturidade: string,
+    id_propriedade: string,
+    user: any,
+    paginationDto: PaginationDto = {},
+  ): Promise<PaginatedResponse<any>> {
+    const { page = 1, limit = 10 } = paginationDto;
+    const { offset } = calculatePaginationParams(page, limit);
+
+    const userId = await this.getUserId(user);
+    const propriedadesUsuario = await this.getUserPropriedades(userId);
+
+    if (!propriedadesUsuario.includes(id_propriedade)) {
+      throw new NotFoundException(`Propriedade com ID ${id_propriedade} não encontrada ou você não tem acesso a ela.`);
+    }
+
+    const { count, error: countError } = await this.supabase
+      .from(this.tableName)
+      .select('*', { count: 'exact', head: true })
+      .eq('id_propriedade', id_propriedade)
+      .eq('nivel_maturidade', nivel_maturidade);
+
+    if (countError) {
+      throw new InternalServerErrorException('Falha ao contar búfalos filtrados por maturidade.');
+    }
+
+    const { data, error } = await this.supabase
+      .from(this.tableName)
+      .select(
+        `
+        *,
+        raca:id_raca(nome),
+        grupo:id_grupo(nome_grupo),
+        propriedade:id_propriedade(nome)
+      `,
+      )
+      .eq('id_propriedade', id_propriedade)
+      .eq('nivel_maturidade', nivel_maturidade)
+      .order('status', { ascending: false })
+      .order('dt_nascimento', { ascending: true })
+      .range(offset, offset + limit - 1);
+
+    if (error) {
+      throw new InternalServerErrorException('Falha ao buscar búfalos filtrados por maturidade.');
+    }
+
+    const bufalosAtivos = (data || []).filter((bufalo) => bufalo.status === true);
+    await this.updateMaturityIfNeeded(bufalosAtivos);
+
+    return createPaginatedResponse(data || [], count || 0, page, limit);
+  }
+
+  /**
+   * Filtra búfalos por maturidade e brinco
+   */
+  async findByMaturidadeAndBrinco(
+    nivel_maturidade: string,
+    id_propriedade: string,
+    brinco: string,
+    user: any,
+    paginationDto: PaginationDto = {},
+  ): Promise<PaginatedResponse<any>> {
+    const { page = 1, limit = 10 } = paginationDto;
+    const { offset } = calculatePaginationParams(page, limit);
+
+    const userId = await this.getUserId(user);
+    const propriedadesUsuario = await this.getUserPropriedades(userId);
+
+    if (!propriedadesUsuario.includes(id_propriedade)) {
+      throw new NotFoundException(`Propriedade com ID ${id_propriedade} não encontrada ou você não tem acesso a ela.`);
+    }
+
+    const { count, error: countError } = await this.supabase
+      .from(this.tableName)
+      .select('*', { count: 'exact', head: true })
+      .eq('id_propriedade', id_propriedade)
+      .eq('nivel_maturidade', nivel_maturidade)
+      .ilike('brinco', `${brinco}%`);
+
+    if (countError) {
+      throw new InternalServerErrorException('Falha ao contar búfalos filtrados por maturidade e brinco.');
+    }
+
+    const { data, error } = await this.supabase
+      .from(this.tableName)
+      .select(
+        `
+        *,
+        raca:id_raca(nome),
+        grupo:id_grupo(nome_grupo),
+        propriedade:id_propriedade(nome)
+      `,
+      )
+      .eq('id_propriedade', id_propriedade)
+      .eq('nivel_maturidade', nivel_maturidade)
+      .ilike('brinco', `${brinco}%`)
+      .order('status', { ascending: false })
+      .order('dt_nascimento', { ascending: true })
+      .range(offset, offset + limit - 1);
+
+    if (error) {
+      throw new InternalServerErrorException('Falha ao buscar búfalos filtrados por maturidade e brinco.');
+    }
+
+    const bufalosAtivos = (data || []).filter((bufalo) => bufalo.status === true);
+    await this.updateMaturityIfNeeded(bufalosAtivos);
+
+    return createPaginatedResponse(data || [], count || 0, page, limit);
+  }
+
+  /**
+   * Filtra búfalos por maturidade e status
+   */
+  async findByMaturidadeAndStatus(
+    nivel_maturidade: string,
+    status: boolean,
+    id_propriedade: string,
+    user: any,
+    paginationDto: PaginationDto = {},
+  ): Promise<PaginatedResponse<any>> {
+    const { page = 1, limit = 10 } = paginationDto;
+    const { offset } = calculatePaginationParams(page, limit);
+
+    const userId = await this.getUserId(user);
+    const propriedadesUsuario = await this.getUserPropriedades(userId);
+
+    if (!propriedadesUsuario.includes(id_propriedade)) {
+      throw new NotFoundException(`Propriedade com ID ${id_propriedade} não encontrada ou você não tem acesso a ela.`);
+    }
+
+    const { count, error: countError } = await this.supabase
+      .from(this.tableName)
+      .select('*', { count: 'exact', head: true })
+      .eq('id_propriedade', id_propriedade)
+      .eq('nivel_maturidade', nivel_maturidade)
+      .eq('status', status);
+
+    if (countError) {
+      throw new InternalServerErrorException('Falha ao contar búfalos filtrados por maturidade e status.');
+    }
+
+    const { data, error } = await this.supabase
+      .from(this.tableName)
+      .select(
+        `
+        *,
+        raca:id_raca(nome),
+        grupo:id_grupo(nome_grupo),
+        propriedade:id_propriedade(nome)
+      `,
+      )
+      .eq('id_propriedade', id_propriedade)
+      .eq('nivel_maturidade', nivel_maturidade)
+      .eq('status', status)
+      .order('status', { ascending: false })
+      .order('dt_nascimento', { ascending: true })
+      .range(offset, offset + limit - 1);
+
+    if (error) {
+      throw new InternalServerErrorException('Falha ao buscar búfalos filtrados por maturidade e status.');
+    }
+
+    const bufalosAtivos = (data || []).filter((bufalo) => bufalo.status === true);
+    await this.updateMaturityIfNeeded(bufalosAtivos);
+
+    return createPaginatedResponse(data || [], count || 0, page, limit);
+  }
+
+  /**
+   * Filtra búfalos por raça e status
+   */
+  async findByRacaAndStatus(
+    id_raca: string,
+    status: boolean,
+    id_propriedade: string,
+    user: any,
+    paginationDto: PaginationDto = {},
+  ): Promise<PaginatedResponse<any>> {
+    const { page = 1, limit = 10 } = paginationDto;
+    const { offset } = calculatePaginationParams(page, limit);
+
+    const userId = await this.getUserId(user);
+    const propriedadesUsuario = await this.getUserPropriedades(userId);
+
+    if (!propriedadesUsuario.includes(id_propriedade)) {
+      throw new NotFoundException(`Propriedade com ID ${id_propriedade} não encontrada ou você não tem acesso a ela.`);
+    }
+
+    const { count, error: countError } = await this.supabase
+      .from(this.tableName)
+      .select('*', { count: 'exact', head: true })
+      .eq('id_propriedade', id_propriedade)
+      .eq('id_raca', id_raca)
+      .eq('status', status);
+
+    if (countError) {
+      throw new InternalServerErrorException('Falha ao contar búfalos filtrados por raça e status.');
+    }
+
+    const { data, error } = await this.supabase
+      .from(this.tableName)
+      .select(
+        `
+        *,
+        raca:id_raca(nome),
+        grupo:id_grupo(nome_grupo),
+        propriedade:id_propriedade(nome)
+      `,
+      )
+      .eq('id_propriedade', id_propriedade)
+      .eq('id_raca', id_raca)
+      .eq('status', status)
+      .order('status', { ascending: false })
+      .order('dt_nascimento', { ascending: true })
+      .range(offset, offset + limit - 1);
+
+    if (error) {
+      throw new InternalServerErrorException('Falha ao buscar búfalos filtrados por raça e status.');
+    }
+
+    const bufalosAtivos = (data || []).filter((bufalo) => bufalo.status === true);
+    await this.updateMaturityIfNeeded(bufalosAtivos);
+
+    return createPaginatedResponse(data || [], count || 0, page, limit);
+  }
+
+  /**
+   * Filtra búfalos por status apenas (sem preferência de status na ordenação)
+   */
+  async findByStatus(status: boolean, id_propriedade: string, user: any, paginationDto: PaginationDto = {}): Promise<PaginatedResponse<any>> {
+    const { page = 1, limit = 10 } = paginationDto;
+    const { offset } = calculatePaginationParams(page, limit);
+
+    const userId = await this.getUserId(user);
+    const propriedadesUsuario = await this.getUserPropriedades(userId);
+
+    if (!propriedadesUsuario.includes(id_propriedade)) {
+      throw new NotFoundException(`Propriedade com ID ${id_propriedade} não encontrada ou você não tem acesso a ela.`);
+    }
+
+    const { count, error: countError } = await this.supabase
+      .from(this.tableName)
+      .select('*', { count: 'exact', head: true })
+      .eq('id_propriedade', id_propriedade)
+      .eq('status', status);
+
+    if (countError) {
+      throw new InternalServerErrorException('Falha ao contar búfalos filtrados por status.');
+    }
+
+    const { data, error } = await this.supabase
+      .from(this.tableName)
+      .select(
+        `
+        *,
+        raca:id_raca(nome),
+        grupo:id_grupo(nome_grupo),
+        propriedade:id_propriedade(nome)
+      `,
+      )
+      .eq('id_propriedade', id_propriedade)
+      .eq('status', status)
+      .order('dt_nascimento', { ascending: true }) // Apenas por data, sem priorizar status
+      .range(offset, offset + limit - 1);
+
+    if (error) {
+      throw new InternalServerErrorException('Falha ao buscar búfalos filtrados por status.');
+    }
+
+    const bufalosAtivos = (data || []).filter((bufalo) => bufalo.status === true);
+    await this.updateMaturityIfNeeded(bufalosAtivos);
+
+    return createPaginatedResponse(data || [], count || 0, page, limit);
+  }
+
+  /**
+   * Filtra búfalos por status e brinco (sem preferência de status na ordenação)
+   */
+  async findByStatusAndBrinco(
+    status: boolean,
+    id_propriedade: string,
+    brinco: string,
+    user: any,
+    paginationDto: PaginationDto = {},
+  ): Promise<PaginatedResponse<any>> {
+    const { page = 1, limit = 10 } = paginationDto;
+    const { offset } = calculatePaginationParams(page, limit);
+
+    const userId = await this.getUserId(user);
+    const propriedadesUsuario = await this.getUserPropriedades(userId);
+
+    if (!propriedadesUsuario.includes(id_propriedade)) {
+      throw new NotFoundException(`Propriedade com ID ${id_propriedade} não encontrada ou você não tem acesso a ela.`);
+    }
+
+    const { count, error: countError } = await this.supabase
+      .from(this.tableName)
+      .select('*', { count: 'exact', head: true })
+      .eq('id_propriedade', id_propriedade)
+      .eq('status', status)
+      .ilike('brinco', `${brinco}%`);
+
+    if (countError) {
+      throw new InternalServerErrorException('Falha ao contar búfalos filtrados por status e brinco.');
+    }
+
+    const { data, error } = await this.supabase
+      .from(this.tableName)
+      .select(
+        `
+        *,
+        raca:id_raca(nome),
+        grupo:id_grupo(nome_grupo),
+        propriedade:id_propriedade(nome)
+      `,
+      )
+      .eq('id_propriedade', id_propriedade)
+      .eq('status', status)
+      .ilike('brinco', `${brinco}%`)
+      .order('dt_nascimento', { ascending: true }) // Apenas por data, sem priorizar status
+      .range(offset, offset + limit - 1);
+
+    if (error) {
+      throw new InternalServerErrorException('Falha ao buscar búfalos filtrados por status e brinco.');
+    }
+
+    const bufalosAtivos = (data || []).filter((bufalo) => bufalo.status === true);
+    await this.updateMaturityIfNeeded(bufalosAtivos);
+
+    return createPaginatedResponse(data || [], count || 0, page, limit);
+  }
+
   async findByMicrochip(microchip: string, user: any) {
     const userId = await this.getUserId(user);
-    
+
     // Busca as propriedades do usuário
     const propriedadesUsuario = await this.getUserPropriedades(userId);
 
@@ -659,31 +1363,14 @@ export class BufaloService {
         console.error(`ERRO: Propriedade não carregada para búfalo ${bufaloId}`);
         console.error('Estrutura do búfalo:', JSON.stringify(bufalo, null, 2));
         throw new InternalServerErrorException(
-          `Não foi possível carregar os dados da propriedade para o búfalo ${bufalo.nome}. Verifique se a relação id_propriedade está correta.`
+          `Não foi possível carregar os dados da propriedade para o búfalo ${bufalo.nome}. Verifique se a relação id_propriedade está correta.`,
         );
       }
 
       // Acessa a propriedade com o alias correto do Supabase (minúsculo)
       const propriedadeABCB = bufalo.propriedade?.p_abcb ?? false;
-      
-      console.log(`Búfalo encontrado: ${bufalo.nome}, Raça: ${bufalo.id_raca}, Propriedade ABCB: ${propriedadeABCB}`);
 
-      // Se não tem raça definida, tenta sugerir com Gemini
-      if (!bufalo.id_raca) {
-        console.log(`Tentando sugerir raça com Gemini para ${bufalo.nome}...`);
-        try {
-          await this.tentarSugerirRaca(bufalo);
-          // Recarrega búfalo após possível atualização de raça
-          const bufaloAtualizado = await this.buscarBufaloCompleto(bufaloId);
-          if (bufaloAtualizado) {
-            Object.assign(bufalo, bufaloAtualizado);
-            console.log(`Búfalo atualizado, nova raça: ${bufalo.id_raca}`);
-          }
-        } catch (error) {
-          console.warn(`Falha ao sugerir raça para ${bufalo.nome}:`, error.message);
-          // Continua o processamento mesmo sem raça
-        }
-      }
+      console.log(`Búfalo encontrado: ${bufalo.nome}, Raça: ${bufalo.id_raca}, Propriedade ABCB: ${propriedadeABCB}`);
 
       // Constrói árvore genealógica usando serviço compartilhado
       console.log(`Construindo árvore genealógica para ${bufalo.nome}...`);
@@ -723,54 +1410,6 @@ export class BufaloService {
 
       // Para outros erros, logga e retorna null
       return null;
-    }
-  }
-
-  /**
-   * Tenta sugerir raça usando Gemini baseado em características físicas
-   */
-  private async tentarSugerirRaca(bufalo: any): Promise<void> {
-    try {
-      // Busca dados zootécnicos mais recentes
-      const { data: dadosZootecnicos, error: errorZootec } = await this.supabase
-        .from('dadoszootecnicos')
-        .select('*')
-        .eq('id_bufalo', bufalo.id_bufalo)
-        .order('dt_registro', { ascending: false })
-        .limit(1)
-        .single();
-
-      if (errorZootec || !dadosZootecnicos) {
-        console.warn(`Dados zootécnicos não encontrados para ${bufalo.nome}, pulando sugestão de raça`);
-        return;
-      }
-
-      const caracteristicas = {
-        cor_pelagem: dadosZootecnicos.cor_pelagem,
-        formato_chifre: dadosZootecnicos.formato_chifre,
-        porte_corporal: dadosZootecnicos.porte_corporal,
-        peso: dadosZootecnicos.peso,
-        regiao_origem: bufalo.Propriedade?.Endereco?.estado,
-      };
-
-      console.log(`Solicitando sugestão de raça para ${bufalo.nome} via Gemini...`);
-      const idRacaSugerida = await this.geminiRacaUtil.sugerirRacaBufalo(caracteristicas, this.supabase);
-
-      if (idRacaSugerida) {
-        const { error: errorUpdate } = await this.supabase.from(this.tableName).update({ id_raca: idRacaSugerida }).eq('id_bufalo', bufalo.id_bufalo);
-
-        if (errorUpdate) {
-          console.error(`Erro ao atualizar raça sugerida para ${bufalo.nome}:`, errorUpdate);
-          throw new InternalServerErrorException(`Falha ao salvar raça sugerida: ${errorUpdate.message}`);
-        }
-
-        console.log(`Raça ${idRacaSugerida} sugerida e salva para ${bufalo.nome}`);
-      } else {
-        console.warn(`Gemini não conseguiu sugerir uma raça para ${bufalo.nome}`);
-      }
-    } catch (error) {
-      console.error(`Erro ao tentar sugerir raça para ${bufalo.nome}:`, error);
-      throw error; // Re-throw para que o caller possa tratar
     }
   }
 

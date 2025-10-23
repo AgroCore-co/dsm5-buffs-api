@@ -18,6 +18,7 @@ import { BufaloService } from './bufalo.service';
 import { CreateBufaloDto } from './dto/create-bufalo.dto';
 import { UpdateBufaloDto } from './dto/update-bufalo.dto';
 import { UpdateGrupoBufaloDto } from './dto/update-grupo-bufalo.dto';
+import { FiltroBufaloDto } from './dto/filtro-bufalo.dto';
 import { ApiTags, ApiOperation, ApiResponse, ApiParam, ApiBearerAuth, ApiQuery } from '@nestjs/swagger';
 import { SupabaseAuthGuard } from '../../auth/guards/auth.guard';
 import { User } from '../../auth/decorators/user.decorator';
@@ -71,8 +72,7 @@ export class BufaloController {
   }
 
   @Get('propriedade/:id_propriedade')
-  @UseInterceptors(CacheInterceptor)
-  @CacheTTL(300000) // 5 minutos
+  // Cache removido: maturidade dos búfalos muda dinamicamente baseado em idade
   @ApiOperation({
     summary: 'Lista todos os búfalos de uma propriedade específica com paginação',
     description: 'Retorna búfalos de uma propriedade ordenados por status (ativos primeiro) e data de nascimento (mais antigos primeiro)',
@@ -87,8 +87,7 @@ export class BufaloController {
   }
 
   @Get('microchip/:microchip')
-  @UseInterceptors(CacheInterceptor)
-  @CacheTTL(300000) // 5 minutos
+  // Cache removido: maturidade dos búfalos muda dinamicamente baseado em idade
   @ApiOperation({ summary: 'Busca um búfalo pelo microchip' })
   @ApiParam({ name: 'microchip', description: 'Número do microchip do búfalo', type: String })
   @ApiResponse({ status: 200, description: 'Búfalo encontrado com sucesso.' })
@@ -97,9 +96,303 @@ export class BufaloController {
     return this.bufaloService.findByMicrochip(microchip, user);
   }
 
+  // ========== ROTAS DE FILTRAGEM ==========
+
+  @Get('filtro/raca/:id_raca/propriedade/:id_propriedade')
+  // Cache removido: maturidade dos búfalos muda dinamicamente baseado em idade
+  @ApiOperation({
+    summary: 'Filtra búfalos por raça em uma propriedade',
+    description: 'Retorna búfalos de uma raça específica ordenados por status (ativos primeiro) e data de nascimento (mais antigos primeiro).',
+  })
+  @ApiParam({ name: 'id_raca', description: 'ID da raça (UUID)', type: String })
+  @ApiParam({ name: 'id_propriedade', description: 'ID da propriedade (UUID)', type: String })
+  @ApiQuery({ name: 'page', required: false, type: Number, description: 'Número da página (começa em 1)' })
+  @ApiQuery({ name: 'limit', required: false, type: Number, description: 'Número de itens por página (máximo 100)' })
+  @ApiResponse({ status: 200, description: 'Lista paginada de búfalos filtrados.' })
+  @ApiResponse({ status: 404, description: 'Propriedade não encontrada ou sem acesso.' })
+  findByRaca(
+    @Param('id_raca', ParseUUIDPipe) id_raca: string,
+    @Param('id_propriedade', ParseUUIDPipe) id_propriedade: string,
+    @User() user: any,
+    @Query() paginationDto: PaginationDto,
+  ) {
+    return this.bufaloService.findByRaca(id_raca, id_propriedade, user, paginationDto);
+  }
+
+  @Get('filtro/raca/:id_raca/propriedade/:id_propriedade/brinco/:brinco')
+  // Cache removido: maturidade dos búfalos muda dinamicamente baseado em idade
+  @ApiOperation({
+    summary: 'Filtra búfalos por raça e brinco (busca progressiva)',
+    description:
+      'Permite busca progressiva do brinco. Exemplos: "IZ" encontra "IZ-001", "IZ-002"; "IZ-0" encontra "IZ-001", "IZ-099"; "IZ-001" encontra apenas "IZ-001". Útil quando a propriedade usa múltiplos padrões como "IZ-000" e "BUF-000".',
+  })
+  @ApiParam({ name: 'id_raca', description: 'ID da raça (UUID)', type: String })
+  @ApiParam({ name: 'id_propriedade', description: 'ID da propriedade (UUID)', type: String })
+  @ApiParam({
+    name: 'brinco',
+    description: 'Início do código do brinco (ex: "IZ", "IZ-0", "IZ-001")',
+    type: String,
+  })
+  @ApiQuery({ name: 'page', required: false, type: Number, description: 'Número da página' })
+  @ApiQuery({ name: 'limit', required: false, type: Number, description: 'Itens por página' })
+  @ApiResponse({ status: 200, description: 'Lista paginada de búfalos filtrados.' })
+  @ApiResponse({ status: 404, description: 'Propriedade não encontrada ou sem acesso.' })
+  findByRacaAndBrinco(
+    @Param('id_raca', ParseUUIDPipe) id_raca: string,
+    @Param('id_propriedade', ParseUUIDPipe) id_propriedade: string,
+    @Param('brinco') brinco: string,
+    @User() user: any,
+    @Query() paginationDto: PaginationDto,
+  ) {
+    return this.bufaloService.findByRacaAndBrinco(id_raca, id_propriedade, brinco, user, paginationDto);
+  }
+
+  @Get('filtro/propriedade/:id_propriedade/avancado')
+  // Cache removido: maturidade dos búfalos muda dinamicamente baseado em idade
+  @ApiOperation({
+    summary: 'Filtragem avançada por múltiplos critérios',
+    description:
+      'Permite combinar filtros: raça, sexo (M/F), maturidade (B/N/V/T), status (true/false) e brinco (busca progressiva). Todos os filtros são opcionais.',
+  })
+  @ApiParam({ name: 'id_propriedade', description: 'ID da propriedade (UUID)', type: String })
+  @ApiQuery({ name: 'id_raca', required: false, type: String, description: 'ID da raça (UUID)' })
+  @ApiQuery({ name: 'sexo', required: false, enum: ['M', 'F'], description: 'M-Macho, F-Fêmea' })
+  @ApiQuery({
+    name: 'nivel_maturidade',
+    required: false,
+    enum: ['B', 'N', 'V', 'T'],
+    description: 'B-Bezerro, N-Novilho/Novilha, V-Vaca, T-Touro',
+  })
+  @ApiQuery({ name: 'status', required: false, type: Boolean, description: 'true-Ativo, false-Inativo' })
+  @ApiQuery({
+    name: 'brinco',
+    required: false,
+    type: String,
+    description: 'Início do brinco (ex: "IZ", "BUF")',
+  })
+  @ApiQuery({ name: 'page', required: false, type: Number, description: 'Número da página' })
+  @ApiQuery({ name: 'limit', required: false, type: Number, description: 'Itens por página' })
+  @ApiResponse({ status: 200, description: 'Lista paginada de búfalos filtrados.' })
+  @ApiResponse({ status: 404, description: 'Propriedade não encontrada ou sem acesso.' })
+  findByFiltros(
+    @Param('id_propriedade', ParseUUIDPipe) id_propriedade: string,
+    @Query() filtros: FiltroBufaloDto,
+    @Query() paginationDto: PaginationDto,
+    @User() user: any,
+  ) {
+    return this.bufaloService.findByFiltros(id_propriedade, filtros, user, paginationDto);
+  }
+
+  // ========== FILTROS POR SEXO ==========
+
+  @Get('filtro/sexo/:sexo/propriedade/:id_propriedade')
+  @ApiOperation({
+    summary: 'Filtra búfalos por sexo em uma propriedade',
+    description: 'Retorna búfalos de um sexo específico ordenados por status (ativos primeiro) e data de nascimento.',
+  })
+  @ApiParam({ name: 'sexo', description: 'Sexo do búfalo (M ou F)', enum: ['M', 'F'] })
+  @ApiParam({ name: 'id_propriedade', description: 'ID da propriedade (UUID)', type: String })
+  @ApiQuery({ name: 'page', required: false, type: Number })
+  @ApiQuery({ name: 'limit', required: false, type: Number })
+  @ApiResponse({ status: 200, description: 'Lista paginada de búfalos filtrados.' })
+  findBySexo(
+    @Param('sexo') sexo: string,
+    @Param('id_propriedade', ParseUUIDPipe) id_propriedade: string,
+    @User() user: any,
+    @Query() paginationDto: PaginationDto,
+  ) {
+    return this.bufaloService.findBySexo(sexo, id_propriedade, user, paginationDto);
+  }
+
+  @Get('filtro/sexo/:sexo/propriedade/:id_propriedade/brinco/:brinco')
+  @ApiOperation({
+    summary: 'Filtra búfalos por sexo e brinco (busca progressiva)',
+    description: 'Retorna búfalos de um sexo específico cujo brinco comece com o valor informado.',
+  })
+  @ApiParam({ name: 'sexo', description: 'Sexo do búfalo (M ou F)', enum: ['M', 'F'] })
+  @ApiParam({ name: 'id_propriedade', description: 'ID da propriedade (UUID)', type: String })
+  @ApiParam({ name: 'brinco', description: 'Início do código do brinco', type: String })
+  @ApiQuery({ name: 'page', required: false, type: Number })
+  @ApiQuery({ name: 'limit', required: false, type: Number })
+  @ApiResponse({ status: 200, description: 'Lista paginada de búfalos filtrados.' })
+  findBySexoAndBrinco(
+    @Param('sexo') sexo: string,
+    @Param('id_propriedade', ParseUUIDPipe) id_propriedade: string,
+    @Param('brinco') brinco: string,
+    @User() user: any,
+    @Query() paginationDto: PaginationDto,
+  ) {
+    return this.bufaloService.findBySexoAndBrinco(sexo, id_propriedade, brinco, user, paginationDto);
+  }
+
+  @Get('filtro/sexo/:sexo/propriedade/:id_propriedade/status/:status')
+  @ApiOperation({
+    summary: 'Filtra búfalos por sexo e status',
+    description: 'Retorna búfalos de um sexo específico com determinado status.',
+  })
+  @ApiParam({ name: 'sexo', description: 'Sexo do búfalo (M ou F)', enum: ['M', 'F'] })
+  @ApiParam({ name: 'id_propriedade', description: 'ID da propriedade (UUID)', type: String })
+  @ApiParam({ name: 'status', description: 'Status do búfalo (true ou false)', enum: ['true', 'false'] })
+  @ApiQuery({ name: 'page', required: false, type: Number })
+  @ApiQuery({ name: 'limit', required: false, type: Number })
+  @ApiResponse({ status: 200, description: 'Lista paginada de búfalos filtrados.' })
+  findBySexoAndStatus(
+    @Param('sexo') sexo: string,
+    @Param('id_propriedade', ParseUUIDPipe) id_propriedade: string,
+    @Param('status') status: string,
+    @User() user: any,
+    @Query() paginationDto: PaginationDto,
+  ) {
+    const statusBoolean = status === 'true';
+    return this.bufaloService.findBySexoAndStatus(sexo, statusBoolean, id_propriedade, user, paginationDto);
+  }
+
+  // ========== FILTROS POR MATURIDADE ==========
+
+  @Get('filtro/maturidade/:nivel_maturidade/propriedade/:id_propriedade')
+  @ApiOperation({
+    summary: 'Filtra búfalos por maturidade em uma propriedade',
+    description: 'Retorna búfalos de um nível de maturidade específico (B, N, V, T).',
+  })
+  @ApiParam({
+    name: 'nivel_maturidade',
+    description: 'Nível de maturidade',
+    enum: ['B', 'N', 'V', 'T'],
+  })
+  @ApiParam({ name: 'id_propriedade', description: 'ID da propriedade (UUID)', type: String })
+  @ApiQuery({ name: 'page', required: false, type: Number })
+  @ApiQuery({ name: 'limit', required: false, type: Number })
+  @ApiResponse({ status: 200, description: 'Lista paginada de búfalos filtrados.' })
+  findByMaturidade(
+    @Param('nivel_maturidade') nivel_maturidade: string,
+    @Param('id_propriedade', ParseUUIDPipe) id_propriedade: string,
+    @User() user: any,
+    @Query() paginationDto: PaginationDto,
+  ) {
+    return this.bufaloService.findByMaturidade(nivel_maturidade, id_propriedade, user, paginationDto);
+  }
+
+  @Get('filtro/maturidade/:nivel_maturidade/propriedade/:id_propriedade/brinco/:brinco')
+  @ApiOperation({
+    summary: 'Filtra búfalos por maturidade e brinco (busca progressiva)',
+    description: 'Retorna búfalos de um nível de maturidade específico cujo brinco comece com o valor informado.',
+  })
+  @ApiParam({
+    name: 'nivel_maturidade',
+    description: 'Nível de maturidade',
+    enum: ['B', 'N', 'V', 'T'],
+  })
+  @ApiParam({ name: 'id_propriedade', description: 'ID da propriedade (UUID)', type: String })
+  @ApiParam({ name: 'brinco', description: 'Início do código do brinco', type: String })
+  @ApiQuery({ name: 'page', required: false, type: Number })
+  @ApiQuery({ name: 'limit', required: false, type: Number })
+  @ApiResponse({ status: 200, description: 'Lista paginada de búfalos filtrados.' })
+  findByMaturidadeAndBrinco(
+    @Param('nivel_maturidade') nivel_maturidade: string,
+    @Param('id_propriedade', ParseUUIDPipe) id_propriedade: string,
+    @Param('brinco') brinco: string,
+    @User() user: any,
+    @Query() paginationDto: PaginationDto,
+  ) {
+    return this.bufaloService.findByMaturidadeAndBrinco(nivel_maturidade, id_propriedade, brinco, user, paginationDto);
+  }
+
+  @Get('filtro/maturidade/:nivel_maturidade/propriedade/:id_propriedade/status/:status')
+  @ApiOperation({
+    summary: 'Filtra búfalos por maturidade e status',
+    description: 'Retorna búfalos de um nível de maturidade específico com determinado status.',
+  })
+  @ApiParam({
+    name: 'nivel_maturidade',
+    description: 'Nível de maturidade',
+    enum: ['B', 'N', 'V', 'T'],
+  })
+  @ApiParam({ name: 'id_propriedade', description: 'ID da propriedade (UUID)', type: String })
+  @ApiParam({ name: 'status', description: 'Status do búfalo (true ou false)', enum: ['true', 'false'] })
+  @ApiQuery({ name: 'page', required: false, type: Number })
+  @ApiQuery({ name: 'limit', required: false, type: Number })
+  @ApiResponse({ status: 200, description: 'Lista paginada de búfalos filtrados.' })
+  findByMaturidadeAndStatus(
+    @Param('nivel_maturidade') nivel_maturidade: string,
+    @Param('id_propriedade', ParseUUIDPipe) id_propriedade: string,
+    @Param('status') status: string,
+    @User() user: any,
+    @Query() paginationDto: PaginationDto,
+  ) {
+    const statusBoolean = status === 'true';
+    return this.bufaloService.findByMaturidadeAndStatus(nivel_maturidade, statusBoolean, id_propriedade, user, paginationDto);
+  }
+
+  // ========== FILTROS POR RAÇA + STATUS ==========
+
+  @Get('filtro/raca/:id_raca/propriedade/:id_propriedade/status/:status')
+  @ApiOperation({
+    summary: 'Filtra búfalos por raça e status',
+    description: 'Retorna búfalos de uma raça específica com determinado status.',
+  })
+  @ApiParam({ name: 'id_raca', description: 'ID da raça (UUID)', type: String })
+  @ApiParam({ name: 'id_propriedade', description: 'ID da propriedade (UUID)', type: String })
+  @ApiParam({ name: 'status', description: 'Status do búfalo (true ou false)', enum: ['true', 'false'] })
+  @ApiQuery({ name: 'page', required: false, type: Number })
+  @ApiQuery({ name: 'limit', required: false, type: Number })
+  @ApiResponse({ status: 200, description: 'Lista paginada de búfalos filtrados.' })
+  findByRacaAndStatus(
+    @Param('id_raca', ParseUUIDPipe) id_raca: string,
+    @Param('id_propriedade', ParseUUIDPipe) id_propriedade: string,
+    @Param('status') status: string,
+    @User() user: any,
+    @Query() paginationDto: PaginationDto,
+  ) {
+    const statusBoolean = status === 'true';
+    return this.bufaloService.findByRacaAndStatus(id_raca, statusBoolean, id_propriedade, user, paginationDto);
+  }
+
+  // ========== FILTROS POR STATUS ==========
+
+  @Get('filtro/status/:status/propriedade/:id_propriedade')
+  @ApiOperation({
+    summary: 'Filtra búfalos por status',
+    description: 'Retorna búfalos com determinado status. Ordenação apenas por data de nascimento (mais antigos primeiro).',
+  })
+  @ApiParam({ name: 'status', description: 'Status do búfalo (true ou false)', enum: ['true', 'false'] })
+  @ApiParam({ name: 'id_propriedade', description: 'ID da propriedade (UUID)', type: String })
+  @ApiQuery({ name: 'page', required: false, type: Number })
+  @ApiQuery({ name: 'limit', required: false, type: Number })
+  @ApiResponse({ status: 200, description: 'Lista paginada de búfalos filtrados.' })
+  findByStatus(
+    @Param('status') status: string,
+    @Param('id_propriedade', ParseUUIDPipe) id_propriedade: string,
+    @User() user: any,
+    @Query() paginationDto: PaginationDto,
+  ) {
+    const statusBoolean = status === 'true';
+    return this.bufaloService.findByStatus(statusBoolean, id_propriedade, user, paginationDto);
+  }
+
+  @Get('filtro/status/:status/propriedade/:id_propriedade/brinco/:brinco')
+  @ApiOperation({
+    summary: 'Filtra búfalos por status e brinco (busca progressiva)',
+    description: 'Retorna búfalos com determinado status cujo brinco comece com o valor informado. Ordenação apenas por data de nascimento.',
+  })
+  @ApiParam({ name: 'status', description: 'Status do búfalo (true ou false)', enum: ['true', 'false'] })
+  @ApiParam({ name: 'id_propriedade', description: 'ID da propriedade (UUID)', type: String })
+  @ApiParam({ name: 'brinco', description: 'Início do código do brinco', type: String })
+  @ApiQuery({ name: 'page', required: false, type: Number })
+  @ApiQuery({ name: 'limit', required: false, type: Number })
+  @ApiResponse({ status: 200, description: 'Lista paginada de búfalos filtrados.' })
+  findByStatusAndBrinco(
+    @Param('status') status: string,
+    @Param('id_propriedade', ParseUUIDPipe) id_propriedade: string,
+    @Param('brinco') brinco: string,
+    @User() user: any,
+    @Query() paginationDto: PaginationDto,
+  ) {
+    const statusBoolean = status === 'true';
+    return this.bufaloService.findByStatusAndBrinco(statusBoolean, id_propriedade, brinco, user, paginationDto);
+  }
+
   @Get(':id')
-  @UseInterceptors(CacheInterceptor)
-  @CacheTTL(300000) // 5 minutos
+  // Cache removido: maturidade dos búfalos muda dinamicamente baseado em idade
   @ApiOperation({ summary: 'Busca um búfalo específico pelo ID' })
   @ApiParam({ name: 'id', description: 'ID do búfalo', type: String })
   @ApiResponse({ status: 200, description: 'Dados do búfalo.' })
