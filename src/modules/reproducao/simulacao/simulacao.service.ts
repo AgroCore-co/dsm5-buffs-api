@@ -76,7 +76,10 @@ export class SimulacaoService {
       console.log('Realizando análise genealógica para a búfala: ' + bufalo.id_bufalo);
 
       const response = await firstValueFrom(
-        this.httpService.post(`${this.iaApiUrl}/analise-genealogica`, { id_bufalo: bufalo.id_bufalo } )
+        this.httpService.post(`${this.iaApiUrl}/analise-genealogica`,
+          { id_bufalo: bufalo.id_bufalo },
+          { timeout: 60000 }
+        )
       );
 
       console.log("Análise genealógica feita com sucesso");
