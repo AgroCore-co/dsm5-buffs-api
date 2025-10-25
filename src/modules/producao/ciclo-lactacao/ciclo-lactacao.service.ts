@@ -145,7 +145,12 @@ export class CicloLactacaoService {
     const { data, error } = await this.supabase
       .getAdminClient()
       .from(this.tableName)
-      .select('*')
+      .select(
+        `
+        *,
+        bufala:id_bufala(nome, brinco)
+      `,
+      )
       .eq('id_propriedade', id_propriedade)
       .order('dt_parto', { ascending: false })
       .range(offset, offset + limitValue - 1);
@@ -158,12 +163,20 @@ export class CicloLactacaoService {
       throw new InternalServerErrorException(`Falha ao buscar ciclos da propriedade: ${error.message}`);
     }
 
+    // Transformar a resposta para aplanar os dados da búfala
+    const enrichedData = data.map((ciclo: any) => ({
+      ...ciclo,
+      bufala_nome: ciclo.bufala?.nome || null,
+      bufala_brinco: ciclo.bufala?.brinco || null,
+      bufala: undefined, // remover o objeto aninhado
+    }));
+
     this.logger.log(`Busca concluída - ${data.length} ciclos encontrados (página ${page})`, {
       module: 'CicloLactacaoService',
       method: 'findByPropriedade',
     });
 
-    return createPaginatedResponse(data, count || 0, page, limitValue);
+    return createPaginatedResponse(enrichedData, count || 0, page, limitValue);
   }
 
   async findOne(id_ciclo_lactacao: string) {
