@@ -18,7 +18,7 @@ import { BufaloService } from './bufalo.service';
 import { CreateBufaloDto } from './dto/create-bufalo.dto';
 import { UpdateBufaloDto } from './dto/update-bufalo.dto';
 import { UpdateGrupoBufaloDto } from './dto/update-grupo-bufalo.dto';
-import { FiltroBufaloDto } from './dto/filtro-bufalo.dto';
+import { FiltroAvancadoBufaloDto } from './dto/filtro-avancado-bufalo.dto';
 import { ApiTags, ApiOperation, ApiResponse, ApiParam, ApiBearerAuth, ApiQuery } from '@nestjs/swagger';
 import { SupabaseAuthGuard } from '../../auth/guards/auth.guard';
 import { User } from '../../auth/decorators/user.decorator';
@@ -174,12 +174,9 @@ export class BufaloController {
   @ApiQuery({ name: 'limit', required: false, type: Number, description: 'Itens por página' })
   @ApiResponse({ status: 200, description: 'Lista paginada de búfalos filtrados.' })
   @ApiResponse({ status: 404, description: 'Propriedade não encontrada ou sem acesso.' })
-  findByFiltros(
-    @Param('id_propriedade', ParseUUIDPipe) id_propriedade: string,
-    @Query() filtros: FiltroBufaloDto,
-    @Query() paginationDto: PaginationDto,
-    @User() user: any,
-  ) {
+  findByFiltros(@Param('id_propriedade', ParseUUIDPipe) id_propriedade: string, @Query() queryParams: FiltroAvancadoBufaloDto, @User() user: any) {
+    const { page, limit, ...filtros } = queryParams;
+    const paginationDto = { page, limit };
     return this.bufaloService.findByFiltros(id_propriedade, filtros, user, paginationDto);
   }
 
@@ -532,6 +529,74 @@ export class BufaloController {
 
       // Para erros não tratados
       throw new InternalServerErrorException(`Erro inesperado no processamento da categoria: ${error.message}`);
+    }
+  }
+
+  @Post('processar-categoria/propriedade/:id_propriedade')
+  @ApiOperation({
+    summary: 'Processa a categoria ABCB de todos os búfalos de uma propriedade',
+    description: `
+      Processa a categoria ABCB de todos os búfalos da propriedade de forma automática.
+      Este processo pode demorar alguns minutos dependendo da quantidade de animais.
+      
+      Retorna um relatório detalhado com:
+      - Total de búfalos processados
+      - Número de sucessos e erros
+      - Detalhes de cada animal (categoria antes/depois)
+    `,
+  })
+  @ApiParam({ name: 'id_propriedade', description: 'ID da propriedade (UUID)', type: String })
+  @ApiResponse({
+    status: 200,
+    description: 'Processamento concluído com sucesso',
+    schema: {
+      type: 'object',
+      properties: {
+        message: { type: 'string', example: 'Processamento de categorias concluído' },
+        total: { type: 'number', example: 150 },
+        processados: { type: 'number', example: 150 },
+        sucesso: { type: 'number', example: 145 },
+        erros: { type: 'number', example: 5 },
+        detalhes: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              id_bufalo: { type: 'string' },
+              nome: { type: 'string' },
+              categoriaAntes: { type: 'string', nullable: true },
+              categoriaDepois: { type: 'string', nullable: true },
+              status: { type: 'string', enum: ['sucesso', 'erro'] },
+              mensagem: { type: 'string' },
+            },
+          },
+        },
+      },
+    },
+  })
+  @ApiResponse({ status: 404, description: 'Propriedade não encontrada ou sem acesso.' })
+  @ApiResponse({ status: 500, description: 'Erro interno no processamento.' })
+  async processarCategoriaPropriedade(@Param('id_propriedade', ParseUUIDPipe) id_propriedade: string, @User() user: any) {
+    const startTime = Date.now();
+    const userInfo = user?.sub || user?.id || 'unknown';
+
+    this.logger.log(`[REQUEST] Processamento de categorias em lote - Usuario: ${userInfo}, Propriedade: ${id_propriedade}`);
+
+    try {
+      const resultado = await this.bufaloService.processarCategoriaPropriedade(id_propriedade, user);
+      const duration = Date.now() - startTime;
+
+      this.logger.log(
+        `[RESPONSE_SUCCESS] Processamento concluído - Usuario: ${userInfo}, Total: ${resultado.total}, Sucesso: ${resultado.sucesso}, Erros: ${resultado.erros}, Duracao: ${duration}ms`,
+      );
+
+      return resultado;
+    } catch (error) {
+      const duration = Date.now() - startTime;
+      this.logger.error(
+        `[RESPONSE_ERROR] Falha no processamento em lote - Usuario: ${userInfo}, Propriedade: ${id_propriedade}, Erro: ${error.message}, Duracao: ${duration}ms`,
+      );
+      throw error;
     }
   }
 }

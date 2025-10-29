@@ -448,6 +448,10 @@ export class BufaloService {
       throw new NotFoundException(`Propriedade com ID ${id_propriedade} não encontrada ou você não tem acesso a ela.`);
     }
 
+    // Log para debug
+    console.log('🔍 Filtros recebidos:', JSON.stringify(filtros, null, 2));
+    console.log('📊 Paginação:', { page, limit, offset });
+
     // Query base para contagem
     let queryCount = this.supabase.from(this.tableName).select('*', { count: 'exact', head: true }).eq('id_propriedade', id_propriedade);
 
@@ -466,26 +470,31 @@ export class BufaloService {
 
     // Aplica filtros dinamicamente
     if (filtros.id_raca) {
+      console.log('✅ Aplicando filtro de raça:', filtros.id_raca);
       queryCount = queryCount.eq('id_raca', filtros.id_raca);
       queryData = queryData.eq('id_raca', filtros.id_raca);
     }
 
     if (filtros.sexo) {
+      console.log('✅ Aplicando filtro de sexo:', filtros.sexo);
       queryCount = queryCount.eq('sexo', filtros.sexo);
       queryData = queryData.eq('sexo', filtros.sexo);
     }
 
     if (filtros.nivel_maturidade) {
+      console.log('✅ Aplicando filtro de maturidade:', filtros.nivel_maturidade);
       queryCount = queryCount.eq('nivel_maturidade', filtros.nivel_maturidade);
       queryData = queryData.eq('nivel_maturidade', filtros.nivel_maturidade);
     }
 
-    if (filtros.status !== undefined) {
+    if (filtros.status !== undefined && filtros.status !== null) {
+      console.log('✅ Aplicando filtro de status:', filtros.status, 'tipo:', typeof filtros.status);
       queryCount = queryCount.eq('status', filtros.status);
       queryData = queryData.eq('status', filtros.status);
     }
 
     if (filtros.brinco) {
+      console.log('✅ Aplicando filtro de brinco:', filtros.brinco);
       queryCount = queryCount.ilike('brinco', `${filtros.brinco}%`);
       queryData = queryData.ilike('brinco', `${filtros.brinco}%`);
     }
@@ -494,8 +503,11 @@ export class BufaloService {
     const { count, error: countError } = await queryCount;
 
     if (countError) {
+      console.error('❌ Erro ao contar:', countError);
       throw new InternalServerErrorException('Falha ao contar búfalos com filtros avançados.');
     }
+
+    console.log('📊 Total de registros encontrados:', count);
 
     // Executa busca com ordenação padrão e paginação
     const { data, error } = await queryData
@@ -504,8 +516,11 @@ export class BufaloService {
       .range(offset, offset + limit - 1);
 
     if (error) {
+      console.error('❌ Erro ao buscar dados:', error);
       throw new InternalServerErrorException('Falha ao buscar búfalos com filtros avançados.');
     }
+
+    console.log(`✅ Retornando ${data?.length || 0} búfalos`);
 
     // Atualiza maturidade de búfalos ativos
     const bufalosAtivos = (data || []).filter((bufalo) => bufalo.status === true);
@@ -1475,8 +1490,8 @@ export class BufaloService {
       .select(
         `
         *,
-        Raca (nome),
-        Propriedade (nome)
+        raca:id_raca(nome),
+        propriedade:id_propriedade(nome)
       `,
       )
       .in('id_propriedade', propriedadesUsuario)
@@ -1484,9 +1499,126 @@ export class BufaloService {
       .eq('status', true);
 
     if (error) {
+      console.error('❌ Erro ao buscar búfalos por categoria:', error);
       throw new InternalServerErrorException(`Falha ao buscar búfalos da categoria ${categoria}.`);
     }
 
     return data || [];
+  }
+
+  /**
+   * Processa a categoria ABCB de todos os búfalos de uma propriedade
+   * @param id_propriedade ID da propriedade
+   * @param user Usuário logado
+   * @returns Relatório do processamento
+   */
+  async processarCategoriaPropriedade(id_propriedade: string, user: any) {
+    console.log(`🏠 Iniciando processamento de categorias para propriedade ${id_propriedade}`);
+
+    const userId = await this.getUserId(user);
+    const propriedadesUsuario = await this.getUserPropriedades(userId);
+
+    // Valida acesso à propriedade
+    if (!propriedadesUsuario.includes(id_propriedade)) {
+      throw new NotFoundException(`Propriedade com ID ${id_propriedade} não encontrada ou você não tem acesso a ela.`);
+    }
+
+    // Busca todos os búfalos da propriedade
+    const { data: bufalos, error } = await this.supabase
+      .from(this.tableName)
+      .select('id_bufalo, nome, categoria')
+      .eq('id_propriedade', id_propriedade)
+      .order('nome', { ascending: true });
+
+    if (error) {
+      console.error('❌ Erro ao buscar búfalos da propriedade:', error);
+      throw new InternalServerErrorException(`Falha ao buscar búfalos da propriedade: ${error.message}`);
+    }
+
+    if (!bufalos || bufalos.length === 0) {
+      return {
+        message: 'Nenhum búfalo encontrado nesta propriedade',
+        total: 0,
+        processados: 0,
+        sucesso: 0,
+        erros: 0,
+        detalhes: [],
+      };
+    }
+
+    console.log(`📊 Total de búfalos encontrados: ${bufalos.length}`);
+
+    const resultados = {
+      total: bufalos.length,
+      processados: 0,
+      sucesso: 0,
+      erros: 0,
+      detalhes: [] as Array<{
+        id_bufalo: string;
+        nome: string;
+        categoriaAntes: CategoriaABCB | null;
+        categoriaDepois: CategoriaABCB | null;
+        status: 'sucesso' | 'erro';
+        mensagem?: string;
+      }>,
+    };
+
+    // Processa cada búfalo
+    for (const bufalo of bufalos) {
+      resultados.processados++;
+      console.log(`[${resultados.processados}/${bufalos.length}] Processando ${bufalo.nome}...`);
+
+      try {
+        const categoriaAntes = bufalo.categoria;
+        const categoriaDepois = await this.processarCategoriaABCB(bufalo.id_bufalo);
+
+        if (categoriaDepois !== null) {
+          resultados.sucesso++;
+          resultados.detalhes.push({
+            id_bufalo: bufalo.id_bufalo,
+            nome: bufalo.nome,
+            categoriaAntes,
+            categoriaDepois,
+            status: 'sucesso',
+            mensagem: categoriaAntes !== categoriaDepois ? 'Categoria atualizada' : 'Categoria mantida',
+          });
+          console.log(`✅ ${bufalo.nome}: ${categoriaAntes || 'null'} → ${categoriaDepois}`);
+        } else {
+          resultados.erros++;
+          resultados.detalhes.push({
+            id_bufalo: bufalo.id_bufalo,
+            nome: bufalo.nome,
+            categoriaAntes,
+            categoriaDepois: null,
+            status: 'erro',
+            mensagem: 'Não foi possível processar a categoria',
+          });
+          console.warn(`⚠️ ${bufalo.nome}: Falha no processamento`);
+        }
+      } catch (error) {
+        resultados.erros++;
+        resultados.detalhes.push({
+          id_bufalo: bufalo.id_bufalo,
+          nome: bufalo.nome,
+          categoriaAntes: bufalo.categoria,
+          categoriaDepois: null,
+          status: 'erro',
+          mensagem: error.message || 'Erro desconhecido',
+        });
+        console.error(`❌ ${bufalo.nome}: ${error.message}`);
+      }
+    }
+
+    console.log(`
+🎉 Processamento concluído!
+📊 Total: ${resultados.total}
+✅ Sucesso: ${resultados.sucesso}
+❌ Erros: ${resultados.erros}
+    `);
+
+    return {
+      message: 'Processamento de categorias concluído',
+      ...resultados,
+    };
   }
 }
