@@ -12,6 +12,7 @@ import {
   ParseBoolPipe,
   HttpCode,
   UseInterceptors,
+  HttpStatus,
 } from '@nestjs/common';
 import { CacheInterceptor, CacheTTL } from '@nestjs/cache-manager';
 import { AlertasService } from './alerta.service';
@@ -19,13 +20,17 @@ import { CreateAlertaDto, PrioridadeAlerta, NichoAlerta } from './dto/create-ale
 import { SupabaseAuthGuard } from '../auth/guards/auth.guard';
 import { ApiBearerAuth, ApiOperation, ApiQuery, ApiResponse, ApiTags, ApiParam } from '@nestjs/swagger';
 import { PaginationDto } from '../../core/dto/pagination.dto';
+import { AlertasScheduler } from './alerta.scheduler';
 
 @ApiBearerAuth('JWT-auth')
 @UseGuards(SupabaseAuthGuard)
 @ApiTags('Alertas')
 @Controller('alertas')
 export class AlertasController {
-  constructor(private readonly alertasService: AlertasService) {}
+  constructor(
+    private readonly alertasService: AlertasService,
+    private readonly alertasScheduler: AlertasScheduler,
+  ) {}
 
   // Este endpoint seria mais para testes ou criação manual,
   // já que a maioria dos alertas será criada pelos serviços.
@@ -109,8 +114,10 @@ export class AlertasController {
     @Query('prioridade') prioridade?: PrioridadeAlerta,
     @Query('antecedencia') antecendencia?: number,
     @Query('incluirVistos', new ParseBoolPipe({ optional: true })) incluirVistos?: boolean,
-    @Query() paginationDto?: PaginationDto,
+    @Query('page') page?: number,
+    @Query('limit') limit?: number,
   ) {
+    const paginationDto: PaginationDto = { page, limit };
     return this.alertasService.findAll(tipo, antecendencia, incluirVistos, paginationDto);
   }
 
@@ -138,8 +145,10 @@ export class AlertasController {
   findByPropriedade(
     @Param('id_propriedade', ParseUUIDPipe) id_propriedade: string,
     @Query('incluirVistos', new ParseBoolPipe({ optional: true })) incluirVistos?: boolean,
-    @Query() paginationDto?: PaginationDto,
+    @Query('page') page?: number,
+    @Query('limit') limit?: number,
   ) {
+    const paginationDto: PaginationDto = { page, limit };
     return this.alertasService.findByPropriedade(id_propriedade, incluirVistos, paginationDto);
   }
 
@@ -211,5 +220,132 @@ export class AlertasController {
   })
   remove(@Param('id', ParseUUIDPipe) id: string) {
     return this.alertasService.remove(id);
+  }
+
+  @Post('verificar/:id_propriedade')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Verifica e cria alertas pendentes para uma propriedade específica',
+    description: `
+      Executa verificação manual de alertas para uma propriedade, processando dados históricos e atuais.
+      
+      **Funcionalidade:**
+      - 🔍 **Verificação sob demanda**: Processa dados da propriedade sem esperar os schedulers diários
+      - 🎯 **Filtro por nicho**: Permite verificar apenas nichos específicos (CLINICO, SANITARIO, REPRODUCAO, MANEJO)
+      - 📊 **Processamento de dados históricos**: Ideal para processar dados anteriores à implementação do sistema de alertas
+      - ⚡ **Performance otimizada**: Processa apenas uma propriedade por vez para evitar sobrecarga
+      
+      **Nichos Disponíveis:**
+      - **CLINICO**: Doenças graves que necessitam atenção imediata
+      - **SANITARIO**: Tratamentos com retorno próximo (15 dias) e vacinações programadas (7 dias)
+      - **REPRODUCAO**: Nascimentos previstos (30 dias), coberturas sem diagnóstico (90+ dias), fêmeas vazias (180+ dias)
+      - **MANEJO**: Secagem de búfalas (alertas criados automaticamente no registro de parto)
+      
+      **Exemplo de uso:**
+      - Verificar todos os nichos: não enviar parâmetro nichos
+      - Verificar apenas reprodução: ?nichos=REPRODUCAO
+      - Verificar sanitário e reprodução: ?nichos=SANITARIO&nichos=REPRODUCAO
+    `,
+  })
+  @ApiParam({
+    name: 'id_propriedade',
+    description: 'ID da propriedade para verificação de alertas',
+    type: 'string',
+  })
+  @ApiQuery({
+    name: 'nichos',
+    required: false,
+    description: 'Nichos específicos para verificar. Se omitido, verifica todos os nichos.',
+    enum: NichoAlerta,
+    isArray: true,
+    example: ['REPRODUCAO', 'SANITARIO'],
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Verificação concluída com sucesso. Retorna detalhes dos alertas criados por nicho.',
+    schema: {
+      example: {
+        success: true,
+        message: 'Verificação de alertas concluída',
+        propriedade: 'f47ac10b-58cc-4372-a567-0e02b2c3d479',
+        nichos_verificados: ['SANITARIO', 'REPRODUCAO'],
+        alertas_criados: 5,
+        detalhes: {
+          SANITARIO: {
+            tratamentos: 2,
+            vacinacoes: 1,
+          },
+          REPRODUCAO: {
+            nascimentos: 1,
+            coberturas_sem_diagnostico: 0,
+            femeas_vazias: 1,
+          },
+        },
+      },
+    },
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Parâmetros inválidos fornecidos.',
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Propriedade não encontrada.',
+  })
+  async verificarAlertas(@Param('id_propriedade', ParseUUIDPipe) id_propriedade: string, @Query('nichos') nichos?: string | string[]) {
+    // Normaliza nichos para array
+    const nichosArray: NichoAlerta[] = nichos
+      ? Array.isArray(nichos)
+        ? (nichos as NichoAlerta[])
+        : [nichos as NichoAlerta]
+      : [NichoAlerta.CLINICO, NichoAlerta.SANITARIO, NichoAlerta.REPRODUCAO, NichoAlerta.MANEJO];
+
+    const detalhes: any = {};
+    let totalAlertas = 0;
+
+    // Verifica cada nicho solicitado
+    for (const nicho of nichosArray) {
+      switch (nicho) {
+        case NichoAlerta.SANITARIO:
+          const tratamentos = await this.alertasScheduler.verificarTratamentosPropriedade(id_propriedade);
+          const vacinacoes = await this.alertasScheduler.verificarVacinacoesPropriedade(id_propriedade);
+          detalhes[nicho] = { tratamentos, vacinacoes };
+          totalAlertas += tratamentos + vacinacoes;
+          break;
+
+        case NichoAlerta.REPRODUCAO:
+          const nascimentos = await this.alertasScheduler.verificarNascimentosPropriedade(id_propriedade);
+          const coberturasSemDiag = await this.alertasScheduler.verificarCoberturaSemDiagnosticoPropriedade(id_propriedade);
+          const femeasVazias = await this.alertasScheduler.verificarFemeasVaziasPropriedade(id_propriedade);
+          detalhes[nicho] = {
+            nascimentos,
+            coberturas_sem_diagnostico: coberturasSemDiag,
+            femeas_vazias: femeasVazias,
+          };
+          totalAlertas += nascimentos + coberturasSemDiag + femeasVazias;
+          break;
+
+        case NichoAlerta.CLINICO:
+          detalhes[nicho] = {
+            message: 'Alertas clínicos são criados automaticamente ao registrar doenças graves',
+          };
+          break;
+
+        case NichoAlerta.MANEJO:
+          detalhes[nicho] = {
+            message: 'Alertas de manejo (secagem) são criados automaticamente ao registrar partos',
+          };
+          break;
+      }
+    }
+
+    return {
+      success: true,
+      message: 'Verificação de alertas concluída',
+      propriedade: id_propriedade,
+      nichos_verificados: nichosArray,
+      alertas_criados: totalAlertas,
+      detalhes,
+    };
   }
 }

@@ -236,4 +236,690 @@ export class AlertasScheduler {
       this.logger.error('Erro geral na verificação de nascimentos:', error);
     }
   }
+
+  /**
+   * Executa todo dia às 01:00 para verificar coberturas sem diagnóstico.
+   * Alerta para coberturas "Em andamento" há mais de 90 dias.
+   */
+  @Cron('0 1 * * *') // 01:00 todos os dias
+  async verificarCoberturaSemDiagnostico() {
+    this.logger.log('Iniciando verificação de coberturas sem diagnóstico...');
+
+    try {
+      const { data: coberturas, error } = await this.supabase
+        .from('dadosreproducao')
+        .select('id_reproducao, dt_evento, id_bufala, id_propriedade, tipo_inseminacao')
+        .eq('status', 'Em andamento');
+
+      if (error) {
+        this.logger.error('Erro ao buscar coberturas:', error.message);
+        return;
+      }
+
+      if (!coberturas || coberturas.length === 0) {
+        this.logger.log('Nenhuma cobertura em andamento encontrada.');
+        return;
+      }
+
+      let alertasCriados = 0;
+      let alertasComErro = 0;
+      const hoje = new Date();
+
+      for (const cob of coberturas) {
+        try {
+          if (!cob.dt_evento) continue;
+
+          const dtCobertura = new Date(cob.dt_evento);
+          const diasDesdeCobertura = Math.floor((hoje.getTime() - dtCobertura.getTime()) / (1000 * 60 * 60 * 24));
+
+          // Alerta se passaram mais de 90 dias sem diagnóstico
+          if (diasDesdeCobertura >= 90) {
+            const { data: bufalaData } = await this.supabase
+              .from('bufalo')
+              .select('id_bufalo, nome, id_grupo, id_propriedade')
+              .eq('id_bufalo', cob.id_bufala)
+              .single();
+
+            if (!bufalaData) continue;
+
+            let grupoNome = 'Não informado';
+            if (bufalaData.id_grupo) {
+              const { data: grupoData } = await this.supabase.from('grupo').select('nome_grupo').eq('id_grupo', bufalaData.id_grupo).single();
+              if (grupoData) grupoNome = grupoData.nome_grupo;
+            }
+
+            let propriedadeNome = 'Não informada';
+            const propriedadeId = cob.id_propriedade || bufalaData.id_propriedade;
+            if (propriedadeId) {
+              const { data: propData } = await this.supabase.from('propriedade').select('nome').eq('id_propriedade', propriedadeId).single();
+              if (propData) propriedadeNome = propData.nome;
+            }
+
+            await this.alertasService.createIfNotExists({
+              animal_id: bufalaData.id_bufalo,
+              grupo: grupoNome,
+              localizacao: propriedadeNome,
+              id_propriedade: propriedadeId,
+              motivo: `Búfala ${bufalaData.nome} com cobertura há ${diasDesdeCobertura} dias sem diagnóstico de prenhez.`,
+              nicho: NichoAlerta.REPRODUCAO,
+              data_alerta: hoje.toISOString().split('T')[0],
+              prioridade: PrioridadeAlerta.MEDIA,
+              observacao: `Cobertura realizada em ${dtCobertura.toLocaleDateString('pt-BR')} (${cob.tipo_inseminacao}). Realizar ultrassonografia.`,
+              id_evento_origem: cob.id_reproducao,
+              tipo_evento_origem: 'COBERTURA_SEM_DIAGNOSTICO',
+            });
+
+            alertasCriados++;
+          }
+        } catch (cobError) {
+          this.logger.error(`Erro ao processar cobertura ${cob.id_reproducao}:`, cobError);
+          alertasComErro++;
+        }
+      }
+
+      this.logger.log(`Verificação de coberturas sem diagnóstico concluída. ${alertasCriados} alertas criados, ${alertasComErro} erros.`);
+    } catch (error) {
+      this.logger.error('Erro geral na verificação de coberturas sem diagnóstico:', error);
+    }
+  }
+
+  /**
+   * Executa todo dia às 02:00 para verificar fêmeas vazias há muito tempo.
+   * Alerta para fêmeas aptas sem cobertura há mais de 180 dias.
+   */
+  @Cron('0 2 * * *') // 02:00 todos os dias
+  async verificarFemeasVazias() {
+    this.logger.log('Iniciando verificação de fêmeas vazias prolongadas...');
+
+    try {
+      // Buscar todas as fêmeas ativas com idade reprodutiva (18+ meses)
+      const idadeMinimaReproducao = new Date();
+      idadeMinimaReproducao.setMonth(idadeMinimaReproducao.getMonth() - 18);
+
+      const { data: femeas, error } = await this.supabase
+        .from('bufalo')
+        .select('id_bufalo, nome, dt_nascimento, id_grupo, id_propriedade')
+        .eq('sexo', 'F')
+        .eq('status', true)
+        .lte('dt_nascimento', idadeMinimaReproducao.toISOString());
+
+      if (error || !femeas) {
+        this.logger.error('Erro ao buscar fêmeas:', error?.message);
+        return;
+      }
+
+      let alertasCriados = 0;
+      let alertasComErro = 0;
+      const hoje = new Date();
+
+      for (const femea of femeas) {
+        try {
+          // Buscar última cobertura
+          const { data: ultimaCobertura } = await this.supabase
+            .from('dadosreproducao')
+            .select('dt_evento, status')
+            .eq('id_bufala', femea.id_bufalo)
+            .order('dt_evento', { ascending: false })
+            .limit(1)
+            .single();
+
+          let diasSemCobertura = 0;
+
+          if (!ultimaCobertura) {
+            // Nunca foi coberta - usar idade como referência
+            const idadeMeses = Math.floor((hoje.getTime() - new Date(femea.dt_nascimento).getTime()) / (1000 * 60 * 60 * 24 * 30.44));
+            if (idadeMeses < 24) continue; // Só alerta se tem 24+ meses e nunca foi coberta
+            diasSemCobertura = 999; // Valor simbólico para "nunca coberta"
+          } else if (ultimaCobertura.status === 'Falhou' || ultimaCobertura.status === 'Concluída') {
+            diasSemCobertura = Math.floor((hoje.getTime() - new Date(ultimaCobertura.dt_evento).getTime()) / (1000 * 60 * 60 * 24));
+          } else {
+            continue; // Tem cobertura ativa, pula
+          }
+
+          // Alerta se sem cobertura há 180+ dias
+          if (diasSemCobertura >= 180) {
+            let grupoNome = 'Não informado';
+            if (femea.id_grupo) {
+              const { data: grupoData } = await this.supabase.from('grupo').select('nome_grupo').eq('id_grupo', femea.id_grupo).single();
+              if (grupoData) grupoNome = grupoData.nome_grupo;
+            }
+
+            let propriedadeNome = 'Não informada';
+            if (femea.id_propriedade) {
+              const { data: propData } = await this.supabase.from('propriedade').select('nome').eq('id_propriedade', femea.id_propriedade).single();
+              if (propData) propriedadeNome = propData.nome;
+            }
+
+            const motivoTexto =
+              diasSemCobertura === 999
+                ? `Fêmea ${femea.nome} apta para reprodução mas nunca foi coberta.`
+                : `Fêmea ${femea.nome} sem cobertura há ${diasSemCobertura} dias.`;
+
+            await this.alertasService.createIfNotExists({
+              animal_id: femea.id_bufalo,
+              grupo: grupoNome,
+              localizacao: propriedadeNome,
+              id_propriedade: femea.id_propriedade,
+              motivo: motivoTexto,
+              nicho: NichoAlerta.REPRODUCAO,
+              data_alerta: hoje.toISOString().split('T')[0],
+              prioridade: PrioridadeAlerta.BAIXA,
+              observacao: 'Avaliar aptidão reprodutiva e planejar cobertura/inseminação.',
+              id_evento_origem: femea.id_bufalo,
+              tipo_evento_origem: 'FEMEA_VAZIA',
+            });
+
+            alertasCriados++;
+          }
+        } catch (femeaError) {
+          this.logger.error(`Erro ao processar fêmea ${femea.id_bufalo}:`, femeaError);
+          alertasComErro++;
+        }
+      }
+
+      this.logger.log(`Verificação de fêmeas vazias concluída. ${alertasCriados} alertas criados, ${alertasComErro} erros.`);
+    } catch (error) {
+      this.logger.error('Erro geral na verificação de fêmeas vazias:', error);
+    }
+  }
+
+  /**
+   * Executa todo dia às 03:00 para verificar vacinações e vermifugações programadas.
+   */
+  @Cron('0 3 * * *') // 03:00 todos os dias
+  async verificarVacinacoes() {
+    this.logger.log('Iniciando verificação de vacinações programadas...');
+
+    try {
+      const dataAlvo = new Date();
+      dataAlvo.setDate(dataAlvo.getDate() + 7); // 7 dias de antecedência
+      const dataAlvoStr = dataAlvo.toISOString().split('T')[0];
+
+      const { data: vacinacoes, error } = await this.supabase
+        .from('vacinacao')
+        .select('id_vacinacao, dt_aplicacao, tipo_vacina, id_bufalo, id_propriedade')
+        .eq('dt_aplicacao', dataAlvoStr);
+
+      if (error || !vacinacoes || vacinacoes.length === 0) {
+        this.logger.log('Nenhuma vacinação programada para a data alvo.');
+        return;
+      }
+
+      let alertasCriados = 0;
+      let alertasComErro = 0;
+
+      for (const vac of vacinacoes) {
+        try {
+          const { data: bufaloData } = await this.supabase
+            .from('bufalo')
+            .select('id_bufalo, nome, id_grupo, id_propriedade')
+            .eq('id_bufalo', vac.id_bufalo)
+            .single();
+
+          if (!bufaloData) continue;
+
+          let grupoNome = 'Não informado';
+          if (bufaloData.id_grupo) {
+            const { data: grupoData } = await this.supabase.from('grupo').select('nome_grupo').eq('id_grupo', bufaloData.id_grupo).single();
+            if (grupoData) grupoNome = grupoData.nome_grupo;
+          }
+
+          let propriedadeNome = 'Não informada';
+          const propriedadeId = vac.id_propriedade || bufaloData.id_propriedade;
+          if (propriedadeId) {
+            const { data: propData } = await this.supabase.from('propriedade').select('nome').eq('id_propriedade', propriedadeId).single();
+            if (propData) propriedadeNome = propData.nome;
+          }
+
+          await this.alertasService.createIfNotExists({
+            animal_id: bufaloData.id_bufalo,
+            grupo: grupoNome,
+            localizacao: propriedadeNome,
+            id_propriedade: propriedadeId,
+            motivo: `Vacinação programada: ${vac.tipo_vacina} para ${bufaloData.nome}.`,
+            nicho: NichoAlerta.SANITARIO,
+            data_alerta: vac.dt_aplicacao,
+            prioridade: PrioridadeAlerta.MEDIA,
+            observacao: `Preparar vacina e equipamentos. Data: ${new Date(vac.dt_aplicacao).toLocaleDateString('pt-BR')}.`,
+            id_evento_origem: vac.id_vacinacao,
+            tipo_evento_origem: 'VACINACAO_PROGRAMADA',
+          });
+
+          alertasCriados++;
+        } catch (vacError) {
+          this.logger.error(`Erro ao processar vacinação ${vac.id_vacinacao}:`, vacError);
+          alertasComErro++;
+        }
+      }
+
+      this.logger.log(`Verificação de vacinações concluída. ${alertasCriados} alertas criados, ${alertasComErro} erros.`);
+    } catch (error) {
+      this.logger.error('Erro geral na verificação de vacinações:', error);
+    }
+  }
+
+  /**
+   * Métodos públicos para verificação manual por propriedade
+   * Usados pelo endpoint de verificação manual de alertas
+   */
+
+  /**
+   * Verifica tratamentos sanitários para uma propriedade específica.
+   * @param id_propriedade - ID da propriedade
+   * @returns Número de alertas criados
+   */
+  async verificarTratamentosPropriedade(id_propriedade: string): Promise<number> {
+    this.logger.log(`Verificando tratamentos para propriedade ${id_propriedade}...`);
+
+    try {
+      const dataAlvo = new Date();
+      dataAlvo.setDate(dataAlvo.getDate() + ANTECEDENCIA_SANITARIO_DIAS);
+      const dataAlvoString = dataAlvo.toISOString().split('T')[0];
+
+      const { data: tratamentos, error } = await this.supabase
+        .from('dadossanitarios')
+        .select('id_sanit, dt_retorno, doenca, id_bufalo, id_propriedade')
+        .eq('necessita_retorno', true)
+        .eq('dt_retorno', dataAlvoString)
+        .eq('id_propriedade', id_propriedade);
+
+      if (error || !tratamentos) {
+        this.logger.error('Erro ao buscar tratamentos:', error?.message);
+        return 0;
+      }
+
+      let alertasCriados = 0;
+
+      for (const tratamento of tratamentos) {
+        try {
+          if (!tratamento.id_bufalo) continue;
+
+          const { data: bufaloData } = await this.supabase
+            .from('bufalo')
+            .select('id_bufalo, id_grupo, id_propriedade')
+            .eq('id_bufalo', tratamento.id_bufalo)
+            .single();
+
+          if (!bufaloData) continue;
+
+          let grupoNome = 'Não informado';
+          if (bufaloData.id_grupo) {
+            const { data: grupoData } = await this.supabase.from('grupo').select('nome_grupo').eq('id_grupo', bufaloData.id_grupo).single();
+            if (grupoData) grupoNome = grupoData.nome_grupo;
+          }
+
+          let propriedadeNome = 'Não informada';
+          if (id_propriedade) {
+            const { data: propData } = await this.supabase.from('propriedade').select('nome').eq('id_propriedade', id_propriedade).single();
+            if (propData) propriedadeNome = propData.nome;
+          }
+
+          const alertaDto: CreateAlertaDto = {
+            animal_id: bufaloData.id_bufalo,
+            grupo: grupoNome,
+            localizacao: propriedadeNome,
+            id_propriedade: id_propriedade,
+            motivo: `Retorno de tratamento para "${tratamento.doenca}" agendado.`,
+            nicho: NichoAlerta.SANITARIO,
+            data_alerta: tratamento.dt_retorno,
+            prioridade: PrioridadeAlerta.MEDIA,
+            observacao: `Verificar protocolo sanitário. ID do tratamento original: ${tratamento.id_sanit}`,
+            id_evento_origem: tratamento.id_sanit,
+            tipo_evento_origem: 'DADOS_SANITARIOS',
+          };
+
+          await this.alertasService.createIfNotExists(alertaDto);
+          alertasCriados++;
+        } catch (error) {
+          this.logger.error(`Erro ao criar alerta para tratamento ${tratamento.id_sanit}:`, error);
+        }
+      }
+
+      this.logger.log(`Verificação de tratamentos concluída para propriedade ${id_propriedade}: ${alertasCriados} alertas criados.`);
+      return alertasCriados;
+    } catch (error) {
+      this.logger.error(`Erro na verificação de tratamentos para propriedade ${id_propriedade}:`, error);
+      return 0;
+    }
+  }
+
+  /**
+   * Verifica nascimentos previstos para uma propriedade específica.
+   * @param id_propriedade - ID da propriedade
+   * @returns Número de alertas criados
+   */
+  async verificarNascimentosPropriedade(id_propriedade: string): Promise<number> {
+    this.logger.log(`Verificando nascimentos para propriedade ${id_propriedade}...`);
+
+    try {
+      const { data: reproducoes, error } = await this.supabase
+        .from('dadosreproducao')
+        .select('id_reproducao, dt_evento, id_bufala, id_propriedade')
+        .eq('status', 'Confirmada')
+        .eq('id_propriedade', id_propriedade);
+
+      if (error || !reproducoes) {
+        this.logger.error('Erro ao buscar reproduções:', error?.message);
+        return 0;
+      }
+
+      let alertasCriados = 0;
+      const hoje = new Date();
+
+      for (const rep of reproducoes) {
+        try {
+          if (!rep.dt_evento) continue;
+
+          const dataEvento = new Date(rep.dt_evento);
+          const dataPrevistaParto = new Date(dataEvento);
+          dataPrevistaParto.setDate(dataEvento.getDate() + TEMPO_GESTAÇÃO_DIAS);
+
+          const diffTime = dataPrevistaParto.getTime() - hoje.getTime();
+          const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+          if (diffDays > 0 && diffDays <= ANTECEDENCIA_PARTO_DIAS) {
+            if (!rep.id_bufala) continue;
+
+            const { data: bufalaData } = await this.supabase
+              .from('bufalo')
+              .select('id_bufalo, id_grupo, id_propriedade')
+              .eq('id_bufalo', rep.id_bufala)
+              .single();
+
+            if (!bufalaData) continue;
+
+            let grupoNome = 'Não informado';
+            if (bufalaData.id_grupo) {
+              const { data: grupoData } = await this.supabase.from('grupo').select('nome_grupo').eq('id_grupo', bufalaData.id_grupo).single();
+              if (grupoData) grupoNome = grupoData.nome_grupo;
+            }
+
+            let propriedadeNome = 'Não informada';
+            if (id_propriedade) {
+              const { data: propData } = await this.supabase.from('propriedade').select('nome').eq('id_propriedade', id_propriedade).single();
+              if (propData) propriedadeNome = propData.nome;
+            }
+
+            const alertaDto: CreateAlertaDto = {
+              animal_id: bufalaData.id_bufalo,
+              grupo: grupoNome,
+              localizacao: propriedadeNome,
+              id_propriedade: id_propriedade,
+              motivo: `Previsão de parto para ${dataPrevistaParto.toLocaleDateString('pt-BR')}.`,
+              nicho: NichoAlerta.REPRODUCAO,
+              data_alerta: dataPrevistaParto.toISOString().split('T')[0],
+              prioridade: PrioridadeAlerta.ALTA,
+              observacao: `Preparar área de maternidade. Gestação confirmada em ${new Date(rep.dt_evento).toLocaleDateString('pt-BR')}.`,
+              id_evento_origem: rep.id_reproducao,
+              tipo_evento_origem: 'DADOS_REPRODUCAO',
+            };
+
+            await this.alertasService.createIfNotExists(alertaDto);
+            alertasCriados++;
+          }
+        } catch (error) {
+          this.logger.error(`Erro ao processar reprodução ${rep.id_reproducao}:`, error);
+        }
+      }
+
+      this.logger.log(`Verificação de nascimentos concluída para propriedade ${id_propriedade}: ${alertasCriados} alertas criados.`);
+      return alertasCriados;
+    } catch (error) {
+      this.logger.error(`Erro na verificação de nascimentos para propriedade ${id_propriedade}:`, error);
+      return 0;
+    }
+  }
+
+  /**
+   * Verifica coberturas sem diagnóstico para uma propriedade específica.
+   * @param id_propriedade - ID da propriedade
+   * @returns Número de alertas criados
+   */
+  async verificarCoberturaSemDiagnosticoPropriedade(id_propriedade: string): Promise<number> {
+    this.logger.log(`Verificando coberturas sem diagnóstico para propriedade ${id_propriedade}...`);
+
+    try {
+      const { data: coberturas, error } = await this.supabase
+        .from('dadosreproducao')
+        .select('id_reproducao, dt_evento, id_bufala, id_propriedade, tipo_inseminacao')
+        .eq('status', 'Em andamento')
+        .eq('id_propriedade', id_propriedade);
+
+      if (error || !coberturas) {
+        this.logger.error('Erro ao buscar coberturas:', error?.message);
+        return 0;
+      }
+
+      let alertasCriados = 0;
+      const hoje = new Date();
+
+      for (const cob of coberturas) {
+        try {
+          if (!cob.dt_evento) continue;
+
+          const dtCobertura = new Date(cob.dt_evento);
+          const diasDesdeCobertura = Math.floor((hoje.getTime() - dtCobertura.getTime()) / (1000 * 60 * 60 * 24));
+
+          if (diasDesdeCobertura >= 90) {
+            const { data: bufalaData } = await this.supabase
+              .from('bufalo')
+              .select('id_bufalo, nome, id_grupo, id_propriedade')
+              .eq('id_bufalo', cob.id_bufala)
+              .single();
+
+            if (!bufalaData) continue;
+
+            let grupoNome = 'Não informado';
+            if (bufalaData.id_grupo) {
+              const { data: grupoData } = await this.supabase.from('grupo').select('nome_grupo').eq('id_grupo', bufalaData.id_grupo).single();
+              if (grupoData) grupoNome = grupoData.nome_grupo;
+            }
+
+            let propriedadeNome = 'Não informada';
+            if (id_propriedade) {
+              const { data: propData } = await this.supabase.from('propriedade').select('nome').eq('id_propriedade', id_propriedade).single();
+              if (propData) propriedadeNome = propData.nome;
+            }
+
+            await this.alertasService.createIfNotExists({
+              animal_id: bufalaData.id_bufalo,
+              grupo: grupoNome,
+              localizacao: propriedadeNome,
+              id_propriedade: id_propriedade,
+              motivo: `Búfala ${bufalaData.nome} com cobertura há ${diasDesdeCobertura} dias sem diagnóstico de prenhez.`,
+              nicho: NichoAlerta.REPRODUCAO,
+              data_alerta: hoje.toISOString().split('T')[0],
+              prioridade: PrioridadeAlerta.MEDIA,
+              observacao: `Cobertura realizada em ${dtCobertura.toLocaleDateString('pt-BR')} (${cob.tipo_inseminacao}). Realizar ultrassonografia.`,
+              id_evento_origem: cob.id_reproducao,
+              tipo_evento_origem: 'COBERTURA_SEM_DIAGNOSTICO',
+            });
+
+            alertasCriados++;
+          }
+        } catch (error) {
+          this.logger.error(`Erro ao processar cobertura ${cob.id_reproducao}:`, error);
+        }
+      }
+
+      this.logger.log(`Verificação de coberturas sem diagnóstico concluída para propriedade ${id_propriedade}: ${alertasCriados} alertas criados.`);
+      return alertasCriados;
+    } catch (error) {
+      this.logger.error(`Erro na verificação de coberturas sem diagnóstico para propriedade ${id_propriedade}:`, error);
+      return 0;
+    }
+  }
+
+  /**
+   * Verifica fêmeas vazias para uma propriedade específica.
+   * @param id_propriedade - ID da propriedade
+   * @returns Número de alertas criados
+   */
+  async verificarFemeasVaziasPropriedade(id_propriedade: string): Promise<number> {
+    this.logger.log(`Verificando fêmeas vazias para propriedade ${id_propriedade}...`);
+
+    try {
+      const idadeMinimaReproducao = new Date();
+      idadeMinimaReproducao.setMonth(idadeMinimaReproducao.getMonth() - 18);
+
+      const { data: femeas, error } = await this.supabase
+        .from('bufalo')
+        .select('id_bufalo, nome, dt_nascimento, id_grupo, id_propriedade')
+        .eq('sexo', 'F')
+        .eq('status', true)
+        .lte('dt_nascimento', idadeMinimaReproducao.toISOString())
+        .eq('id_propriedade', id_propriedade);
+
+      if (error || !femeas) {
+        this.logger.error('Erro ao buscar fêmeas:', error?.message);
+        return 0;
+      }
+
+      let alertasCriados = 0;
+      const hoje = new Date();
+
+      for (const femea of femeas) {
+        try {
+          const { data: ultimaCobertura } = await this.supabase
+            .from('dadosreproducao')
+            .select('dt_evento, status')
+            .eq('id_bufala', femea.id_bufalo)
+            .order('dt_evento', { ascending: false })
+            .limit(1)
+            .single();
+
+          let diasSemCobertura = 0;
+
+          if (!ultimaCobertura) {
+            const idadeMeses = Math.floor((hoje.getTime() - new Date(femea.dt_nascimento).getTime()) / (1000 * 60 * 60 * 24 * 30.44));
+            if (idadeMeses < 24) continue;
+            diasSemCobertura = 999;
+          } else if (ultimaCobertura.status === 'Falhou' || ultimaCobertura.status === 'Concluída') {
+            diasSemCobertura = Math.floor((hoje.getTime() - new Date(ultimaCobertura.dt_evento).getTime()) / (1000 * 60 * 60 * 24));
+          } else {
+            continue;
+          }
+
+          if (diasSemCobertura >= 180) {
+            let grupoNome = 'Não informado';
+            if (femea.id_grupo) {
+              const { data: grupoData } = await this.supabase.from('grupo').select('nome_grupo').eq('id_grupo', femea.id_grupo).single();
+              if (grupoData) grupoNome = grupoData.nome_grupo;
+            }
+
+            let propriedadeNome = 'Não informada';
+            if (id_propriedade) {
+              const { data: propData } = await this.supabase.from('propriedade').select('nome').eq('id_propriedade', id_propriedade).single();
+              if (propData) propriedadeNome = propData.nome;
+            }
+
+            const motivoTexto =
+              diasSemCobertura === 999
+                ? `Fêmea ${femea.nome} apta para reprodução mas nunca foi coberta.`
+                : `Fêmea ${femea.nome} sem cobertura há ${diasSemCobertura} dias.`;
+
+            await this.alertasService.createIfNotExists({
+              animal_id: femea.id_bufalo,
+              grupo: grupoNome,
+              localizacao: propriedadeNome,
+              id_propriedade: id_propriedade,
+              motivo: motivoTexto,
+              nicho: NichoAlerta.REPRODUCAO,
+              data_alerta: hoje.toISOString().split('T')[0],
+              prioridade: PrioridadeAlerta.BAIXA,
+              observacao: 'Avaliar aptidão reprodutiva e planejar cobertura/inseminação.',
+              id_evento_origem: femea.id_bufalo,
+              tipo_evento_origem: 'FEMEA_VAZIA',
+            });
+
+            alertasCriados++;
+          }
+        } catch (error) {
+          this.logger.error(`Erro ao processar fêmea ${femea.id_bufalo}:`, error);
+        }
+      }
+
+      this.logger.log(`Verificação de fêmeas vazias concluída para propriedade ${id_propriedade}: ${alertasCriados} alertas criados.`);
+      return alertasCriados;
+    } catch (error) {
+      this.logger.error(`Erro na verificação de fêmeas vazias para propriedade ${id_propriedade}:`, error);
+      return 0;
+    }
+  }
+
+  /**
+   * Verifica vacinações programadas para uma propriedade específica.
+   * @param id_propriedade - ID da propriedade
+   * @returns Número de alertas criados
+   */
+  async verificarVacinacoesPropriedade(id_propriedade: string): Promise<number> {
+    this.logger.log(`Verificando vacinações para propriedade ${id_propriedade}...`);
+
+    try {
+      const dataAlvo = new Date();
+      dataAlvo.setDate(dataAlvo.getDate() + 7);
+      const dataAlvoStr = dataAlvo.toISOString().split('T')[0];
+
+      const { data: vacinacoes, error } = await this.supabase
+        .from('vacinacao')
+        .select('id_vacinacao, dt_aplicacao, tipo_vacina, id_bufalo, id_propriedade')
+        .eq('dt_aplicacao', dataAlvoStr)
+        .eq('id_propriedade', id_propriedade);
+
+      if (error || !vacinacoes) {
+        this.logger.log('Nenhuma vacinação programada para a propriedade.');
+        return 0;
+      }
+
+      let alertasCriados = 0;
+
+      for (const vac of vacinacoes) {
+        try {
+          const { data: bufaloData } = await this.supabase
+            .from('bufalo')
+            .select('id_bufalo, nome, id_grupo, id_propriedade')
+            .eq('id_bufalo', vac.id_bufalo)
+            .single();
+
+          if (!bufaloData) continue;
+
+          let grupoNome = 'Não informado';
+          if (bufaloData.id_grupo) {
+            const { data: grupoData } = await this.supabase.from('grupo').select('nome_grupo').eq('id_grupo', bufaloData.id_grupo).single();
+            if (grupoData) grupoNome = grupoData.nome_grupo;
+          }
+
+          let propriedadeNome = 'Não informada';
+          if (id_propriedade) {
+            const { data: propData } = await this.supabase.from('propriedade').select('nome').eq('id_propriedade', id_propriedade).single();
+            if (propData) propriedadeNome = propData.nome;
+          }
+
+          await this.alertasService.createIfNotExists({
+            animal_id: bufaloData.id_bufalo,
+            grupo: grupoNome,
+            localizacao: propriedadeNome,
+            id_propriedade: id_propriedade,
+            motivo: `Vacinação programada: ${vac.tipo_vacina} para ${bufaloData.nome}.`,
+            nicho: NichoAlerta.SANITARIO,
+            data_alerta: vac.dt_aplicacao,
+            prioridade: PrioridadeAlerta.MEDIA,
+            observacao: `Preparar vacina e equipamentos. Data: ${new Date(vac.dt_aplicacao).toLocaleDateString('pt-BR')}.`,
+            id_evento_origem: vac.id_vacinacao,
+            tipo_evento_origem: 'VACINACAO_PROGRAMADA',
+          });
+
+          alertasCriados++;
+        } catch (error) {
+          this.logger.error(`Erro ao processar vacinação ${vac.id_vacinacao}:`, error);
+        }
+      }
+
+      this.logger.log(`Verificação de vacinações concluída para propriedade ${id_propriedade}: ${alertasCriados} alertas criados.`);
+      return alertasCriados;
+    } catch (error) {
+      this.logger.error(`Erro na verificação de vacinações para propriedade ${id_propriedade}:`, error);
+      return 0;
+    }
+  }
 }

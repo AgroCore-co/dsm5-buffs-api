@@ -7,10 +7,15 @@ import { createPaginatedResponse, calculatePaginationParams } from '../../../cor
 import { FrequenciaDoencasResponseDto } from './dto/frequencia-doencas.dto';
 import { StringSimilarityUtil } from '../../../core/utils/string-similarity.utils';
 import { DoencaNormalizerUtil } from './utils/doenca-normalizer.utils';
+import { AlertasService } from '../../alerta/alerta.service';
+import { NichoAlerta, PrioridadeAlerta } from '../../alerta/dto/create-alerta.dto';
 
 @Injectable()
 export class DadosSanitariosService {
-  constructor(private readonly supabase: SupabaseService) {}
+  constructor(
+    private readonly supabase: SupabaseService,
+    private readonly alertasService: AlertasService,
+  ) {}
 
   private readonly tableName = 'dadossanitarios';
   private readonly tableMedicacoes = 'medicacoes';
@@ -79,6 +84,78 @@ export class DadosSanitariosService {
     if (error) {
       throw new InternalServerErrorException(`Falha ao criar dado sanitário: ${error.message}`);
     }
+
+    // 5. CRIAR ALERTA CLÍNICO AUTOMÁTICO para doenças graves
+    try {
+      const doencasGraves = [
+        'brucelose',
+        'tuberculose',
+        'raiva',
+        'carbúnculo',
+        'mastite gangrenosa',
+        'pneumonia severa',
+        'septicemia',
+        'leptospirose',
+        'febre aftosa',
+      ];
+
+      const doencaLower = doencaNormalizada?.toLowerCase() || '';
+      const isGrave = doencasGraves.some((grave) => doencaLower.includes(grave));
+
+      if (isGrave) {
+        // Buscar informações do búfalo
+        const { data: bufaloData } = await this.supabase
+          .getAdminClient()
+          .from('bufalo')
+          .select('id_bufalo, nome, id_grupo, id_propriedade')
+          .eq('id_bufalo', dto.id_bufalo)
+          .single();
+
+        if (bufaloData) {
+          let grupoNome = 'Não informado';
+          if (bufaloData.id_grupo) {
+            const { data: grupoData } = await this.supabase
+              .getAdminClient()
+              .from('grupo')
+              .select('nome_grupo')
+              .eq('id_grupo', bufaloData.id_grupo)
+              .single();
+            if (grupoData) grupoNome = grupoData.nome_grupo;
+          }
+
+          let propriedadeNome = 'Não informada';
+          if (bufaloData.id_propriedade) {
+            const { data: propData } = await this.supabase
+              .getAdminClient()
+              .from('propriedade')
+              .select('nome')
+              .eq('id_propriedade', bufaloData.id_propriedade)
+              .single();
+            if (propData) propriedadeNome = propData.nome;
+          }
+
+          await this.alertasService.createIfNotExists({
+            animal_id: bufaloData.id_bufalo,
+            grupo: grupoNome,
+            localizacao: propriedadeNome,
+            id_propriedade: bufaloData.id_propriedade,
+            motivo: `⚠️ ATENÇÃO: ${bufaloData.nome} diagnosticado(a) com ${doencaNormalizada}.`,
+            nicho: NichoAlerta.CLINICO,
+            data_alerta: new Date().toISOString().split('T')[0],
+            prioridade: PrioridadeAlerta.ALTA,
+            observacao: `Doença grave detectada: ${doencaNormalizada}. Monitorar evolução clínica e isolamento se necessário.`,
+            id_evento_origem: data.id_sanit,
+            tipo_evento_origem: 'DADOS_SANITARIOS_GRAVE',
+          });
+
+          console.log(`✅ Alerta clínico criado para ${bufaloData.nome} - ${doencaNormalizada}`);
+        }
+      }
+    } catch (alertaError) {
+      // Não bloqueia o fluxo se o alerta falhar
+      console.error('⚠️ Erro ao criar alerta clínico:', alertaError);
+    }
+
     return data;
   }
 

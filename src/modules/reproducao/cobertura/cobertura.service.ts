@@ -7,10 +7,15 @@ import { PaginatedResponse } from '../../../core/dto/pagination.dto';
 import { createPaginatedResponse, calculatePaginationParams } from '../../../core/utils/pagination.utils';
 import { FemeaDisponivelReproducaoDto } from './dto/femea-disponivel-reproducao.dto';
 import { RegistrarPartoDto } from './dto/registrar-parto.dto';
+import { AlertasService } from '../../alerta/alerta.service';
+import { NichoAlerta, PrioridadeAlerta } from '../../alerta/dto/create-alerta.dto';
 
 @Injectable()
 export class CoberturaService {
-  constructor(private readonly supabase: SupabaseService) {}
+  constructor(
+    private readonly supabase: SupabaseService,
+    private readonly alertasService: AlertasService,
+  ) {}
 
   private readonly tableName = 'dadosreproducao';
 
@@ -300,13 +305,84 @@ export class CoberturaService {
         console.warn('Erro ao criar ciclo de lactação:', cicloError.message);
       } else {
         cicloLactacao = ciclo;
+
+        // 4. CRIAR ALERTA AUTOMÁTICO PARA SECAGEM (60 dias antes do previsto)
+        try {
+          const dtParto = new Date(dto.dt_parto);
+          const padrãoDias = dto.padrao_dias_lactacao || 305;
+          const dtSecagemPrevista = new Date(dtParto);
+          dtSecagemPrevista.setDate(dtParto.getDate() + padrãoDias);
+
+          // Alerta 60 dias antes da secagem prevista
+          const dtAlertaSecagem = new Date(dtSecagemPrevista);
+          dtAlertaSecagem.setDate(dtSecagemPrevista.getDate() - 60);
+
+          // Buscar informações da búfala para o alerta
+          const { data: bufalaData } = await this.supabase
+            .getAdminClient()
+            .from('bufalo')
+            .select('id_bufalo, nome, id_grupo, id_propriedade')
+            .eq('id_bufalo', cobertura.id_bufala)
+            .single();
+
+          if (bufalaData) {
+            // Buscar nome do grupo
+            let grupoNome = 'Não informado';
+            if (bufalaData.id_grupo) {
+              const { data: grupoData } = await this.supabase
+                .getAdminClient()
+                .from('grupo')
+                .select('nome_grupo')
+                .eq('id_grupo', bufalaData.id_grupo)
+                .single();
+              if (grupoData) {
+                grupoNome = grupoData.nome_grupo;
+              }
+            }
+
+            // Buscar nome da propriedade
+            let propriedadeNome = 'Não informada';
+            const propriedadeId = cobertura.id_propriedade || bufalaData.id_propriedade;
+            if (propriedadeId) {
+              const { data: propData } = await this.supabase
+                .getAdminClient()
+                .from('propriedade')
+                .select('nome')
+                .eq('id_propriedade', propriedadeId)
+                .single();
+              if (propData) {
+                propriedadeNome = propData.nome;
+              }
+            }
+
+            // Criar alerta
+            await this.alertasService.createIfNotExists({
+              animal_id: bufalaData.id_bufalo,
+              grupo: grupoNome,
+              localizacao: propriedadeNome,
+              id_propriedade: propriedadeId,
+              motivo: `Preparar para secagem da búfala ${bufalaData.nome}. Lactação prevista até ${dtSecagemPrevista.toLocaleDateString('pt-BR')}.`,
+              nicho: NichoAlerta.MANEJO,
+              data_alerta: dtAlertaSecagem.toISOString().split('T')[0],
+              prioridade: PrioridadeAlerta.MEDIA,
+              observacao: `Ciclo iniciado em ${dtParto.toLocaleDateString('pt-BR')}. Duração padrão: ${padrãoDias} dias. Iniciar protocolo de secagem 60 dias antes.`,
+              id_evento_origem: ciclo.id_ciclo_lactacao,
+              tipo_evento_origem: 'CICLO_LACTACAO',
+            });
+
+            console.log(`✅ Alerta de secagem criado automaticamente para ${bufalaData.nome}`);
+          }
+        } catch (alertaError) {
+          // Não bloqueia o fluxo se o alerta falhar
+          console.error('⚠️ Erro ao criar alerta de secagem:', alertaError);
+        }
       }
     }
 
     return {
       cobertura: coberturaAtualizada,
       ciclo_lactacao: cicloLactacao,
-      message: cicloLactacao ? 'Parto registrado e ciclo de lactação criado com sucesso' : 'Parto registrado com sucesso',
+      message: cicloLactacao ? 'Parto registrado, ciclo de lactação criado e alerta de secagem agendado com sucesso' : 'Parto registrado com sucesso',
     };
   }
 }
