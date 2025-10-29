@@ -45,20 +45,45 @@ export class AlertasService {
       if (createAlertaDto.tipo_evento_origem && createAlertaDto.id_evento_origem) {
         const { data: existingAlert, error: searchError } = await this.supabase
           .from('alertas')
-          .select('id_alerta')
+          .select('id_alerta, visto')
           .eq('tipo_evento_origem', createAlertaDto.tipo_evento_origem)
           .eq('id_evento_origem', createAlertaDto.id_evento_origem)
-          .maybeSingle(); // Perfeito para verificar 0 ou 1 resultado
+          .eq('animal_id', createAlertaDto.animal_id)
+          .eq('nicho', createAlertaDto.nicho)
+          .maybeSingle();
 
         if (searchError) {
           console.error('Erro ao verificar alerta existente:', searchError.message);
           throw new InternalServerErrorException(`Erro ao verificar alerta existente: ${searchError.message}`);
         }
 
-        // Se o alerta JÁ EXISTE (independente do status 'visto'), não faz nada.
-        if (existingAlert) {
-          // console.log(`Alerta para evento ${createAlertaDto.tipo_evento_origem}:${createAlertaDto.id_evento_origem} já existe. Ignorando.`);
+        // Se o alerta JÁ EXISTE e NÃO foi visto, não cria duplicata
+        if (existingAlert && !existingAlert.visto) {
+          // console.log(`Alerta para evento ${createAlertaDto.tipo_evento_origem}:${createAlertaDto.id_evento_origem} já existe e não foi visto. Ignorando.`);
           return existingAlert;
+        }
+
+        // Se o alerta existe mas foi visto, verifica se precisa criar um novo
+        // baseado na data do alerta (para alertas recorrentes como fêmeas vazias)
+        if (existingAlert && existingAlert.visto) {
+          // Para tipos recorrentes (FEMEA_VAZIA, COBERTURA_SEM_DIAGNOSTICO),
+          // verifica se já existe um alerta NÃO VISTO na mesma data
+          if (createAlertaDto.tipo_evento_origem === 'FEMEA_VAZIA' || createAlertaDto.tipo_evento_origem === 'COBERTURA_SEM_DIAGNOSTICO') {
+            const { data: alertaMesmaData } = await this.supabase
+              .from('alertas')
+              .select('id_alerta')
+              .eq('tipo_evento_origem', createAlertaDto.tipo_evento_origem)
+              .eq('id_evento_origem', createAlertaDto.id_evento_origem)
+              .eq('animal_id', createAlertaDto.animal_id)
+              .eq('data_alerta', createAlertaDto.data_alerta)
+              .eq('visto', false)
+              .maybeSingle();
+
+            if (alertaMesmaData) {
+              // console.log(`Alerta recorrente já existe para hoje e não foi visto. Ignorando.`);
+              return alertaMesmaData;
+            }
+          }
         }
       }
 

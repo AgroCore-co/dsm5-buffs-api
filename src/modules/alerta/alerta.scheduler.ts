@@ -19,7 +19,7 @@ export class AlertasScheduler {
     private readonly supabaseService: SupabaseService,
     private readonly alertasService: AlertasService,
   ) {
-    this.supabase = this.supabaseService.getClient();
+    this.supabase = this.supabaseService.getAdminClient();
   }
 
   /**
@@ -37,7 +37,7 @@ export class AlertasScheduler {
       // Busca tratamentos que precisam de retorno na data alvo
       const { data: tratamentos, error } = await this.supabase
         .from('dadossanitarios')
-        .select('id_sanit, dt_retorno, doenca, id_bufalo, id_propriedade')
+        .select('id_sanit, dt_retorno, doenca, id_bufalo')
         .eq('necessita_retorno', true)
         .eq('dt_retorno', dataAlvoString);
 
@@ -87,9 +87,12 @@ export class AlertasScheduler {
 
           // Buscar nome da propriedade
           let propriedadeNome = 'Não informada';
-          const propriedadeId = tratamento.id_propriedade || bufaloData.id_propriedade;
-          if (propriedadeId) {
-            const { data: propData } = await this.supabase.from('propriedade').select('nome').eq('id_propriedade', propriedadeId).single();
+          if (bufaloData.id_propriedade) {
+            const { data: propData } = await this.supabase
+              .from('propriedade')
+              .select('nome')
+              .eq('id_propriedade', bufaloData.id_propriedade)
+              .single();
 
             if (propData) {
               propriedadeNome = propData.nome;
@@ -100,7 +103,7 @@ export class AlertasScheduler {
             animal_id: bufaloData.id_bufalo,
             grupo: grupoNome,
             localizacao: propriedadeNome,
-            id_propriedade: propriedadeId,
+            id_propriedade: bufaloData.id_propriedade,
             motivo: `Retorno de tratamento para "${tratamento.doenca}" agendado.`,
             nicho: NichoAlerta.SANITARIO,
             data_alerta: tratamento.dt_retorno,
@@ -516,12 +519,23 @@ export class AlertasScheduler {
       dataAlvo.setDate(dataAlvo.getDate() + ANTECEDENCIA_SANITARIO_DIAS);
       const dataAlvoString = dataAlvo.toISOString().split('T')[0];
 
+      // Busca búfalos da propriedade
+      const { data: bufalos, error: bufaloError } = await this.supabase.from('bufalo').select('id_bufalo').eq('id_propriedade', id_propriedade);
+
+      if (bufaloError || !bufalos || bufalos.length === 0) {
+        this.logger.log('Nenhum búfalo encontrado para a propriedade.');
+        return 0;
+      }
+
+      const bufaloIds = bufalos.map((b) => b.id_bufalo);
+
+      // Busca tratamentos dos búfalos da propriedade
       const { data: tratamentos, error } = await this.supabase
         .from('dadossanitarios')
-        .select('id_sanit, dt_retorno, doenca, id_bufalo, id_propriedade')
+        .select('id_sanit, dt_retorno, doenca, id_bufalo')
         .eq('necessita_retorno', true)
         .eq('dt_retorno', dataAlvoString)
-        .eq('id_propriedade', id_propriedade);
+        .in('id_bufalo', bufaloIds);
 
       if (error || !tratamentos) {
         this.logger.error('Erro ao buscar tratamentos:', error?.message);
