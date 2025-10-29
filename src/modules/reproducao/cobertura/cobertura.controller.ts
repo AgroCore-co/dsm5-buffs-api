@@ -6,6 +6,8 @@ import { CoberturaService } from './cobertura.service';
 import { CreateCoberturaDto } from './dto/create-cobertura.dto';
 import { UpdateCoberturaDto } from './dto/update-cobertura.dto';
 import { PaginationDto } from '../../../core/dto/pagination.dto';
+import { FemeaDisponivelReproducaoDto } from './dto/femea-disponivel-reproducao.dto';
+import { RegistrarPartoDto } from './dto/registrar-parto.dto';
 
 @ApiBearerAuth('JWT-auth')
 @UseGuards(SupabaseAuthGuard)
@@ -68,5 +70,48 @@ export class CoberturaController {
   @ApiResponse({ status: 404, description: 'Cobertura não encontrada.' })
   remove(@Param('id', ParseUUIDPipe) id: string) {
     return this.service.remove(id);
+  }
+
+  @Get('femeas/disponiveis-reproducao/:id_propriedade')
+  @ApiOperation({ summary: 'Lista fêmeas disponíveis para reprodução' })
+  @ApiParam({ name: 'id_propriedade', description: 'ID da propriedade', type: 'string' })
+  @ApiQuery({
+    name: 'filtro',
+    required: false,
+    enum: ['todas', 'solteiras', 'vazias', 'aptas'],
+    description: 'todas = todas fêmeas | solteiras = sem cobertura | vazias = cobertura falhou | aptas = prontas para cobrir',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Fêmeas disponíveis para reprodução',
+    type: [FemeaDisponivelReproducaoDto],
+  })
+  async getFemeasDisponiveisReproducao(
+    @Param('id_propriedade', ParseUUIDPipe) id_propriedade: string,
+    @Query('filtro') filtro: 'todas' | 'solteiras' | 'vazias' | 'aptas' = 'aptas',
+  ): Promise<FemeaDisponivelReproducaoDto[]> {
+    return this.service.findFemeasDisponiveisReproducao(id_propriedade, filtro);
+  }
+
+  @Patch(':id/registrar-parto')
+  @ApiOperation({ summary: 'Registra parto e cria novo ciclo de lactação automaticamente' })
+  @ApiParam({ name: 'id', description: 'ID da cobertura', type: 'string' })
+  @ApiBody({ type: RegistrarPartoDto })
+  @ApiResponse({
+    status: 200,
+    description: 'Parto registrado e ciclo criado (se aplicável)',
+    schema: {
+      type: 'object',
+      properties: {
+        cobertura: { type: 'object', description: 'Dados atualizados da cobertura' },
+        ciclo_lactacao: { type: 'object', nullable: true, description: 'Ciclo criado (se aplicável)' },
+        message: { type: 'string', example: 'Parto registrado e ciclo de lactação criado com sucesso' },
+      },
+    },
+  })
+  @ApiResponse({ status: 400, description: 'Cobertura não está confirmada ou dados inválidos' })
+  @ApiResponse({ status: 404, description: 'Cobertura não encontrada' })
+  registrarParto(@Param('id', ParseUUIDPipe) id: string, @Body() dto: RegistrarPartoDto) {
+    return this.service.registrarParto(id, dto);
   }
 }

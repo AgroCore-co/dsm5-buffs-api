@@ -1,11 +1,13 @@
 import { Controller, Get, Post, Body, Patch, Param, Delete, ParseUUIDPipe, UseGuards, HttpCode, Query } from '@nestjs/common';
-import { ApiBearerAuth, ApiOperation, ApiResponse, ApiTags, ApiQuery } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiOperation, ApiResponse, ApiTags, ApiQuery, ApiParam } from '@nestjs/swagger';
 import { SupabaseAuthGuard } from '../../auth/guards/auth.guard';
 import { User } from '../../auth/decorators/user.decorator';
 import { LoggerService } from '../../../core/logger/logger.service';
 import { ControleLeiteiroService } from './controle-leiteiro.service';
 import { CreateDadosLactacaoDto } from './dto/create-dados-lactacao.dto';
 import { UpdateDadosLactacaoDto } from './dto/update-dados-lactacao.dto';
+import { FemeaEmLactacaoDto } from './dto/femea-em-lactacao.dto';
+import { ResumoProducaoBufalaDto } from './dto/resumo-producao-bufala.dto';
 
 @ApiBearerAuth('JWT-auth')
 @UseGuards(SupabaseAuthGuard)
@@ -97,5 +99,39 @@ export class ControleLeiteiroController {
   remove(@Param('id', ParseUUIDPipe) id: string, @User() user: any) {
     this.logger.logApiRequest('DELETE', `/lactacao/${id}`, undefined, { module: 'ControleLeiteiroController', method: 'remove', lactacaoId: id });
     return this.service.remove(id, user);
+  }
+
+  @Get('femeas/em-lactacao/:id_propriedade')
+  @ApiOperation({ summary: 'Lista fêmeas em período de lactação ativo' })
+  @ApiParam({ name: 'id_propriedade', description: 'ID da propriedade', type: 'string' })
+  @ApiResponse({
+    status: 200,
+    description: 'Fêmeas em lactação com dados de produção',
+    type: [FemeaEmLactacaoDto],
+  })
+  async getFemeasEmLactacao(@Param('id_propriedade', ParseUUIDPipe) id_propriedade: string): Promise<FemeaEmLactacaoDto[]> {
+    this.logger.logApiRequest('GET', `/lactacao/femeas/em-lactacao/${id_propriedade}`, undefined, {
+      module: 'ControleLeiteiroController',
+      method: 'getFemeasEmLactacao',
+      propriedadeId: id_propriedade,
+    });
+    return this.service.findFemeasEmLactacao(id_propriedade);
+  }
+
+  @Get('bufala/:id/resumo-producao')
+  @ApiOperation({ summary: 'Resumo de produção de uma búfala (ciclo atual + histórico)' })
+  @ApiParam({ name: 'id', description: 'ID da búfala', type: 'string' })
+  @ApiResponse({
+    status: 200,
+    description: 'Resumo completo de produção',
+    type: ResumoProducaoBufalaDto,
+  })
+  async getResumoProducaoBufala(@Param('id', ParseUUIDPipe) id: string, @User() user: any): Promise<ResumoProducaoBufalaDto> {
+    this.logger.logApiRequest('GET', `/lactacao/bufala/${id}/resumo-producao`, undefined, {
+      module: 'ControleLeiteiroController',
+      method: 'getResumoProducaoBufala',
+      bufalaId: id,
+    });
+    return this.service.getResumoProducaoBufala(id, user);
   }
 }

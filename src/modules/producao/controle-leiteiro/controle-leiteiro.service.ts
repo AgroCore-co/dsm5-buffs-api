@@ -7,6 +7,8 @@ import { UpdateDadosLactacaoDto } from './dto/update-dados-lactacao.dto';
 import { AlertasService } from '../../alerta/alerta.service';
 import { CreateAlertaDto, NichoAlerta, PrioridadeAlerta } from '../../alerta/dto/create-alerta.dto';
 import { GeminiService } from '../../../core/gemini/gemini.service';
+import { FemeaEmLactacaoDto } from './dto/femea-em-lactacao.dto';
+import { ResumoProducaoBufalaDto } from './dto/resumo-producao-bufala.dto';
 
 @Injectable()
 export class ControleLeiteiroService {
@@ -488,5 +490,273 @@ export class ControleLeiteiroService {
       lactacaoId: id,
     });
     return;
+  }
+
+  /**
+   * Busca fêmeas em lactação de uma propriedade
+   */
+  async findFemeasEmLactacao(id_propriedade: string): Promise<FemeaEmLactacaoDto[]> {
+    this.customLogger.log('Buscando fêmeas em lactação', {
+      module: 'ControleLeiteiroService',
+      method: 'findFemeasEmLactacao',
+      propriedadeId: id_propriedade,
+    });
+
+    // 1. Buscar ciclos ativos (status = 'Em Lactação')
+    const { data: ciclosAtivos, error: ciclosError } = await this.supabase
+      .from('ciclolactacao')
+      .select(
+        `
+        id_ciclo_lactacao,
+        id_bufala,
+        dt_parto,
+        dt_secagem_prevista,
+        status,
+        bufala:id_bufala(
+          id_bufalo,
+          nome,
+          brinco,
+          dt_nascimento,
+          id_raca
+        )
+      `,
+      )
+      .eq('id_propriedade', id_propriedade)
+      .eq('status', 'Em Lactação')
+      .order('dt_parto', { ascending: false });
+
+    if (ciclosError) {
+      this.customLogger.logError(ciclosError, {
+        module: 'ControleLeiteiroService',
+        method: 'findFemeasEmLactacao',
+      });
+      throw new InternalServerErrorException(`Erro ao buscar ciclos de lactação: ${ciclosError.message}`);
+    }
+
+    if (!ciclosAtivos || ciclosAtivos.length === 0) {
+      return [];
+    }
+
+    const resultado: FemeaEmLactacaoDto[] = [];
+
+    for (const ciclo of ciclosAtivos) {
+      const bufala = Array.isArray(ciclo.bufala) ? ciclo.bufala[0] : ciclo.bufala;
+      if (!bufala) continue;
+
+      // 2. Calcular dias em lactação
+      const diasEmLactacao = Math.floor((new Date().getTime() - new Date(ciclo.dt_parto).getTime()) / (1000 * 60 * 60 * 24));
+
+      // 3. Buscar estatísticas de produção do ciclo
+      const { data: lactacoes } = await this.supabase
+        .from('dadoslactacao')
+        .select('qt_ordenha, dt_ordenha, periodo')
+        .eq('id_bufala', bufala.id_bufalo)
+        .gte('dt_ordenha', ciclo.dt_parto)
+        .order('dt_ordenha', { ascending: false });
+
+      const totalProduzido = lactacoes?.reduce((sum, l) => sum + (l.qt_ordenha || 0), 0) || 0;
+      const mediaDiaria = diasEmLactacao > 0 ? totalProduzido / diasEmLactacao : 0;
+      const ultimaOrdenha = lactacoes?.[0] || null;
+
+      // 4. Buscar raça
+      let nomeRaca = 'Sem raça definida';
+      if (bufala.id_raca) {
+        const { data: raca } = await this.supabase.from('raca').select('nome').eq('id_raca', bufala.id_raca).single();
+        if (raca) nomeRaca = raca.nome;
+      }
+
+      // 5. Calcular idade em meses
+      const idadeMeses = bufala.dt_nascimento
+        ? Math.floor((new Date().getTime() - new Date(bufala.dt_nascimento).getTime()) / (1000 * 60 * 60 * 24 * 30.44))
+        : 0;
+
+      // 6. Contar número do ciclo
+      const { count } = await this.supabase.from('ciclolactacao').select('*', { count: 'exact', head: true }).eq('id_bufala', bufala.id_bufalo);
+
+      resultado.push({
+        id_bufalo: bufala.id_bufalo,
+        nome: bufala.nome,
+        brinco: bufala.brinco || 'Sem brinco',
+        idade_meses: idadeMeses,
+        raca: nomeRaca,
+        ciclo_atual: {
+          id_ciclo_lactacao: ciclo.id_ciclo_lactacao,
+          numero_ciclo: count || 0,
+          dt_parto: ciclo.dt_parto,
+          dias_em_lactacao: diasEmLactacao,
+          dt_secagem_prevista: ciclo.dt_secagem_prevista,
+          status: ciclo.status,
+        },
+        producao_atual: {
+          total_produzido: parseFloat(totalProduzido.toFixed(2)),
+          media_diaria: parseFloat(mediaDiaria.toFixed(2)),
+          ultima_ordenha: ultimaOrdenha
+            ? {
+                data: ultimaOrdenha.dt_ordenha,
+                quantidade: ultimaOrdenha.qt_ordenha,
+                periodo: ultimaOrdenha.periodo,
+              }
+            : null,
+        },
+      });
+    }
+
+    this.customLogger.log(`${resultado.length} fêmeas em lactação encontradas`, {
+      module: 'ControleLeiteiroService',
+      method: 'findFemeasEmLactacao',
+    });
+
+    return resultado;
+  }
+
+  /**
+   * Busca resumo de produção de uma búfala
+   */
+  async getResumoProducaoBufala(id_bufala: string, user: any): Promise<ResumoProducaoBufalaDto> {
+    this.customLogger.log('Buscando resumo de produção da búfala', {
+      module: 'ControleLeiteiroService',
+      method: 'getResumoProducaoBufala',
+      bufalaId: id_bufala,
+    });
+
+    // 1. Buscar dados da búfala
+    const { data: bufala, error: bufalaError } = await this.supabase
+      .from('bufalo')
+      .select('id_bufalo, nome, brinco')
+      .eq('id_bufalo', id_bufala)
+      .single();
+
+    if (bufalaError || !bufala) {
+      throw new NotFoundException(`Búfala com ID ${id_bufala} não encontrada.`);
+    }
+
+    // 2. Buscar ciclo atual (ativo)
+    const { data: cicloAtual } = await this.supabase
+      .from('ciclolactacao')
+      .select('*')
+      .eq('id_bufala', id_bufala)
+      .eq('status', 'Em Lactação')
+      .single();
+
+    let cicloAtualProcessado: any = null;
+
+    if (cicloAtual) {
+      const diasEmLactacao = Math.floor((new Date().getTime() - new Date(cicloAtual.dt_parto).getTime()) / (1000 * 60 * 60 * 24));
+
+      // Buscar ordenhas do ciclo atual
+      const { data: ordenhasCiclo } = await this.supabase
+        .from('dadoslactacao')
+        .select('qt_ordenha, dt_ordenha, periodo')
+        .eq('id_bufala', id_bufala)
+        .gte('dt_ordenha', cicloAtual.dt_parto)
+        .order('dt_ordenha', { ascending: false });
+
+      const totalProduzido = ordenhasCiclo?.reduce((sum, o) => sum + (o.qt_ordenha || 0), 0) || 0;
+      const mediaDiaria = diasEmLactacao > 0 ? totalProduzido / diasEmLactacao : 0;
+      const ultimaOrdenha = ordenhasCiclo?.[0] || null;
+
+      // Contar número do ciclo
+      const { count } = await this.supabase
+        .from('ciclolactacao')
+        .select('*', { count: 'exact', head: true })
+        .eq('id_bufala', id_bufala)
+        .lte('dt_parto', cicloAtual.dt_parto);
+
+      cicloAtualProcessado = {
+        id_ciclo_lactacao: cicloAtual.id_ciclo_lactacao,
+        numero_ciclo: count || 1,
+        dt_parto: cicloAtual.dt_parto,
+        dias_em_lactacao: diasEmLactacao,
+        total_produzido: parseFloat(totalProduzido.toFixed(2)),
+        media_diaria: parseFloat(mediaDiaria.toFixed(2)),
+        dt_secagem_prevista: cicloAtual.dt_secagem_prevista,
+        ultima_ordenha: ultimaOrdenha
+          ? {
+              data: ultimaOrdenha.dt_ordenha,
+              quantidade: ultimaOrdenha.qt_ordenha,
+              periodo: ultimaOrdenha.periodo,
+            }
+          : null,
+      };
+    }
+
+    // 3. Buscar ciclos anteriores finalizados
+    const { data: ciclosAnteriores } = await this.supabase
+      .from('ciclolactacao')
+      .select('*')
+      .eq('id_bufala', id_bufala)
+      .eq('status', 'Seca')
+      .order('dt_parto', { ascending: false });
+
+    const comparativoCiclos: any[] = [];
+
+    if (ciclosAnteriores) {
+      for (const ciclo of ciclosAnteriores) {
+        const dtParto = new Date(ciclo.dt_parto);
+        const dtSecagem = ciclo.dt_secagem_real ? new Date(ciclo.dt_secagem_real) : null;
+        const duracaoDias = dtSecagem ? Math.floor((dtSecagem.getTime() - dtParto.getTime()) / (1000 * 60 * 60 * 24)) : 0;
+
+        // Buscar produção do ciclo
+        const { data: ordenhas } = await this.supabase
+          .from('dadoslactacao')
+          .select('qt_ordenha')
+          .eq('id_bufala', id_bufala)
+          .gte('dt_ordenha', ciclo.dt_parto)
+          .lte('dt_ordenha', ciclo.dt_secagem_real || new Date().toISOString());
+
+        const totalProduzido = ordenhas?.reduce((sum, o) => sum + (o.qt_ordenha || 0), 0) || 0;
+        const mediaDiaria = duracaoDias > 0 ? totalProduzido / duracaoDias : 0;
+
+        const { count } = await this.supabase
+          .from('ciclolactacao')
+          .select('*', { count: 'exact', head: true })
+          .eq('id_bufala', id_bufala)
+          .lte('dt_parto', ciclo.dt_parto);
+
+        comparativoCiclos.push({
+          numero_ciclo: count || 0,
+          dt_parto: ciclo.dt_parto,
+          dt_secagem: ciclo.dt_secagem_real,
+          total_produzido: parseFloat(totalProduzido.toFixed(2)),
+          media_diaria: parseFloat(mediaDiaria.toFixed(2)),
+          duracao_dias: duracaoDias,
+        });
+      }
+    }
+
+    // 4. Gráfico de produção (últimos 30 dias)
+    const dataInicio = new Date();
+    dataInicio.setDate(dataInicio.getDate() - 30);
+
+    const { data: ordenhasRecentes } = await this.supabase
+      .from('dadoslactacao')
+      .select('dt_ordenha, qt_ordenha')
+      .eq('id_bufala', id_bufala)
+      .gte('dt_ordenha', dataInicio.toISOString())
+      .order('dt_ordenha', { ascending: true });
+
+    // Agrupar por data
+    const producaoPorDia = new Map<string, number>();
+    ordenhasRecentes?.forEach((ordenha) => {
+      const data = ordenha.dt_ordenha.split('T')[0];
+      const atual = producaoPorDia.get(data) || 0;
+      producaoPorDia.set(data, atual + (ordenha.qt_ordenha || 0));
+    });
+
+    const graficoProducao = Array.from(producaoPorDia.entries()).map(([data, quantidade]) => ({
+      data,
+      quantidade: parseFloat(quantidade.toFixed(2)),
+    }));
+
+    return {
+      bufala: {
+        id: bufala.id_bufalo,
+        nome: bufala.nome,
+        brinco: bufala.brinco || 'Sem brinco',
+      },
+      ciclo_atual: cicloAtualProcessado,
+      comparativo_ciclos: comparativoCiclos,
+      grafico_producao: graficoProducao,
+    };
   }
 }
