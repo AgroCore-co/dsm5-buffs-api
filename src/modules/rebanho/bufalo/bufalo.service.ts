@@ -1400,9 +1400,9 @@ export class BufaloService {
 
       // Calcula categoria
       console.log(`Calculando categoria ABCB para ${bufalo.nome}...`);
-      console.log(`Parâmetros: propriedadeABCB=${propriedadeABCB}, temRaca=${Boolean(bufalo.id_raca)}`);
+      console.log(`Parâmetros: propriedadeABCB=${propriedadeABCB}, id_raca=${bufalo.id_raca}`);
 
-      const categoria = CategoriaABCBUtil.calcularCategoria(arvore, propriedadeABCB, Boolean(bufalo.id_raca));
+      const categoria = CategoriaABCBUtil.calcularCategoria(arvore, propriedadeABCB);
 
       console.log(`Categoria calculada para ${bufalo.nome}: ${categoria}`);
 

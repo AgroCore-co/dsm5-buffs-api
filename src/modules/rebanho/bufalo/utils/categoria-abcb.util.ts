@@ -4,77 +4,85 @@ import { ArvoreGenealogicaNode } from '../../../reproducao/genealogia/genealogia
 export class CategoriaABCBUtil {
   /**
    * Calcula categoria ABCB baseada na genealogia e propriedade ABCB
+   *
+   * @param arvoreGenealogica Árvore genealógica do animal
+   * @param propriedadeParticipaABCB Se a propriedade participa da ABCB
+   * @returns Categoria ABCB do animal
    */
-  static calcularCategoria(arvoreGenealogica: ArvoreGenealogicaNode, propriedadeParticipaABCB: boolean, temRacaDefinida: boolean): CategoriaABCB {
-    // Se propriedade não participa da ABCB, sempre SRD
+  static calcularCategoria(arvoreGenealogica: ArvoreGenealogicaNode, propriedadeParticipaABCB: boolean): CategoriaABCB {
+    // 1. Se propriedade não participa da ABCB, sempre SRD
     if (!propriedadeParticipaABCB) {
       return CategoriaABCB.SRD;
     }
 
-    // Se não tem raça definida, é SRD
-    if (!temRacaDefinida) {
+    const racaAnimal = arvoreGenealogica.id_raca;
+
+    // 2. Se não tem raça definida, é SRD
+    if (!racaAnimal) {
       return CategoriaABCB.SRD;
     }
 
-    // Se tem raça mas não tem genealogia (caso do "Zé Buceta"), é PA
+    // 3. Se tem raça definida, mas NÃO TEM pais (animal base, "fundação")
+    //    Esta é a definição de Puro por Absorção (PA).
     if (!arvoreGenealogica.pai && !arvoreGenealogica.mae) {
       return CategoriaABCB.PA;
     }
 
-    const racaAnimal = arvoreGenealogica.id_raca;
+    // --- Daqui para baixo, o animal TEM raça E TEM pais (ou pelo menos um) ---
 
-    // Se não tem raça definida, não pode ser categorizado como puro
-    if (!racaAnimal) {
-      return this.temControleGenealogico(arvoreGenealogica) ? CategoriaABCB.CCG : CategoriaABCB.SRD;
-    }
-
-    // Verifica 4 gerações puras para PO
-    if (this.verificarGeracoesPuras(arvoreGenealogica, racaAnimal, 4)) {
+    // 4. Verifica 4 gerações puras para PO
+    //    (animal + pais + avós + bisavós)
+    if (this.verificarPurezaRecursiva(arvoreGenealogica, racaAnimal, 4)) {
       return CategoriaABCB.PO;
     }
 
-    // Verifica 3 gerações puras para PC
-    if (this.verificarGeracoesPuras(arvoreGenealogica, racaAnimal, 3)) {
+    // 5. Verifica 3 gerações puras para PC
+    //    (animal + pais + avós)
+    if (this.verificarPurezaRecursiva(arvoreGenealogica, racaAnimal, 3)) {
       return CategoriaABCB.PC;
     }
 
-    // Se tem controle genealógico mas não atende critérios de pureza
-    if (this.temControleGenealogico(arvoreGenealogica)) {
-      return CategoriaABCB.CCG;
-    }
-
-    // Tem raça definida mas genealogia incompleta
-    return CategoriaABCB.PA;
+    // 6. Se tem pais (passou da verificação 3), mas não é PO nem PC,
+    //    ele se enquadra como Controle de Cruzamento e Genealogia (CCG).
+    //    Isso captura tanto mestiços (ex: pai Murrah, mãe Jafarabadi)
+    //    quanto puros em progresso (ex: 7/8 Murrah).
+    return CategoriaABCB.CCG;
   }
 
   /**
-   * Verifica se tem N gerações puras da mesma raça
+   * Verifica recursivamente se um animal e seus ancestrais
+   * são da mesma raça e possuem genealogia completa
+   * até N níveis de profundidade.
+   *
+   * @param arvore O nó do animal atual
+   * @param racaAlvo A raça que todos devem ter
+   * @param niveisRestantes Quantos níveis de gerações (incluindo este) ainda faltam verificar.
+   *                        Para PO (4 gerações), chama-se com niveisRestantes = 4.
+   * @returns true se o animal e seus ancestrais atendem aos critérios de pureza
    */
-  private static verificarGeracoesPuras(arvore: ArvoreGenealogicaNode, racaAlvo: string | null, geracoesNecessarias: number): boolean {
-    if (!arvore || !racaAlvo || arvore.id_raca !== racaAlvo) {
+  private static verificarPurezaRecursiva(arvore: ArvoreGenealogicaNode | null | undefined, racaAlvo: string, niveisRestantes: number): boolean {
+    // 1. Caso Base de Sucesso: Verificamos todos os níveis necessários.
+    if (niveisRestantes === 0) {
+      return true;
+    }
+
+    // 2. Caso de Falha: Nó não existe ou não é da raça alvo.
+    if (!arvore?.id_raca || arvore.id_raca !== racaAlvo) {
       return false;
     }
 
-    // Se chegou no limite de gerações necessárias
-    if (arvore.geracao >= geracoesNecessarias) {
-      return arvore.id_raca === racaAlvo;
-    }
-
-    // Verifica se tem pai e mãe (genealogia completa)
-    if (!arvore.pai || !arvore.mae) {
+    // 3. Caso de Falha: Precisamos verificar mais fundo (niveis > 1),
+    //    mas este nó não tem pais (genealogia incompleta).
+    if (niveisRestantes > 1 && (!arvore.pai || !arvore.mae)) {
       return false;
     }
 
-    // Verifica recursivamente pai e mãe
+    // 4. Chamada Recursiva:
+    //    Verifica este nível (já feito) e desce para os pais,
+    //    decrementando o nível.
     return (
-      this.verificarGeracoesPuras(arvore.pai, racaAlvo, geracoesNecessarias) && this.verificarGeracoesPuras(arvore.mae, racaAlvo, geracoesNecessarias)
+      this.verificarPurezaRecursiva(arvore.pai, racaAlvo, niveisRestantes - 1) &&
+      this.verificarPurezaRecursiva(arvore.mae, racaAlvo, niveisRestantes - 1)
     );
-  }
-
-  /**
-   * Verifica se tem algum controle genealógico
-   */
-  private static temControleGenealogico(arvore: ArvoreGenealogicaNode): boolean {
-    return Boolean(arvore.pai || arvore.mae);
   }
 }
