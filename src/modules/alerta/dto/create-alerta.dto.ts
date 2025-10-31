@@ -1,13 +1,13 @@
-import { ApiProperty } from '@nestjs/swagger';
+import { ApiProperty, PartialType } from '@nestjs/swagger';
 import { IsString, IsNotEmpty, IsDateString, IsEnum, IsOptional, IsUUID, IsBoolean } from 'class-validator';
 import { Transform } from 'class-transformer';
-import { PartialType } from '@nestjs/swagger';
 
 export enum NichoAlerta {
   CLINICO = 'CLINICO',
   SANITARIO = 'SANITARIO',
   REPRODUCAO = 'REPRODUCAO',
   MANEJO = 'MANEJO',
+  PRODUCAO = 'PRODUCAO',
 }
 
 export enum PrioridadeAlerta {

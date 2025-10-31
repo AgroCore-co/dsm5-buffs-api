@@ -1,4 +1,12 @@
-import { Injectable, NotFoundException, InternalServerErrorException, BadRequestException, Logger, UnauthorizedException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  InternalServerErrorException,
+  BadRequestException,
+  Logger,
+  UnauthorizedException,
+  ForbiddenException,
+} from '@nestjs/common';
 import { SupabaseClient } from '@supabase/supabase-js';
 import { SupabaseService } from '../../../core/supabase/supabase.service';
 import { LoggerService } from '../../../core/logger/logger.service';
@@ -490,6 +498,115 @@ export class ControleLeiteiroService {
       lactacaoId: id,
     });
     return;
+  }
+
+  /**
+   * Lista todos os registros de ordenha de um ciclo de lactação específico.
+   * Verifica se o usuário tem permissão para acessar o ciclo através da propriedade.
+   */
+  async findAllByCiclo(id_ciclo_lactacao: string, page = 1, limit = 20, user: any) {
+    this.customLogger.log('Iniciando busca de registros de ordenha por ciclo', {
+      module: 'ControleLeiteiroService',
+      method: 'findAllByCiclo',
+      cicloId: id_ciclo_lactacao,
+      page,
+      limit,
+    });
+
+    const idUsuario = await this.getUserId(user);
+
+    // Verificar se o ciclo existe e se o usuário tem permissão
+    const { data: cicloData, error: cicloError } = await this.supabase
+      .from('ciclolactacao')
+      .select('id_ciclo_lactacao, id_propriedade, propriedade:id_propriedade(id_dono)')
+      .eq('id_ciclo_lactacao', id_ciclo_lactacao)
+      .single();
+
+    if (cicloError || !cicloData) {
+      this.customLogger.logError(cicloError, {
+        module: 'ControleLeiteiroService',
+        method: 'findAllByCiclo',
+        cicloId: id_ciclo_lactacao,
+      });
+      throw new NotFoundException('Ciclo de lactação não encontrado.');
+    }
+
+    const idDonoPropriedade = (cicloData.propriedade as any)?.id_dono;
+
+    if (!idDonoPropriedade || idDonoPropriedade !== idUsuario) {
+      this.customLogger.log('Usuário não autorizado a acessar este ciclo', {
+        module: 'ControleLeiteiroService',
+        method: 'findAllByCiclo',
+        userId: String(idUsuario),
+        idDonoPropriedade: String(idDonoPropriedade),
+      });
+      throw new ForbiddenException('Você não tem permissão para acessar os dados deste ciclo de lactação.');
+    }
+
+    const from = (page - 1) * limit;
+    const to = from + limit - 1;
+
+    try {
+      // Contar total de registros
+      const { count, error: countError } = await this.supabase
+        .from('dadoslactacao')
+        .select('*', { count: 'exact', head: true })
+        .eq('id_ciclo_lactacao', id_ciclo_lactacao);
+
+      if (countError) {
+        this.customLogger.logError(countError, {
+          module: 'ControleLeiteiroService',
+          method: 'findAllByCiclo',
+          step: 'count',
+        });
+        throw new InternalServerErrorException('Erro ao contar registros de ordenha.');
+      }
+
+      // Buscar registros paginados
+      const { data, error } = await this.supabase
+        .from('dadoslactacao')
+        .select('*')
+        .eq('id_ciclo_lactacao', id_ciclo_lactacao)
+        .order('dt_ordenha', { ascending: false })
+        .order('periodo', { ascending: true })
+        .range(from, to);
+
+      if (error) {
+        this.customLogger.logError(error, {
+          module: 'ControleLeiteiroService',
+          method: 'findAllByCiclo',
+          step: 'fetch',
+        });
+        throw new InternalServerErrorException('Erro ao buscar registros de ordenha do ciclo.');
+      }
+
+      this.customLogger.log('Registros de ordenha do ciclo encontrados com sucesso', {
+        module: 'ControleLeiteiroService',
+        method: 'findAllByCiclo',
+        cicloId: id_ciclo_lactacao,
+        totalRegistros: count,
+        registrosRetornados: data.length,
+      });
+
+      return {
+        data,
+        pagination: {
+          total: count || 0,
+          page,
+          limit,
+          totalPages: Math.ceil((count || 0) / limit),
+        },
+      };
+    } catch (error) {
+      if (error instanceof ForbiddenException || error instanceof NotFoundException || error instanceof InternalServerErrorException) {
+        throw error;
+      }
+      this.customLogger.logError(error, {
+        module: 'ControleLeiteiroService',
+        method: 'findAllByCiclo',
+      });
+      throw new InternalServerErrorException('Erro inesperado ao buscar registros de ordenha do ciclo.');
+    }
   }
 
   /**

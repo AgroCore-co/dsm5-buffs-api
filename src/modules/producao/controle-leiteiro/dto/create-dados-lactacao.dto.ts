@@ -16,6 +16,10 @@ export class CreateDadosLactacaoDto {
   @IsUUID()
   id_propriedade: string;
 
+  @ApiProperty({ description: 'ID do ciclo de lactação', example: 'f47ac10b-58cc-4372-a567-0e02b2c3d479' })
+  @IsUUID()
+  id_ciclo_lactacao: string;
+
   @ApiProperty({ description: 'Quantidade ordenhada (L)', example: 8.75 })
   @IsNumber()
   @IsPositive()

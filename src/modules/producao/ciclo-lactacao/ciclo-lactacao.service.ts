@@ -1,10 +1,11 @@
 import { Injectable, InternalServerErrorException, NotFoundException } from '@nestjs/common';
 import { SupabaseService } from '../../../core/supabase/supabase.service';
 import { LoggerService } from '../../../core/logger/logger.service';
+import { AlertasService } from '../../alerta/alerta.service';
+import { NichoAlerta, PrioridadeAlerta } from '../../alerta/dto/create-alerta.dto';
 import { CreateCicloLactacaoDto } from './dto/create-ciclo-lactacao.dto';
 import { UpdateCicloLactacaoDto } from './dto/update-ciclo-lactacao.dto';
-import { PaginationDto } from '../../../core/dto/pagination.dto';
-import { PaginatedResponse } from '../../../core/dto/pagination.dto';
+import { PaginationDto, PaginatedResponse } from '../../../core/dto/pagination.dto';
 import { createPaginatedResponse, calculatePaginationParams } from '../../../core/utils/pagination.utils';
 
 @Injectable()
@@ -12,9 +13,20 @@ export class CicloLactacaoService {
   constructor(
     private readonly supabase: SupabaseService,
     private readonly logger: LoggerService,
+    private readonly alertasService: AlertasService,
   ) {}
 
   private readonly tableName = 'ciclolactacao';
+
+  /**
+   * Calcula dias em lactação
+   */
+  private calcularDiasEmLactacao(dt_parto: string, dt_secagem_real?: string | null): number {
+    const dataFim = dt_secagem_real ? new Date(dt_secagem_real) : new Date();
+    const dataInicio = new Date(dt_parto);
+    const diffTime = Math.abs(dataFim.getTime() - dataInicio.getTime());
+    return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+  }
 
   private computeSecagemPrevista(dt_parto: string, padrao_dias: number): string {
     const baseDate = new Date(dt_parto);
@@ -25,6 +37,155 @@ export class CicloLactacaoService {
 
   private computeStatus(dt_secagem_real?: string | null): string {
     return dt_secagem_real ? 'Seca' : 'Em Lactação';
+  }
+
+  /**
+   * Verifica se deve criar alertas para o ciclo
+   */
+  private async verificarAlertasCiclo(ciclo: any, bufalaData: any) {
+    try {
+      const diasEmLactacao = this.calcularDiasEmLactacao(ciclo.dt_parto, ciclo.dt_secagem_real);
+
+      await this.verificarCicloProlongado(ciclo, bufalaData, diasEmLactacao);
+      await this.verificarProximaSecagem(ciclo, bufalaData);
+      await this.verificarSecagemAtrasada(ciclo, bufalaData);
+      await this.verificarCicloCurto(ciclo, bufalaData, diasEmLactacao);
+    } catch (error) {
+      this.logger.logError(error, {
+        module: 'CicloLactacaoService',
+        method: 'verificarAlertasCiclo',
+        cicloId: ciclo.id_ciclo_lactacao,
+      });
+    }
+  }
+
+  private async verificarCicloProlongado(ciclo: any, bufalaData: any, diasEmLactacao: number) {
+    if (!ciclo.dt_secagem_real && diasEmLactacao > 365) {
+      await this.criarAlertaProducao({
+        animal_id: ciclo.id_bufala,
+        bufalaData,
+        id_propriedade: ciclo.id_propriedade,
+        motivo: `Búfala em lactação há ${diasEmLactacao} dias - Ciclo prolongado`,
+        prioridade: PrioridadeAlerta.MEDIA,
+        observacao: 'Avaliar condição corporal e considerar secagem.',
+        id_evento_origem: ciclo.id_ciclo_lactacao,
+        tipo_evento_origem: 'CICLO_PROLONGADO',
+      });
+    }
+  }
+
+  private async verificarProximaSecagem(ciclo: any, bufalaData: any) {
+    if (!ciclo.dt_secagem_real && ciclo.dt_secagem_prevista) {
+      const dataSecagemPrev = new Date(ciclo.dt_secagem_prevista);
+      const hoje = new Date();
+      const diasParaSecagem = Math.ceil((dataSecagemPrev.getTime() - hoje.getTime()) / (1000 * 60 * 60 * 24));
+
+      if (diasParaSecagem <= 15 && diasParaSecagem >= 0) {
+        await this.criarAlertaProducao({
+          animal_id: ciclo.id_bufala,
+          bufalaData,
+          id_propriedade: ciclo.id_propriedade,
+          motivo: `Secagem prevista em ${diasParaSecagem} dias (${ciclo.dt_secagem_prevista})`,
+          prioridade: diasParaSecagem <= 7 ? PrioridadeAlerta.ALTA : PrioridadeAlerta.MEDIA,
+          observacao: 'Planejar protocolo de secagem e preparar animal.',
+          id_evento_origem: ciclo.id_ciclo_lactacao,
+          tipo_evento_origem: 'PROXIMA_SECAGEM',
+        });
+      }
+    }
+  }
+
+  private async verificarSecagemAtrasada(ciclo: any, bufalaData: any) {
+    if (!ciclo.dt_secagem_real && ciclo.dt_secagem_prevista) {
+      const dataSecagemPrev = new Date(ciclo.dt_secagem_prevista);
+      const hoje = new Date();
+      const diasAtraso = Math.ceil((hoje.getTime() - dataSecagemPrev.getTime()) / (1000 * 60 * 60 * 24));
+
+      if (diasAtraso > 0) {
+        await this.criarAlertaProducao({
+          animal_id: ciclo.id_bufala,
+          bufalaData,
+          id_propriedade: ciclo.id_propriedade,
+          motivo: `Secagem atrasada há ${diasAtraso} dias - Data prevista: ${ciclo.dt_secagem_prevista}`,
+          prioridade: diasAtraso > 30 ? PrioridadeAlerta.ALTA : PrioridadeAlerta.MEDIA,
+          observacao: 'Realizar secagem urgente para preservar saúde do úbere.',
+          id_evento_origem: ciclo.id_ciclo_lactacao,
+          tipo_evento_origem: 'SECAGEM_ATRASADA',
+        });
+      }
+    }
+  }
+
+  private async verificarCicloCurto(ciclo: any, bufalaData: any, diasEmLactacao: number) {
+    if (ciclo.dt_secagem_real && diasEmLactacao < 200) {
+      await this.criarAlertaProducao({
+        animal_id: ciclo.id_bufala,
+        bufalaData,
+        id_propriedade: ciclo.id_propriedade,
+        motivo: `Ciclo muito curto: apenas ${diasEmLactacao} dias`,
+        prioridade: PrioridadeAlerta.MEDIA,
+        observacao: 'Investigar causas da lactação curta (saúde, nutrição, manejo).',
+        id_evento_origem: ciclo.id_ciclo_lactacao,
+        tipo_evento_origem: 'CICLO_CURTO',
+      });
+    }
+  }
+
+  /**
+   * Cria um alerta de produção
+   */
+  private async criarAlertaProducao(params: {
+    animal_id: string;
+    bufalaData: any;
+    id_propriedade: string;
+    motivo: string;
+    prioridade: PrioridadeAlerta;
+    observacao: string;
+    id_evento_origem: string;
+    tipo_evento_origem: string;
+  }) {
+    try {
+      let grupoNome = 'Não informado';
+      if (params.bufalaData.id_grupo) {
+        const { data: grupoData } = await this.supabase
+          .getAdminClient()
+          .from('grupo')
+          .select('nome_grupo')
+          .eq('id_grupo', params.bufalaData.id_grupo)
+          .single();
+        if (grupoData) grupoNome = grupoData.nome_grupo;
+      }
+
+      let propriedadeNome = 'Não informada';
+      if (params.id_propriedade) {
+        const { data: propData } = await this.supabase
+          .getAdminClient()
+          .from('propriedade')
+          .select('nome')
+          .eq('id_propriedade', params.id_propriedade)
+          .single();
+        if (propData) propriedadeNome = propData.nome;
+      }
+
+      await this.alertasService.createIfNotExists({
+        animal_id: params.animal_id,
+        grupo: grupoNome,
+        localizacao: propriedadeNome,
+        id_propriedade: params.id_propriedade,
+        motivo: params.motivo,
+        nicho: NichoAlerta.PRODUCAO,
+        data_alerta: new Date().toISOString().split('T')[0],
+        prioridade: params.prioridade,
+        observacao: params.observacao,
+        id_evento_origem: params.id_evento_origem,
+        tipo_evento_origem: params.tipo_evento_origem,
+      });
+    } catch (error) {
+      this.logger.logError(error, {
+        module: 'CicloLactacaoService',
+        method: 'criarAlertaProducao',
+      });
+    }
   }
 
   async create(dto: CreateCicloLactacaoDto) {
@@ -63,6 +224,18 @@ export class CicloLactacaoService {
         bufalaId: dto.id_bufala,
       });
       throw new InternalServerErrorException(`Falha ao criar ciclo de lactação: ${error.message}`);
+    }
+
+    // Buscar dados da búfala para verificar alertas
+    const { data: bufalaData } = await this.supabase
+      .getAdminClient()
+      .from('bufalo')
+      .select('id_bufalo, nome, id_grupo')
+      .eq('id_bufalo', dto.id_bufala)
+      .single();
+
+    if (bufalaData) {
+      await this.verificarAlertasCiclo(data, bufalaData);
     }
 
     this.logger.log('Ciclo de lactação criado com sucesso', {
@@ -248,6 +421,18 @@ export class CicloLactacaoService {
       throw new InternalServerErrorException(`Falha ao atualizar ciclo de lactação: ${error.message}`);
     }
 
+    // Verificar alertas após atualização
+    const { data: bufalaData } = await this.supabase
+      .getAdminClient()
+      .from('bufalo')
+      .select('id_bufalo, nome, id_grupo')
+      .eq('id_bufalo', data.id_bufala)
+      .single();
+
+    if (bufalaData) {
+      await this.verificarAlertasCiclo(data, bufalaData);
+    }
+
     this.logger.log('Ciclo de lactação atualizado com sucesso', {
       module: 'CicloLactacaoService',
       method: 'update',
@@ -282,5 +467,61 @@ export class CicloLactacaoService {
       cicloId: id_ciclo_lactacao,
     });
     return { message: 'Ciclo removido com sucesso' };
+  }
+
+  /**
+   * Retorna estatísticas gerais de ciclos de lactação por propriedade
+   */
+  async getEstatisticasPropriedade(id_propriedade: string) {
+    this.logger.log('Buscando estatísticas de ciclos por propriedade', {
+      module: 'CicloLactacaoService',
+      method: 'getEstatisticasPropriedade',
+      propriedadeId: id_propriedade,
+    });
+
+    const { data, error } = await this.supabase
+      .getAdminClient()
+      .from(this.tableName)
+      .select('id_ciclo_lactacao, dt_parto, dt_secagem_real, dt_secagem_prevista, status, padrao_dias')
+      .eq('id_propriedade', id_propriedade);
+
+    if (error) {
+      throw new InternalServerErrorException(`Falha ao buscar estatísticas: ${error.message}`);
+    }
+
+    const totalCiclos = data.length;
+    const ciclosAtivos = data.filter((c) => c.status === 'Em Lactação').length;
+    const ciclosSecos = data.filter((c) => c.status === 'Seca').length;
+
+    // Calcular média de dias em lactação dos ciclos ativos
+    const ciclosAtivosComDias = data.filter((c) => c.status === 'Em Lactação').map((c) => this.calcularDiasEmLactacao(c.dt_parto));
+
+    const mediaDiasLactacao =
+      ciclosAtivosComDias.length > 0 ? Math.round(ciclosAtivosComDias.reduce((a, b) => a + b, 0) / ciclosAtivosComDias.length) : 0;
+
+    // Ciclos próximos da secagem (próximos 30 dias)
+    const hoje = new Date();
+    const ciclosProximosSecagem = data.filter((c) => {
+      if (c.status !== 'Em Lactação' || !c.dt_secagem_prevista) return false;
+      const dataSecagem = new Date(c.dt_secagem_prevista);
+      const diasParaSecagem = Math.ceil((dataSecagem.getTime() - hoje.getTime()) / (1000 * 60 * 60 * 24));
+      return diasParaSecagem >= 0 && diasParaSecagem <= 30;
+    }).length;
+
+    // Ciclos com secagem atrasada
+    const ciclosSecagemAtrasada = data.filter((c) => {
+      if (c.status !== 'Em Lactação' || !c.dt_secagem_prevista) return false;
+      const dataSecagem = new Date(c.dt_secagem_prevista);
+      return hoje > dataSecagem;
+    }).length;
+
+    return {
+      total_ciclos: totalCiclos,
+      ciclos_ativos: ciclosAtivos,
+      ciclos_secos: ciclosSecos,
+      media_dias_lactacao: mediaDiasLactacao,
+      ciclos_proximos_secagem: ciclosProximosSecagem,
+      ciclos_secagem_atrasada: ciclosSecagemAtrasada,
+    };
   }
 }

@@ -70,6 +70,30 @@ export class ControleLeiteiroController {
     return this.service.findAllByBufala(id_bufala, Number(page), Number(limit), user);
   }
 
+  @Get('ciclo/:id_ciclo_lactacao')
+  @ApiOperation({ summary: 'Busca todos os registros de ordenha de um ciclo de lactação específico (paginado)' })
+  @ApiParam({ name: 'id_ciclo_lactacao', description: 'ID do ciclo de lactação', type: 'string' })
+  @ApiResponse({ status: 200, description: 'Lista de ordenhas do ciclo retornada com sucesso.' })
+  @ApiResponse({ status: 401, description: 'Não autorizado.' })
+  @ApiResponse({ status: 404, description: 'Ciclo de lactação não encontrado.' })
+  @ApiQuery({ name: 'page', required: false, type: Number, description: 'Número da página (default: 1)' })
+  @ApiQuery({ name: 'limit', required: false, type: Number, description: 'Quantidade de registros por página (default: 20)' })
+  findAllByCiclo(
+    @Param('id_ciclo_lactacao', ParseUUIDPipe) id_ciclo_lactacao: string,
+    @Query('page') page: number = 1,
+    @Query('limit') limit: number = 20,
+    @User() user: any,
+  ) {
+    this.logger.logApiRequest('GET', `/lactacao/ciclo/${id_ciclo_lactacao}`, undefined, {
+      module: 'ControleLeiteiroController',
+      method: 'findAllByCiclo',
+      cicloId: id_ciclo_lactacao,
+      page: Number(page),
+      limit: Number(limit),
+    });
+    return this.service.findAllByCiclo(id_ciclo_lactacao, Number(page), Number(limit), user);
+  }
+
   @Get(':id')
   @ApiOperation({ summary: 'Busca um registro de lactação específico pelo ID' })
   @ApiResponse({ status: 200, description: 'Dados do registro retornados.' })

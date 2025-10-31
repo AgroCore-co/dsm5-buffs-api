@@ -61,6 +61,21 @@ export class CicloLactacaoController {
     return this.service.findByPropriedade(id_propriedade, paginationDto);
   }
 
+  @Get('propriedade/:id_propriedade/estatisticas')
+  @UseInterceptors(CacheInterceptor)
+  @CacheTTL(300)
+  @ApiOperation({ summary: 'Retorna estatísticas de ciclos de lactação por propriedade' })
+  @ApiParam({ name: 'id_propriedade', description: 'ID da propriedade', type: 'string' })
+  @ApiResponse({ status: 200, description: 'Estatísticas retornadas com sucesso.' })
+  getEstatisticas(@Param('id_propriedade', ParseUUIDPipe) id_propriedade: string) {
+    this.logger.logApiRequest('GET', `/ciclos-lactacao/propriedade/${id_propriedade}/estatisticas`, undefined, {
+      module: 'CicloLactacaoController',
+      method: 'getEstatisticas',
+      propriedadeId: id_propriedade,
+    });
+    return this.service.getEstatisticasPropriedade(id_propriedade);
+  }
+
   @Get(':id')
   @UseInterceptors(CacheInterceptor)
   @CacheTTL(900)
