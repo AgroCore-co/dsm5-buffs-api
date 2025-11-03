@@ -2,6 +2,7 @@ import { Injectable, NotFoundException, InternalServerErrorException } from '@ne
 import { SupabaseService } from '../../core/supabase/supabase.service';
 import { DashboardStatsDto } from './dto/dashboard-stats.dto';
 import { DashboardLactacaoDto, CicloLactacaoMetricaDto } from './dto/dashboard-lactacao.dto';
+import { DashboardProducaoMensalDto, ProducaoMensalItemDto } from './dto/dashboard-producao-mensal.dto';
 
 @Injectable()
 export class DashboardService {
@@ -222,6 +223,113 @@ export class DashboardService {
         throw error;
       }
       throw new InternalServerErrorException(`Erro inesperado ao gerar métricas de lactação: ${error.message}`);
+    }
+  }
+
+  /**
+   * Retorna métricas de produção mensal de leite de uma propriedade
+   */
+  async getProducaoMensal(id_propriedade: string, ano?: number): Promise<DashboardProducaoMensalDto> {
+    const supabase = this.supabaseService.getAdminClient();
+    const anoReferencia = ano || new Date().getFullYear();
+
+    try {
+      // Verifica se a propriedade existe
+      const { data: propriedadeExists, error: propError } = await supabase
+        .from('propriedade')
+        .select('id_propriedade')
+        .eq('id_propriedade', id_propriedade)
+        .single();
+
+      if (propError || !propriedadeExists) {
+        throw new NotFoundException(`Propriedade com ID ${id_propriedade} não encontrada.`);
+      }
+
+      // Buscar todas as ordenhas do ano
+      const dataInicio = `${anoReferencia}-01-01`;
+      const dataFim = `${anoReferencia}-12-31`;
+
+      const { data: ordenhas, error: ordenhasError } = await supabase
+        .from('dadoslactacao')
+        .select('dt_ordenha, qt_ordenha, id_bufala')
+        .eq('id_propriedade', id_propriedade)
+        .gte('dt_ordenha', dataInicio)
+        .lte('dt_ordenha', dataFim)
+        .order('dt_ordenha', { ascending: true });
+
+      if (ordenhasError) {
+        throw new InternalServerErrorException(`Erro ao buscar dados de ordenha: ${ordenhasError.message}`);
+      }
+
+      // Agrupar por mês
+      const producaoPorMes = new Map<string, { total: number; bufalas: Set<string>; dias: Set<string> }>();
+
+      (ordenhas || []).forEach((ordenha: any) => {
+        const mes = ordenha.dt_ordenha.substring(0, 7); // YYYY-MM
+
+        if (!producaoPorMes.has(mes)) {
+          producaoPorMes.set(mes, { total: 0, bufalas: new Set(), dias: new Set() });
+        }
+
+        const mesData = producaoPorMes.get(mes)!;
+        mesData.total += ordenha.qt_ordenha;
+        mesData.bufalas.add(ordenha.id_bufala);
+        mesData.dias.add(ordenha.dt_ordenha.substring(0, 10)); // YYYY-MM-DD
+      });
+
+      // Construir série histórica
+      const serieHistorica: ProducaoMensalItemDto[] = [];
+      const mesAtual = new Date().toISOString().substring(0, 7);
+      let mesAnterior = '';
+
+      // Preencher todos os 12 meses do ano
+      for (let mes = 1; mes <= 12; mes++) {
+        const mesStr = `${anoReferencia}-${mes.toString().padStart(2, '0')}`;
+        const dados = producaoPorMes.get(mesStr);
+
+        const totalLitros = dados?.total || 0;
+        const qtdBufalas = dados?.bufalas.size || 0;
+        const diasComOrdenha = dados?.dias.size || 1; // Evitar divisão por zero
+        const mediaDiaria = totalLitros / diasComOrdenha;
+
+        serieHistorica.push({
+          mes: mesStr,
+          total_litros: Math.round(totalLitros * 100) / 100,
+          qtd_bufalas: qtdBufalas,
+          media_diaria: Math.round(mediaDiaria * 100) / 100,
+        });
+
+        // Identificar mês anterior ao atual
+        if (mesStr < mesAtual && (!mesAnterior || mesStr > mesAnterior)) {
+          mesAnterior = mesStr;
+        }
+      }
+
+      // Dados do mês atual
+      const dadosMesAtual = producaoPorMes.get(mesAtual);
+      const mesAtualLitros = dadosMesAtual?.total || 0;
+      const bufalasLactantesAtual = dadosMesAtual?.bufalas.size || 0;
+
+      // Dados do mês anterior
+      const dadosMesAnterior = mesAnterior ? producaoPorMes.get(mesAnterior) : null;
+      const mesAnteriorLitros = dadosMesAnterior?.total || 0;
+
+      // Calcular variação percentual
+      const variacaoPercentual = mesAnteriorLitros > 0 ? ((mesAtualLitros - mesAnteriorLitros) / mesAnteriorLitros) * 100 : 0;
+
+      return {
+        ano: anoReferencia,
+        mes_atual_litros: Math.round(mesAtualLitros * 100) / 100,
+        mes_anterior_litros: Math.round(mesAnteriorLitros * 100) / 100,
+        variacao_percentual: Math.round(variacaoPercentual * 100) / 100,
+        bufalas_lactantes_atual: bufalasLactantesAtual,
+        serie_historica: serieHistorica,
+      };
+    } catch (error) {
+      if (error instanceof NotFoundException || error instanceof InternalServerErrorException) {
+        throw error;
+      }
+      throw new InternalServerErrorException(`Erro inesperado ao gerar métricas de produção mensal: ${error.message}`);
     }
   }
 }
