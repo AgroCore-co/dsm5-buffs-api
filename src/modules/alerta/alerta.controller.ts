@@ -125,8 +125,20 @@ export class AlertasController {
   @UseInterceptors(CacheInterceptor)
   @CacheTTL(30)
   @ApiOperation({
-    summary: 'Lista alertas por propriedade',
-    description: 'Retorna todos os alertas de uma propriedade específica com paginação.',
+    summary: 'Lista alertas por propriedade com filtros opcionais',
+    description: `
+      Retorna alertas de uma propriedade específica com suporte a filtros avançados.
+      
+      **Filtros disponíveis:**
+      - **nichos**: Filtra por um ou mais nichos específicos (CLINICO, SANITARIO, REPRODUCAO, MANEJO, PRODUCAO)
+      - **incluirVistos**: Inclui ou exclui alertas já visualizados
+      - **prioridade**: Filtra por nível de prioridade (BAIXA, MEDIA, ALTA)
+      - **paginação**: Controle de página e limite de resultados
+      
+      **Diferença do endpoint de verificação:**
+      - Este endpoint apenas LISTA alertas existentes (sem reprocessamento)
+      - Use POST /alertas/verificar para criar novos alertas baseados em dados atuais
+    `,
   })
   @ApiParam({ name: 'id_propriedade', description: 'ID da propriedade', type: 'string' })
   @ApiQuery({ name: 'page', required: false, type: Number, description: 'Número da página (padrão: 1)' })
@@ -138,6 +150,21 @@ export class AlertasController {
     type: Boolean,
     example: false,
   })
+  @ApiQuery({
+    name: 'nichos',
+    required: false,
+    description: 'Filtra por nichos específicos. Pode enviar múltiplos valores.',
+    enum: NichoAlerta,
+    isArray: true,
+    example: ['REPRODUCAO', 'SANITARIO'],
+  })
+  @ApiQuery({
+    name: 'prioridade',
+    required: false,
+    description: 'Filtra por prioridade específica',
+    enum: PrioridadeAlerta,
+    example: 'ALTA',
+  })
   @ApiResponse({
     status: 200,
     description: 'Lista de alertas da propriedade retornada com sucesso.',
@@ -145,11 +172,17 @@ export class AlertasController {
   findByPropriedade(
     @Param('id_propriedade', ParseUUIDPipe) id_propriedade: string,
     @Query('incluirVistos', new ParseBoolPipe({ optional: true })) incluirVistos?: boolean,
+    @Query('nichos') nichos?: string | string[],
+    @Query('prioridade') prioridade?: PrioridadeAlerta,
     @Query('page') page?: number,
     @Query('limit') limit?: number,
   ) {
     const paginationDto: PaginationDto = { page, limit };
-    return this.alertasService.findByPropriedade(id_propriedade, incluirVistos, paginationDto);
+
+    // Normaliza nichos para array
+    const nichosArray: NichoAlerta[] | undefined = nichos ? (Array.isArray(nichos) ? (nichos as NichoAlerta[]) : [nichos as NichoAlerta]) : undefined;
+
+    return this.alertasService.findByPropriedade(id_propriedade, incluirVistos, paginationDto, nichosArray, prioridade);
   }
 
   @Get(':id')

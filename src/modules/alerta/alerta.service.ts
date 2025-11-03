@@ -169,12 +169,16 @@ export class AlertasService {
    * @param id_propriedade - ID da propriedade.
    * @param incluirVistos - Se `true`, inclui alertas já marcados como vistos.
    * @param paginationDto - Parâmetros de paginação.
+   * @param nichos - Array opcional de nichos para filtrar (CLINICO, SANITARIO, REPRODUCAO, MANEJO, PRODUCAO).
+   * @param prioridade - Prioridade opcional para filtrar (BAIXA, MEDIA, ALTA).
    * @returns Um resultado paginado de alertas da propriedade.
    */
   async findByPropriedade(
     id_propriedade: string,
     incluirVistos: boolean = false,
     paginationDto: PaginationDto = {},
+    nichos?: string[],
+    prioridade?: string,
   ): Promise<PaginatedResponse<any>> {
     try {
       const { page = 1, limit = 10 } = paginationDto;
@@ -187,6 +191,18 @@ export class AlertasService {
       if (!incluirVistos) {
         countQuery = countQuery.eq('visto', false);
         dataQuery = dataQuery.eq('visto', false);
+      }
+
+      // Filtro por nichos
+      if (nichos && nichos.length > 0) {
+        countQuery = countQuery.in('nicho', nichos);
+        dataQuery = dataQuery.in('nicho', nichos);
+      }
+
+      // Filtro por prioridade
+      if (prioridade) {
+        countQuery = countQuery.eq('prioridade', prioridade);
+        dataQuery = dataQuery.eq('prioridade', prioridade);
       }
 
       // Contar total
