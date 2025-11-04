@@ -249,6 +249,53 @@ export class DashboardService {
       const dataInicio = `${anoReferencia}-01-01`;
       const dataFim = `${anoReferencia}-12-31`;
 
+      console.log(`🔍 Buscando ordenhas para propriedade ${id_propriedade} entre ${dataInicio} e ${dataFim}`);
+
+      // Primeiro, verificar se existem dados SEM filtro de propriedade
+      const { data: todasOrdenhasSemFiltro, error: errorSemFiltro } = await supabase
+        .from('dadoslactacao')
+        .select('dt_ordenha, id_propriedade, id_bufala')
+        .order('dt_ordenha', { ascending: true })
+        .limit(5);
+
+      console.log(`🔎 Teste SEM filtro de propriedade:`, {
+        total: todasOrdenhasSemFiltro?.length || 0,
+        amostra: todasOrdenhasSemFiltro,
+        erro: errorSemFiltro,
+      });
+
+      // Agora verificar COM filtro de propriedade
+      const { data: todasOrdenhas, error: errorComFiltro } = await supabase
+        .from('dadoslactacao')
+        .select('dt_ordenha, id_propriedade, id_bufala')
+        .eq('id_propriedade', id_propriedade)
+        .order('dt_ordenha', { ascending: true })
+        .limit(5);
+
+      console.log(`🔎 Teste COM filtro de propriedade:`, {
+        id_propriedade,
+        total: todasOrdenhas?.length || 0,
+        amostra: todasOrdenhas,
+        erro: errorComFiltro,
+      });
+
+      if (todasOrdenhas && todasOrdenhas.length > 0) {
+        // Buscar range completo
+        const { data: rangeData } = await supabase
+          .from('dadoslactacao')
+          .select('dt_ordenha')
+          .eq('id_propriedade', id_propriedade)
+          .order('dt_ordenha', { ascending: true });
+
+        if (rangeData && rangeData.length > 0) {
+          const primeiraData = rangeData[0].dt_ordenha;
+          const ultimaData = rangeData[rangeData.length - 1].dt_ordenha;
+          console.log(`📅 Dados disponíveis de ${primeiraData} até ${ultimaData} (${rangeData.length} registros)`);
+        }
+      } else {
+        console.log(`⚠️ Nenhum dado de ordenha encontrado para esta propriedade`);
+      }
+
       const { data: ordenhas, error: ordenhasError } = await supabase
         .from('dadoslactacao')
         .select('dt_ordenha, qt_ordenha, id_bufala')
@@ -257,7 +304,14 @@ export class DashboardService {
         .lte('dt_ordenha', dataFim)
         .order('dt_ordenha', { ascending: true });
 
+      console.log(`📊 Ordenhas encontradas no período ${dataInicio} a ${dataFim}: ${ordenhas?.length || 0}`);
+      if (ordenhas && ordenhas.length > 0) {
+        console.log(`🔹 Primeira ordenha:`, ordenhas[0]);
+        console.log(`🔹 Última ordenha:`, ordenhas[ordenhas.length - 1]);
+      }
+
       if (ordenhasError) {
+        console.error(`❌ Erro ao buscar ordenhas:`, ordenhasError);
         throw new InternalServerErrorException(`Erro ao buscar dados de ordenha: ${ordenhasError.message}`);
       }
 
@@ -277,10 +331,43 @@ export class DashboardService {
         mesData.dias.add(ordenha.dt_ordenha.substring(0, 10)); // YYYY-MM-DD
       });
 
+      console.log(`📅 Meses com produção:`, Array.from(producaoPorMes.keys()));
+      console.log(
+        `📊 Totais por mês:`,
+        Array.from(producaoPorMes.entries()).map(([mes, dados]) => ({
+          mes,
+          total: dados.total,
+          bufalas: dados.bufalas.size,
+        })),
+      );
+
       // Construir série histórica
       const serieHistorica: ProducaoMensalItemDto[] = [];
-      const mesAtual = new Date().toISOString().substring(0, 7);
-      let mesAnterior = '';
+
+      // Determinar o último mês com dados no ano solicitado
+      let ultimoMesComDados = 0;
+      for (let mes = 1; mes <= 12; mes++) {
+        const mesStr = `${anoReferencia}-${mes.toString().padStart(2, '0')}`;
+        if (producaoPorMes.has(mesStr)) {
+          ultimoMesComDados = mes;
+        }
+      }
+
+      // Se não há dados, usar mês atual do ano (ou dezembro se for ano passado)
+      const hoje = new Date();
+      const anoAtual = hoje.getFullYear();
+      const mesAtualNumero = hoje.getMonth() + 1; // 1-12
+
+      const mesReferenciaAtual = ultimoMesComDados > 0 ? ultimoMesComDados : anoReferencia === anoAtual ? mesAtualNumero : 12;
+
+      const mesReferenciaAnterior = mesReferenciaAtual > 1 ? mesReferenciaAtual - 1 : 12;
+
+      const mesAtualStr = `${anoReferencia}-${mesReferenciaAtual.toString().padStart(2, '0')}`;
+      const mesAnteriorStr =
+        mesReferenciaAtual > 1 ? `${anoReferencia}-${mesReferenciaAnterior.toString().padStart(2, '0')}` : `${anoReferencia - 1}-12`;
+
+      console.log(`📊 Último mês com dados: ${mesAtualStr} (mês ${mesReferenciaAtual})`);
+      console.log(`📊 Mês anterior: ${mesAnteriorStr} (mês ${mesReferenciaAnterior})`);
 
       // Preencher todos os 12 meses do ano
       for (let mes = 1; mes <= 12; mes++) {
@@ -298,20 +385,15 @@ export class DashboardService {
           qtd_bufalas: qtdBufalas,
           media_diaria: Math.round(mediaDiaria * 100) / 100,
         });
-
-        // Identificar mês anterior ao atual
-        if (mesStr < mesAtual && (!mesAnterior || mesStr > mesAnterior)) {
-          mesAnterior = mesStr;
-        }
       }
 
-      // Dados do mês atual
-      const dadosMesAtual = producaoPorMes.get(mesAtual);
+      // Dados do mês atual (considerando o ano da requisição)
+      const dadosMesAtual = producaoPorMes.get(mesAtualStr);
       const mesAtualLitros = dadosMesAtual?.total || 0;
       const bufalasLactantesAtual = dadosMesAtual?.bufalas.size || 0;
 
       // Dados do mês anterior
-      const dadosMesAnterior = mesAnterior ? producaoPorMes.get(mesAnterior) : null;
+      const dadosMesAnterior = producaoPorMes.get(mesAnteriorStr);
       const mesAnteriorLitros = dadosMesAnterior?.total || 0;
 
       // Calcular variação percentual
