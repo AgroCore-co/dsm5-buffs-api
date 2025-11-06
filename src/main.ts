@@ -84,6 +84,72 @@ async function bootstrap() {
   - Use \`POST /auth/refresh\` quando o access_token expirar
   - Use \`POST /auth/signout\` para fazer logout
 
+  ---
+
+  ## 🥛 Sistema de Produção de Leite - Fluxo Completo
+
+  ### **Conceitos Importantes:**
+
+  #### **1️⃣ Ciclo de Lactação**
+  **O que é:** Período que inicia quando a búfala pare e começa a produzir leite.
+  - **Início:** Data do parto
+  - **Fim:** Quando a búfala é secada (para de ser ordenhada)
+  - **Status:** ATIVO (produzindo) ou ENCERRADO (parou de produzir)
+
+  #### **2️⃣ Controle Leiteiro (Ordenha Individual)**
+  **O que é:** Cada ordenha individual de uma búfala.
+  - Registra quanto leite foi produzido por búfala em cada ordenha
+  - Pode ter múltiplas ordenhas por dia (manhã, tarde, noite)
+  - Vinculado a um ciclo de lactação específico
+
+  #### **3️⃣ Estoque de Leite**
+  **O que é:** Consolidação do leite produzido no dia pela propriedade.
+  - Soma de todas as ordenhas do dia
+  - Registrado no final do dia de produção
+  - Representa o total de leite disponível
+
+  #### **4️⃣ Coleta de Leite**
+  **O que é:** Quando o laticínio vem buscar o leite na propriedade.
+  - Retira leite do estoque
+  - Gera receita para a propriedade
+  - Registra quantidade coletada e valor pago
+
+  ### **Fluxo de Trabalho Diário:**
+
+  \`\`\`
+  MANHÃ:
+  1. Ordenha individual das búfalas → POST /lactacao (Controle Leiteiro)
+  
+  TARDE:
+  2. Ordenha individual das búfalas → POST /lactacao (Controle Leiteiro)
+  
+  FIM DO DIA:
+  3. Consolidar produção do dia → POST /estoque-leite
+  
+  QUANDO O LATICÍNIO CHEGAR:
+  4. Registrar coleta → POST /coletas
+  \`\`\`
+
+  ### **Endpoints Organizados por Ordem de Uso:**
+
+  **1. Gestão de Ciclos (Após Parto)**
+  - \`POST /ciclos-lactacao\` - Iniciar novo ciclo após parto
+  - \`GET /ciclos-lactacao/propriedade/:id\` - Ver ciclos ativos
+
+  **2. Ordenha Diária (2-3x por dia)**
+  - \`POST /lactacao\` - Registrar cada ordenha individual
+  - \`GET /lactacao/femeas/em-lactacao/:id_propriedade\` - Ver búfalas em lactação
+
+  **3. Consolidação Diária (Fim do dia)**
+  - \`POST /estoque-leite\` - Consolidar produção do dia
+  - \`GET /estoque-leite/propriedade/:id\` - Ver estoque disponível
+
+  **4. Coleta pelo Laticínio (Conforme agendamento)**
+  - \`POST /coletas\` - Registrar coleta do laticínio
+  - \`GET /coletas/propriedade/:id\` - Histórico de coletas
+
+  ---
+
   ## 📝 Notas Importantes
 
   - **Autenticação**: Use os endpoints \`/auth/*\` para cadastro, login e gerenciamento de sessão
@@ -110,6 +176,11 @@ async function bootstrap() {
     .addTag('Gestão de Propriedade - Lotes (Piquetes)', '🌾 Gerenciamento de lotes (PROPRIETARIO apenas)')
     .addTag('Gestão de Propriedade - Endereços', '📍 Gerenciamento de endereços (PROPRIETARIO apenas)')
     .addTag('Rebanho - Búfalos', '🐃 Gerenciamento de búfalos (todos os cargos)')
+    .addTag('Produção 1️⃣ - Ciclos de Lactação', '🔄 Gerencia ciclos de produção (início: parto | fim: secagem)')
+    .addTag('Produção 2️⃣ - Controle Leiteiro (Ordenhas)', '🥛 Registra cada ordenha individual por búfala')
+    .addTag('Produção 3️⃣ - Estoque de Leite', '📦 Consolida produção diária da propriedade')
+    .addTag('Produção 4️⃣ - Coletas de Leite', '🚚 Registra coletas realizadas pelo laticínio')
+    .addTag('Produção - Laticínios/Indústrias', '🏭 Cadastro de empresas que coletam leite')
     .addBearerAuth(
       {
         type: 'http',

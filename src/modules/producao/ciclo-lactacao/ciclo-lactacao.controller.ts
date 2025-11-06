@@ -10,7 +10,7 @@ import { PaginationDto } from '../../../core/dto/pagination.dto';
 
 @ApiBearerAuth('JWT-auth')
 @UseGuards(SupabaseAuthGuard)
-@ApiTags('Produção - Ciclos de Lactação')
+@ApiTags('Produção 1️⃣ - Ciclos de Lactação')
 @Controller('ciclos-lactacao')
 export class CicloLactacaoController {
   constructor(
@@ -19,7 +19,19 @@ export class CicloLactacaoController {
   ) {}
 
   @Post()
-  @ApiOperation({ summary: 'Cria um novo ciclo de lactação' })
+  @ApiOperation({
+    summary: '🆕 Iniciar novo ciclo de lactação',
+    description: `
+**Quando usar:** Logo após a búfala parir.
+
+**O que faz:** 
+- Marca o início do período de produção de leite
+- Define a data do parto como início do ciclo
+- Ativa a búfala para ordenhas (Controle Leiteiro)
+
+**Próximo passo:** Começar a registrar ordenhas em \`POST /lactacao\`
+    `,
+  })
   @ApiBody({ type: CreateCicloLactacaoDto })
   @ApiResponse({ status: 201, description: 'Ciclo criado com sucesso.' })
   @ApiResponse({ status: 400, description: 'Dados inválidos.' })
@@ -35,7 +47,10 @@ export class CicloLactacaoController {
   @Get()
   @UseInterceptors(CacheInterceptor)
   @CacheTTL(900)
-  @ApiOperation({ summary: 'Lista todos os ciclos de lactação com paginação' })
+  @ApiOperation({
+    summary: '📋 Listar todos os ciclos',
+    description: 'Lista todos os ciclos de lactação (ativos e encerrados) com paginação.',
+  })
   @ApiQuery({ name: 'page', required: false, type: Number, description: 'Número da página (padrão: 1)' })
   @ApiQuery({ name: 'limit', required: false, type: Number, description: 'Itens por página (padrão: 10)' })
   @ApiResponse({ status: 200, description: 'Lista retornada com sucesso.' })
@@ -47,7 +62,10 @@ export class CicloLactacaoController {
   @Get('propriedade/:id_propriedade')
   @UseInterceptors(CacheInterceptor)
   @CacheTTL(900)
-  @ApiOperation({ summary: 'Lista ciclos de lactação por propriedade com paginação' })
+  @ApiOperation({
+    summary: '🏠 Listar ciclos por propriedade',
+    description: 'Lista todos os ciclos de lactação de uma propriedade específica.',
+  })
   @ApiParam({ name: 'id_propriedade', description: 'ID da propriedade', type: 'string' })
   @ApiQuery({ name: 'page', required: false, type: Number, description: 'Número da página (padrão: 1)' })
   @ApiQuery({ name: 'limit', required: false, type: Number, description: 'Itens por página (padrão: 10)' })
@@ -64,7 +82,16 @@ export class CicloLactacaoController {
   @Get('propriedade/:id_propriedade/estatisticas')
   @UseInterceptors(CacheInterceptor)
   @CacheTTL(300)
-  @ApiOperation({ summary: 'Retorna estatísticas de ciclos de lactação por propriedade' })
+  @ApiOperation({
+    summary: '📊 Estatísticas dos ciclos',
+    description: `
+**Retorna:**
+- Total de ciclos ativos
+- Total de ciclos encerrados
+- Média de duração dos ciclos
+- Produção total por ciclo
+    `,
+  })
   @ApiParam({ name: 'id_propriedade', description: 'ID da propriedade', type: 'string' })
   @ApiResponse({ status: 200, description: 'Estatísticas retornadas com sucesso.' })
   getEstatisticas(@Param('id_propriedade', ParseUUIDPipe) id_propriedade: string) {
@@ -79,7 +106,10 @@ export class CicloLactacaoController {
   @Get(':id')
   @UseInterceptors(CacheInterceptor)
   @CacheTTL(900)
-  @ApiOperation({ summary: 'Busca um ciclo de lactação pelo ID' })
+  @ApiOperation({
+    summary: '🔍 Buscar ciclo específico',
+    description: 'Retorna detalhes completos de um ciclo de lactação.',
+  })
   @ApiParam({ name: 'id', description: 'ID do ciclo', type: 'string' })
   @ApiResponse({ status: 200, description: 'Ciclo encontrado.' })
   @ApiResponse({ status: 404, description: 'Ciclo não encontrado.' })
@@ -89,7 +119,10 @@ export class CicloLactacaoController {
   }
 
   @Patch(':id')
-  @ApiOperation({ summary: 'Atualiza um ciclo de lactação' })
+  @ApiOperation({
+    summary: '✏️ Atualizar ciclo',
+    description: 'Atualiza informações do ciclo (ex: encerrar ciclo definindo data_fim).',
+  })
   @ApiParam({ name: 'id', description: 'ID do ciclo a ser atualizado', type: 'string' })
   @ApiBody({ type: UpdateCicloLactacaoDto })
   @ApiResponse({ status: 200, description: 'Ciclo atualizado com sucesso.' })
@@ -100,7 +133,10 @@ export class CicloLactacaoController {
   }
 
   @Delete(':id')
-  @ApiOperation({ summary: 'Remove um ciclo de lactação' })
+  @ApiOperation({
+    summary: '🗑️ Remover ciclo',
+    description: 'Remove um ciclo de lactação (cuidado: pode afetar ordenhas vinculadas).',
+  })
   @ApiParam({ name: 'id', description: 'ID do ciclo a ser removido', type: 'string' })
   @ApiResponse({ status: 200, description: 'Ciclo removido com sucesso.' })
   @ApiResponse({ status: 404, description: 'Ciclo não encontrado.' })

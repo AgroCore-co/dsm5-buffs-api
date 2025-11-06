@@ -10,7 +10,7 @@ import { PaginationDto } from '../../../core/dto/pagination.dto';
 
 @ApiBearerAuth('JWT-auth')
 @UseGuards(SupabaseAuthGuard)
-@ApiTags('Produção - Estoque de Leite')
+@ApiTags('Produção 3️⃣ - Estoque de Leite')
 @Controller('estoque-leite')
 export class EstoqueLeiteController {
   constructor(
@@ -19,9 +19,23 @@ export class EstoqueLeiteController {
   ) {}
 
   @Post()
-  @ApiOperation({ summary: 'Cria um novo registro de estoque de leite' })
+  @ApiOperation({
+    summary: '📦 Consolidar produção diária',
+    description: `
+**Quando usar:** No final do dia, após todas as ordenhas.
+
+**O que faz:**
+- Soma todo o leite produzido no dia
+- Registra o estoque total disponível
+- Atualiza quantidade disponível para coleta
+
+**Pré-requisito:** Ter ordenhas registradas em \`POST /lactacao\`
+
+**Próximo passo:** Aguardar coleta do laticínio (\`POST /coletas\`)
+    `,
+  })
   @ApiBody({ type: CreateEstoqueLeiteDto })
-  @ApiResponse({ status: 201, description: 'Registro de estoque criado com sucesso.' })
+  @ApiResponse({ status: 201, description: 'Estoque consolidado com sucesso.' })
   @ApiResponse({ status: 400, description: 'Dados inválidos.' })
   create(@Body() dto: CreateEstoqueLeiteDto, @User('sub') id_usuario: string) {
     this.logger.logApiRequest('POST', '/estoque-leite', undefined, {
@@ -34,7 +48,10 @@ export class EstoqueLeiteController {
   }
 
   @Get()
-  @ApiOperation({ summary: 'Lista todos os registros de estoque de leite com paginação' })
+  @ApiOperation({
+    summary: '📋 Listar todo o estoque',
+    description: 'Lista histórico completo de estoque com paginação.',
+  })
   @ApiQuery({ name: 'page', required: false, type: Number, description: 'Número da página (padrão: 1)' })
   @ApiQuery({ name: 'limit', required: false, type: Number, description: 'Itens por página (padrão: 10)' })
   @ApiResponse({ status: 200, description: 'Lista de registros retornada com sucesso.' })
@@ -44,7 +61,15 @@ export class EstoqueLeiteController {
   }
 
   @Get('propriedade/:id_propriedade')
-  @ApiOperation({ summary: 'Lista registros de estoque por propriedade com paginação' })
+  @ApiOperation({
+    summary: '🏠 Estoque por propriedade',
+    description: `
+**Use para:**
+- Ver quanto leite está disponível
+- Verificar produção dos últimos dias
+- Planejar coletas
+    `,
+  })
   @ApiParam({ name: 'id_propriedade', description: 'ID da propriedade', type: 'string' })
   @ApiQuery({ name: 'page', required: false, type: Number, description: 'Número da página (padrão: 1)' })
   @ApiQuery({ name: 'limit', required: false, type: Number, description: 'Itens por página (padrão: 10)' })
@@ -59,7 +84,10 @@ export class EstoqueLeiteController {
   }
 
   @Get(':id')
-  @ApiOperation({ summary: 'Busca um registro de estoque pelo ID' })
+  @ApiOperation({
+    summary: '🔍 Buscar estoque específico',
+    description: 'Retorna detalhes de um registro de estoque.',
+  })
   @ApiParam({ name: 'id', description: 'ID do registro de estoque', type: 'string' })
   @ApiResponse({ status: 200, description: 'Registro encontrado.' })
   @ApiResponse({ status: 404, description: 'Registro não encontrado.' })
@@ -69,7 +97,10 @@ export class EstoqueLeiteController {
   }
 
   @Patch(':id')
-  @ApiOperation({ summary: 'Atualiza um registro de estoque' })
+  @ApiOperation({
+    summary: '✏️ Atualizar estoque',
+    description: 'Corrige dados de estoque (quantidade, data, etc).',
+  })
   @ApiParam({ name: 'id', description: 'ID do registro a ser atualizado', type: 'string' })
   @ApiBody({ type: UpdateEstoqueLeiteDto })
   @ApiResponse({ status: 200, description: 'Registro atualizado com sucesso.' })
@@ -80,7 +111,10 @@ export class EstoqueLeiteController {
   }
 
   @Delete(':id')
-  @ApiOperation({ summary: 'Remove um registro de estoque' })
+  @ApiOperation({
+    summary: '🗑️ Remover estoque',
+    description: 'Remove um registro de estoque (cuidado: pode afetar coletas).',
+  })
   @ApiParam({ name: 'id', description: 'ID do registro a ser removido', type: 'string' })
   @ApiResponse({ status: 200, description: 'Registro removido com sucesso.' })
   @ApiResponse({ status: 404, description: 'Registro não encontrado.' })

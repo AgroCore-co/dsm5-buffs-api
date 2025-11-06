@@ -11,7 +11,7 @@ import { ResumoProducaoBufalaDto } from './dto/resumo-producao-bufala.dto';
 
 @ApiBearerAuth('JWT-auth')
 @UseGuards(SupabaseAuthGuard)
-@ApiTags('Produção - Lactação (Controle Leiteiro)')
+@ApiTags('Produção 2️⃣ - Controle Leiteiro (Ordenhas)')
 @Controller('lactacao')
 export class ControleLeiteiroController {
   constructor(
@@ -20,23 +20,37 @@ export class ControleLeiteiroController {
   ) {}
 
   @Post()
-  @ApiOperation({ summary: 'Cria um novo registro de lactação para o usuário logado' })
-  @ApiResponse({ status: 201, description: 'Registro criado com sucesso.' })
-  @ApiResponse({ status: 400, description: 'Dados inválidos ou búfala não encontrada.' })
-  @ApiResponse({ status: 401, description: 'Não autorizado.' })
-  @ApiResponse({ status: 404, description: 'Perfil do usuário não encontrado.' })
+  @ApiOperation({
+    summary: '🥛 Registrar ordenha individual',
+    description: `
+**Quando usar:** A cada ordenha realizada (2-3x por dia).
+
+**O que registra:**
+- Quantidade de leite produzida por búfala
+- Horário da ordenha
+- Período (manhã, tarde, noite)
+- Qualidade do leite (opcional)
+
+**Pré-requisito:** Búfala deve ter um ciclo de lactação ATIVO.
+
+**Próximo passo:** No fim do dia, consolidar em \`POST /estoque-leite\`
+    `,
+  })
+  @ApiResponse({ status: 201, description: 'Ordenha registrada com sucesso.' })
+  @ApiResponse({ status: 400, description: 'Dados inválidos ou búfala não está em lactação.' })
   create(@Body() dto: CreateDadosLactacaoDto, @User() user: any) {
     this.logger.logApiRequest('POST', '/lactacao', undefined, { module: 'ControleLeiteiroController', method: 'create', bufalaId: dto.id_bufala });
     return this.service.create(dto, user);
   }
 
   @Get()
-  @ApiOperation({ summary: 'Lista todos os registros de lactação (paginado)' })
-  @ApiResponse({ status: 200, description: 'Lista de registros retornada com sucesso.' })
-  @ApiResponse({ status: 401, description: 'Não autorizado.' })
-  @ApiResponse({ status: 400, description: 'Parâmetros de paginação inválidos.' })
+  @ApiOperation({
+    summary: '📋 Listar todas as ordenhas',
+    description: 'Lista histórico completo de ordenhas com paginação.',
+  })
   @ApiQuery({ name: 'page', required: false, type: Number, description: 'Número da página (default: 1)' })
   @ApiQuery({ name: 'limit', required: false, type: Number, description: 'Quantidade de registros por página (default: 20)' })
+  @ApiResponse({ status: 200, description: 'Lista de registros retornada com sucesso.' })
   findAll(@Query('page') page: number = 1, @Query('limit') limit: number = 20) {
     this.logger.logApiRequest('GET', '/lactacao', undefined, {
       module: 'ControleLeiteiroController',
@@ -48,10 +62,10 @@ export class ControleLeiteiroController {
   }
 
   @Get('bufala/:id_bufala')
-  @ApiOperation({ summary: 'Busca todos os registros de lactação de uma búfala específica (paginado)' })
-  @ApiResponse({ status: 200, description: 'Lista de registros da búfala retornada com sucesso.' })
-  @ApiResponse({ status: 401, description: 'Não autorizado.' })
-  @ApiResponse({ status: 404, description: 'Búfala não encontrada.' })
+  @ApiOperation({
+    summary: '🐃 Histórico de ordenhas por búfala',
+    description: 'Lista todas as ordenhas de uma búfala específica.',
+  })
   @ApiQuery({ name: 'page', required: false, type: Number, description: 'Número da página (default: 1)' })
   @ApiQuery({ name: 'limit', required: false, type: Number, description: 'Quantidade de registros por página (default: 20)' })
   findAllByBufala(
@@ -71,11 +85,11 @@ export class ControleLeiteiroController {
   }
 
   @Get('ciclo/:id_ciclo_lactacao')
-  @ApiOperation({ summary: 'Busca todos os registros de ordenha de um ciclo de lactação específico (paginado)' })
+  @ApiOperation({
+    summary: '🔄 Ordenhas por ciclo de lactação',
+    description: 'Lista todas as ordenhas de um ciclo específico.',
+  })
   @ApiParam({ name: 'id_ciclo_lactacao', description: 'ID do ciclo de lactação', type: 'string' })
-  @ApiResponse({ status: 200, description: 'Lista de ordenhas do ciclo retornada com sucesso.' })
-  @ApiResponse({ status: 401, description: 'Não autorizado.' })
-  @ApiResponse({ status: 404, description: 'Ciclo de lactação não encontrado.' })
   @ApiQuery({ name: 'page', required: false, type: Number, description: 'Número da página (default: 1)' })
   @ApiQuery({ name: 'limit', required: false, type: Number, description: 'Quantidade de registros por página (default: 20)' })
   findAllByCiclo(
@@ -95,20 +109,24 @@ export class ControleLeiteiroController {
   }
 
   @Get(':id')
-  @ApiOperation({ summary: 'Busca um registro de lactação específico pelo ID' })
+  @ApiOperation({
+    summary: '🔍 Buscar ordenha específica',
+    description: 'Retorna detalhes de uma ordenha pelo ID.',
+  })
   @ApiResponse({ status: 200, description: 'Dados do registro retornados.' })
-  @ApiResponse({ status: 401, description: 'Não autorizado.' })
-  @ApiResponse({ status: 404, description: 'Registro não encontrado ou não pertence a este usuário.' })
+  @ApiResponse({ status: 404, description: 'Registro não encontrado.' })
   findOne(@Param('id', ParseUUIDPipe) id: string, @User() user: any) {
     this.logger.logApiRequest('GET', `/lactacao/${id}`, undefined, { module: 'ControleLeiteiroController', method: 'findOne', lactacaoId: id });
     return this.service.findOne(id, user);
   }
 
   @Patch(':id')
-  @ApiOperation({ summary: 'Atualiza um registro de lactação' })
+  @ApiOperation({
+    summary: '✏️ Atualizar ordenha',
+    description: 'Corrige dados de uma ordenha registrada (quantidade, horário, etc).',
+  })
   @ApiResponse({ status: 200, description: 'Registro atualizado com sucesso.' })
-  @ApiResponse({ status: 401, description: 'Não autorizado.' })
-  @ApiResponse({ status: 404, description: 'Registro não encontrado ou não pertence a este usuário.' })
+  @ApiResponse({ status: 404, description: 'Registro não encontrado.' })
   update(@Param('id', ParseUUIDPipe) id: string, @Body() dto: UpdateDadosLactacaoDto, @User() user: any) {
     this.logger.logApiRequest('PATCH', `/lactacao/${id}`, undefined, { module: 'ControleLeiteiroController', method: 'update', lactacaoId: id });
     return this.service.update(id, dto, user);
@@ -116,23 +134,28 @@ export class ControleLeiteiroController {
 
   @Delete(':id')
   @HttpCode(204)
-  @ApiOperation({ summary: 'Deleta um registro de lactação' })
+  @ApiOperation({
+    summary: '🗑️ Remover ordenha',
+    description: 'Remove um registro de ordenha (cuidado: afeta estatísticas).',
+  })
   @ApiResponse({ status: 204, description: 'Registro deletado com sucesso.' })
-  @ApiResponse({ status: 401, description: 'Não autorizado.' })
-  @ApiResponse({ status: 404, description: 'Registro não encontrado ou não pertence a este usuário.' })
+  @ApiResponse({ status: 404, description: 'Registro não encontrado.' })
   remove(@Param('id', ParseUUIDPipe) id: string, @User() user: any) {
     this.logger.logApiRequest('DELETE', `/lactacao/${id}`, undefined, { module: 'ControleLeiteiroController', method: 'remove', lactacaoId: id });
     return this.service.remove(id, user);
   }
 
   @Get('femeas/em-lactacao/:id_propriedade')
-  @ApiOperation({ summary: 'Lista fêmeas em período de lactação ativo' })
-  @ApiParam({ name: 'id_propriedade', description: 'ID da propriedade', type: 'string' })
-  @ApiResponse({
-    status: 200,
-    description: 'Fêmeas em lactação com dados de produção',
-    type: [FemeaEmLactacaoDto],
+  @ApiOperation({
+    summary: '📋 Listar búfalas disponíveis para ordenha',
+    description: `
+**Retorna:** Todas as búfalas com ciclo de lactação ATIVO.
+
+**Use antes de:** Registrar uma nova ordenha para ver quais búfalas podem ser ordenhadas.
+    `,
   })
+  @ApiParam({ name: 'id_propriedade', description: 'ID da propriedade', type: 'string' })
+  @ApiResponse({ status: 200, description: 'Fêmeas em lactação com dados de produção', type: [FemeaEmLactacaoDto] })
   async getFemeasEmLactacao(@Param('id_propriedade', ParseUUIDPipe) id_propriedade: string): Promise<FemeaEmLactacaoDto[]> {
     this.logger.logApiRequest('GET', `/lactacao/femeas/em-lactacao/${id_propriedade}`, undefined, {
       module: 'ControleLeiteiroController',
@@ -143,13 +166,18 @@ export class ControleLeiteiroController {
   }
 
   @Get('bufala/:id/resumo-producao')
-  @ApiOperation({ summary: 'Resumo de produção de uma búfala (ciclo atual + histórico)' })
-  @ApiParam({ name: 'id', description: 'ID da búfala', type: 'string' })
-  @ApiResponse({
-    status: 200,
-    description: 'Resumo completo de produção',
-    type: ResumoProducaoBufalaDto,
+  @ApiOperation({
+    summary: '📊 Resumo de produção por búfala',
+    description: `
+**Retorna:**
+- Dados do ciclo atual
+- Produção total do ciclo
+- Média diária de produção
+- Histórico de ciclos anteriores
+    `,
   })
+  @ApiParam({ name: 'id', description: 'ID da búfala', type: 'string' })
+  @ApiResponse({ status: 200, description: 'Resumo completo de produção', type: ResumoProducaoBufalaDto })
   async getResumoProducaoBufala(@Param('id', ParseUUIDPipe) id: string, @User() user: any): Promise<ResumoProducaoBufalaDto> {
     this.logger.logApiRequest('GET', `/lactacao/bufala/${id}/resumo-producao`, undefined, {
       module: 'ControleLeiteiroController',

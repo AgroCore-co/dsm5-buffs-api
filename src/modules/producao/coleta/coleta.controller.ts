@@ -12,7 +12,7 @@ import { PaginationDto } from '../../../core/dto/pagination.dto';
 
 @ApiBearerAuth('JWT-auth')
 @UseGuards(SupabaseAuthGuard)
-@ApiTags('Produção - Coletas de Leite')
+@ApiTags('Produção 4️⃣ - Coletas de Leite')
 @Controller('coletas')
 export class ColetaController {
   constructor(
@@ -21,10 +21,26 @@ export class ColetaController {
   ) {}
 
   @Post()
-  @ApiOperation({ summary: 'Cria um novo registro de coleta de leite' })
+  @ApiOperation({
+    summary: '🚚 Registrar coleta do laticínio',
+    description: `
+**Quando usar:** Quando o caminhão do laticínio vem buscar o leite.
+
+**O que registra:**
+- Quantidade coletada
+- Empresa que coletou
+- Data e hora da coleta
+- Valor pago (opcional)
+- Reduz o estoque disponível
+
+**Pré-requisito:** Ter estoque disponível em \`POST /estoque-leite\`
+
+**Efeito:** Diminui quantidade disponível no estoque
+    `,
+  })
   @ApiBody({ type: CreateColetaDto })
   @ApiResponse({ status: 201, description: 'Coleta registrada com sucesso.' })
-  @ApiResponse({ status: 400, description: 'Dados inválidos.' })
+  @ApiResponse({ status: 400, description: 'Dados inválidos ou estoque insuficiente.' })
   create(@Body() dto: CreateColetaDto, @User('sub') id_funcionario: string) {
     this.logger.logApiRequest('POST', '/coletas', undefined, {
       module: 'ColetaController',
@@ -38,7 +54,10 @@ export class ColetaController {
   @Get()
   @UseInterceptors(CacheInterceptor)
   @CacheTTL(300)
-  @ApiOperation({ summary: 'Lista todas as coletas de leite com paginação' })
+  @ApiOperation({
+    summary: '📋 Listar todas as coletas',
+    description: 'Histórico completo de coletas realizadas.',
+  })
   @ApiQuery({ name: 'page', required: false, type: Number, description: 'Número da página (padrão: 1)' })
   @ApiQuery({ name: 'limit', required: false, type: Number, description: 'Itens por página (padrão: 10)' })
   @ApiResponse({ status: 200, description: 'Lista de coletas retornada com sucesso.' })
@@ -50,13 +69,22 @@ export class ColetaController {
   @Get('propriedade/:id_propriedade')
   @UseInterceptors(CacheInterceptor)
   @CacheTTL(300)
-  @ApiOperation({ summary: 'Lista coletas por propriedade com estatísticas' })
+  @ApiOperation({
+    summary: '🏠 Coletas por propriedade',
+    description: `
+**Retorna:**
+- Histórico de coletas
+- Nome do laticínio
+- Valores totais coletados
+- Estatísticas de vendas
+    `,
+  })
   @ApiParam({ name: 'id_propriedade', description: 'ID da propriedade', type: 'string' })
   @ApiQuery({ name: 'page', required: false, type: Number, description: 'Número da página (padrão: 1)' })
   @ApiQuery({ name: 'limit', required: false, type: Number, description: 'Itens por página (padrão: 10)' })
   @ApiResponse({
     status: 200,
-    description: 'Lista de coletas com nome da empresa e estatísticas retornada com sucesso.',
+    description: 'Lista de coletas com estatísticas.',
     type: ColetaPropriedadeResponseDto,
   })
   findByPropriedade(
@@ -74,7 +102,10 @@ export class ColetaController {
   @Get(':id')
   @UseInterceptors(CacheInterceptor)
   @CacheTTL(300)
-  @ApiOperation({ summary: 'Busca uma coleta de leite pelo ID' })
+  @ApiOperation({
+    summary: '🔍 Buscar coleta específica',
+    description: 'Retorna detalhes completos de uma coleta.',
+  })
   @ApiParam({ name: 'id', description: 'ID da coleta', type: 'string' })
   @ApiResponse({ status: 200, description: 'Coleta encontrada.' })
   @ApiResponse({ status: 404, description: 'Coleta não encontrada.' })
@@ -84,7 +115,10 @@ export class ColetaController {
   }
 
   @Patch(':id')
-  @ApiOperation({ summary: 'Atualiza um registro de coleta' })
+  @ApiOperation({
+    summary: '✏️ Atualizar coleta',
+    description: 'Corrige dados de uma coleta (quantidade, valor, etc).',
+  })
   @ApiParam({ name: 'id', description: 'ID da coleta a ser atualizada', type: 'string' })
   @ApiBody({ type: UpdateColetaDto })
   @ApiResponse({ status: 200, description: 'Coleta atualizada com sucesso.' })
@@ -95,7 +129,10 @@ export class ColetaController {
   }
 
   @Delete(':id')
-  @ApiOperation({ summary: 'Remove um registro de coleta' })
+  @ApiOperation({
+    summary: '🗑️ Remover coleta',
+    description: 'Cancela uma coleta (atenção: restitui estoque).',
+  })
   @ApiParam({ name: 'id', description: 'ID da coleta a ser removida', type: 'string' })
   @ApiResponse({ status: 200, description: 'Coleta removida com sucesso.' })
   @ApiResponse({ status: 404, description: 'Coleta não encontrada.' })
