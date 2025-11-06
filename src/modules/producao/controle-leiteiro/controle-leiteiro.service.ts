@@ -760,12 +760,11 @@ export class ControleLeiteiroService {
     if (cicloAtual) {
       const diasEmLactacao = Math.floor((new Date().getTime() - new Date(cicloAtual.dt_parto).getTime()) / (1000 * 60 * 60 * 24));
 
-      // Buscar ordenhas do ciclo atual
+      // CORREÇÃO: Buscar ordenhas do ciclo atual usando id_ciclo_lactacao
       const { data: ordenhasCiclo } = await this.supabase
         .from('dadoslactacao')
         .select('qt_ordenha, dt_ordenha, periodo')
-        .eq('id_bufala', id_bufala)
-        .gte('dt_ordenha', cicloAtual.dt_parto)
+        .eq('id_ciclo_lactacao', cicloAtual.id_ciclo_lactacao) // <-- MUDANÇA AQUI
         .order('dt_ordenha', { ascending: false });
 
       const totalProduzido = ordenhasCiclo?.reduce((sum, o) => sum + (o.qt_ordenha || 0), 0) || 0;
@@ -797,13 +796,13 @@ export class ControleLeiteiroService {
       };
     }
 
-    // 3. Buscar ciclos anteriores finalizados
+    // 3. Buscar ciclos anteriores finalizados - CORREÇÃO: Ordem crescente
     const { data: ciclosAnteriores } = await this.supabase
       .from('ciclolactacao')
       .select('*')
       .eq('id_bufala', id_bufala)
       .eq('status', 'Seca')
-      .order('dt_parto', { ascending: false });
+      .order('dt_parto', { ascending: true }); // <-- MUDANÇA: true para ordem crescente
 
     const comparativoCiclos: any[] = [];
 
@@ -813,13 +812,8 @@ export class ControleLeiteiroService {
         const dtSecagem = ciclo.dt_secagem_real ? new Date(ciclo.dt_secagem_real) : null;
         const duracaoDias = dtSecagem ? Math.floor((dtSecagem.getTime() - dtParto.getTime()) / (1000 * 60 * 60 * 24)) : 0;
 
-        // Buscar produção do ciclo
-        const { data: ordenhas } = await this.supabase
-          .from('dadoslactacao')
-          .select('qt_ordenha')
-          .eq('id_bufala', id_bufala)
-          .gte('dt_ordenha', ciclo.dt_parto)
-          .lte('dt_ordenha', ciclo.dt_secagem_real || new Date().toISOString());
+        // CORREÇÃO: Buscar produção usando id_ciclo_lactacao
+        const { data: ordenhas } = await this.supabase.from('dadoslactacao').select('qt_ordenha').eq('id_ciclo_lactacao', ciclo.id_ciclo_lactacao); // <-- MUDANÇA AQUI
 
         const totalProduzido = ordenhas?.reduce((sum, o) => sum + (o.qt_ordenha || 0), 0) || 0;
         const mediaDiaria = duracaoDias > 0 ? totalProduzido / duracaoDias : 0;
@@ -841,7 +835,7 @@ export class ControleLeiteiroService {
       }
     }
 
-    // 4. Gráfico de produção (últimos 30 dias)
+    // 4. Gráfico de produção (últimos 30 dias) - usando id_bufala
     const dataInicio = new Date();
     dataInicio.setDate(dataInicio.getDate() - 30);
 
@@ -849,7 +843,7 @@ export class ControleLeiteiroService {
       .from('dadoslactacao')
       .select('dt_ordenha, qt_ordenha')
       .eq('id_bufala', id_bufala)
-      .gte('dt_ordenha', dataInicio.toISOString())
+      .gte('dt_ordenha', dataInicio.toISOString().split('T')[0])
       .order('dt_ordenha', { ascending: true });
 
     // Agrupar por data
@@ -860,10 +854,12 @@ export class ControleLeiteiroService {
       producaoPorDia.set(data, atual + (ordenha.qt_ordenha || 0));
     });
 
-    const graficoProducao = Array.from(producaoPorDia.entries()).map(([data, quantidade]) => ({
-      data,
-      quantidade: parseFloat(quantidade.toFixed(2)),
-    }));
+    const graficoProducao = Array.from(producaoPorDia.entries())
+      .map(([data, quantidade]) => ({
+        data,
+        quantidade: parseFloat(quantidade.toFixed(2)),
+      }))
+      .sort((a, b) => a.data.localeCompare(b.data)); // <-- Garantir ordem cronológica
 
     return {
       bufala: {
