@@ -14,6 +14,7 @@ import { CategoriaABCB } from './dto/categoria-abcb.dto';
 import { GenealogiaService } from '../../reproducao/genealogia/genealogia.service';
 import { PaginationDto, PaginatedResponse } from '../../../core/dto/pagination.dto';
 import { createPaginatedResponse, calculatePaginationParams } from '../../../core/utils/pagination.utils';
+import { formatDateFields, formatDateFieldsArray } from '../../../core/utils/date-formatter.utils';
 
 // Interface para tipar as atualizações de maturidade
 interface MaturityUpdate {
@@ -181,7 +182,7 @@ export class BufaloService {
       });
     }
 
-    return data;
+    return formatDateFields(data);
   }
 
   async findAll(user: any, paginationDto: PaginationDto = {}): Promise<PaginatedResponse<any>> {
@@ -228,7 +229,8 @@ export class BufaloService {
     const bufalosAtivos = (data || []).filter((bufalo) => bufalo.status === true);
     await this.updateMaturityIfNeeded(bufalosAtivos);
 
-    return createPaginatedResponse(data || [], count || 0, page, limit);
+    const formattedData = formatDateFieldsArray(data || []);
+    return createPaginatedResponse(formattedData, count || 0, page, limit);
   }
 
   async findOne(id: string, user: any) {
@@ -307,7 +309,8 @@ export class BufaloService {
     const bufalosAtivos = (data || []).filter((bufalo) => bufalo.status === true);
     await this.updateMaturityIfNeeded(bufalosAtivos);
 
-    return createPaginatedResponse(data || [], count || 0, page, limit);
+    const formattedData = formatDateFieldsArray(data || []);
+    return createPaginatedResponse(formattedData, count || 0, page, limit);
   }
 
   /**
@@ -361,7 +364,8 @@ export class BufaloService {
     const bufalosAtivos = (data || []).filter((bufalo) => bufalo.status === true);
     await this.updateMaturityIfNeeded(bufalosAtivos);
 
-    return createPaginatedResponse(data || [], count || 0, page, limit);
+    const formattedData = formatDateFieldsArray(data || []);
+    return createPaginatedResponse(formattedData, count || 0, page, limit);
   }
 
   /**
@@ -424,7 +428,8 @@ export class BufaloService {
     const bufalosAtivos = (data || []).filter((bufalo) => bufalo.status === true);
     await this.updateMaturityIfNeeded(bufalosAtivos);
 
-    return createPaginatedResponse(data || [], count || 0, page, limit);
+    const formattedData = formatDateFieldsArray(data || []);
+    return createPaginatedResponse(formattedData, count || 0, page, limit);
   }
 
   /**
@@ -526,7 +531,8 @@ export class BufaloService {
     const bufalosAtivos = (data || []).filter((bufalo) => bufalo.status === true);
     await this.updateMaturityIfNeeded(bufalosAtivos);
 
-    return createPaginatedResponse(data || [], count || 0, page, limit);
+    const formattedData = formatDateFieldsArray(data || []);
+    return createPaginatedResponse(formattedData, count || 0, page, limit);
   }
 
   /**
@@ -576,7 +582,8 @@ export class BufaloService {
     const bufalosAtivos = (data || []).filter((bufalo) => bufalo.status === true);
     await this.updateMaturityIfNeeded(bufalosAtivos);
 
-    return createPaginatedResponse(data || [], count || 0, page, limit);
+    const formattedData = formatDateFieldsArray(data || []);
+    return createPaginatedResponse(formattedData, count || 0, page, limit);
   }
 
   /**
@@ -634,7 +641,8 @@ export class BufaloService {
     const bufalosAtivos = (data || []).filter((bufalo) => bufalo.status === true);
     await this.updateMaturityIfNeeded(bufalosAtivos);
 
-    return createPaginatedResponse(data || [], count || 0, page, limit);
+    const formattedData = formatDateFieldsArray(data || []);
+    return createPaginatedResponse(formattedData, count || 0, page, limit);
   }
 
   /**
@@ -692,7 +700,8 @@ export class BufaloService {
     const bufalosAtivos = (data || []).filter((bufalo) => bufalo.status === true);
     await this.updateMaturityIfNeeded(bufalosAtivos);
 
-    return createPaginatedResponse(data || [], count || 0, page, limit);
+    const formattedData = formatDateFieldsArray(data || []);
+    return createPaginatedResponse(formattedData, count || 0, page, limit);
   }
 
   /**
@@ -747,7 +756,8 @@ export class BufaloService {
     const bufalosAtivos = (data || []).filter((bufalo) => bufalo.status === true);
     await this.updateMaturityIfNeeded(bufalosAtivos);
 
-    return createPaginatedResponse(data || [], count || 0, page, limit);
+    const formattedData = formatDateFieldsArray(data || []);
+    return createPaginatedResponse(formattedData, count || 0, page, limit);
   }
 
   /**
@@ -805,7 +815,8 @@ export class BufaloService {
     const bufalosAtivos = (data || []).filter((bufalo) => bufalo.status === true);
     await this.updateMaturityIfNeeded(bufalosAtivos);
 
-    return createPaginatedResponse(data || [], count || 0, page, limit);
+    const formattedData = formatDateFieldsArray(data || []);
+    return createPaginatedResponse(formattedData, count || 0, page, limit);
   }
 
   /**
@@ -863,7 +874,8 @@ export class BufaloService {
     const bufalosAtivos = (data || []).filter((bufalo) => bufalo.status === true);
     await this.updateMaturityIfNeeded(bufalosAtivos);
 
-    return createPaginatedResponse(data || [], count || 0, page, limit);
+    const formattedData = formatDateFieldsArray(data || []);
+    return createPaginatedResponse(formattedData, count || 0, page, limit);
   }
 
   /**
@@ -921,7 +933,8 @@ export class BufaloService {
     const bufalosAtivos = (data || []).filter((bufalo) => bufalo.status === true);
     await this.updateMaturityIfNeeded(bufalosAtivos);
 
-    return createPaginatedResponse(data || [], count || 0, page, limit);
+    const formattedData = formatDateFieldsArray(data || []);
+    return createPaginatedResponse(formattedData, count || 0, page, limit);
   }
 
   /**
@@ -970,7 +983,8 @@ export class BufaloService {
     const bufalosAtivos = (data || []).filter((bufalo) => bufalo.status === true);
     await this.updateMaturityIfNeeded(bufalosAtivos);
 
-    return createPaginatedResponse(data || [], count || 0, page, limit);
+    const formattedData = formatDateFieldsArray(data || []);
+    return createPaginatedResponse(formattedData, count || 0, page, limit);
   }
 
   /**
@@ -1027,7 +1041,8 @@ export class BufaloService {
     const bufalosAtivos = (data || []).filter((bufalo) => bufalo.status === true);
     await this.updateMaturityIfNeeded(bufalosAtivos);
 
-    return createPaginatedResponse(data || [], count || 0, page, limit);
+    const formattedData = formatDateFieldsArray(data || []);
+    return createPaginatedResponse(formattedData, count || 0, page, limit);
   }
 
   async findByMicrochip(microchip: string, user: any) {
@@ -1057,7 +1072,7 @@ export class BufaloService {
     // Atualiza maturidade automaticamente se necessário
     await this.updateMaturityIfNeeded([data]);
 
-    return data;
+    return formatDateFields(data);
   }
 
   async update(id: string, updateDto: UpdateBufaloDto, user: any) {
@@ -1098,7 +1113,7 @@ export class BufaloService {
       }
     });
 
-    return data;
+    return formatDateFields(data);
   }
 
   /**

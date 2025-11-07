@@ -5,6 +5,7 @@ import { CreateUsuarioDto } from '../dto/create-usuario.dto';
 import { UpdateUsuarioDto } from '../dto/update-usuario.dto';
 import { Cargo } from '../enums/cargo.enum';
 import { LoggerService } from 'src/core/logger/logger.service';
+import { formatDateFields, formatDateFieldsArray } from '../../../core/utils/date-formatter.utils';
 
 @Injectable()
 export class UsuarioService {
@@ -52,7 +53,7 @@ export class UsuarioService {
       throw new InternalServerErrorException(`Erro ao criar perfil de usuário: ${error.message}`);
     }
 
-    return data;
+    return formatDateFields(data);
   }
 
   /**
@@ -69,7 +70,7 @@ export class UsuarioService {
       this.logger.logError(error, { method: 'findAll' });
       throw new InternalServerErrorException(error.message);
     }
-    return data;
+    return formatDateFieldsArray(data);
   }
 
   /**
@@ -96,7 +97,7 @@ export class UsuarioService {
     if (!data) {
       throw new NotFoundException(`Nenhum perfil de usuário encontrado para o email: ${email}`);
     }
-    return data;
+    return formatDateFields(data);
   }
 
   /**
@@ -123,7 +124,7 @@ export class UsuarioService {
     if (!data) {
       throw new NotFoundException(`Usuário com ID ${id} não encontrado.`);
     }
-    return data;
+    return formatDateFields(data);
   }
 
   /**
@@ -150,7 +151,7 @@ export class UsuarioService {
       this.logger.logError(error, { method: 'update', id });
       throw new InternalServerErrorException(error.message);
     }
-    return data;
+    return formatDateFields(data);
   }
 
   /**
@@ -282,6 +283,6 @@ export class UsuarioService {
       throw new InternalServerErrorException('Erro ao vincular funcionário à propriedade.');
     }
 
-    return perfil;
+    return formatDateFields(perfil);
   }
 }

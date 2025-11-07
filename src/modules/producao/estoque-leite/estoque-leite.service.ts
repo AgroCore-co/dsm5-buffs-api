@@ -6,6 +6,7 @@ import { UpdateEstoqueLeiteDto } from './dto/update-estoque-leite.dto';
 import { PaginationDto } from '../../../core/dto/pagination.dto';
 import { PaginatedResponse } from '../../../core/dto/pagination.dto';
 import { createPaginatedResponse, calculatePaginationParams } from '../../../core/utils/pagination.utils';
+import { formatDateFields, formatDateFieldsArray } from '../../../core/utils/date-formatter.utils';
 
 @Injectable()
 export class EstoqueLeiteService {
@@ -49,7 +50,7 @@ export class EstoqueLeiteService {
       estoqueId: data.id_estoque,
       usuarioId: id_usuario,
     });
-    return data;
+    return formatDateFields(data);
   }
 
   async findAll(paginationDto: PaginationDto = {}): Promise<PaginatedResponse<any>> {
@@ -93,7 +94,8 @@ export class EstoqueLeiteService {
       method: 'findAll',
     });
 
-    return createPaginatedResponse(data, count || 0, page, limitValue);
+    const formattedData = formatDateFieldsArray(data);
+    return createPaginatedResponse(formattedData, count || 0, page, limitValue);
   }
 
   async findByPropriedade(id_propriedade: string, paginationDto: PaginationDto = {}): Promise<PaginatedResponse<any>> {
@@ -141,7 +143,8 @@ export class EstoqueLeiteService {
       method: 'findByPropriedade',
     });
 
-    return createPaginatedResponse(data, count || 0, page, limitValue);
+    const formattedData = formatDateFieldsArray(data);
+    return createPaginatedResponse(formattedData, count || 0, page, limitValue);
   }
 
   async findOne(id_estoque: string) {
@@ -167,7 +170,7 @@ export class EstoqueLeiteService {
       method: 'findOne',
       estoqueId: id_estoque,
     });
-    return data;
+    return formatDateFields(data);
   }
 
   async update(id_estoque: string, dto: UpdateEstoqueLeiteDto) {
@@ -195,7 +198,7 @@ export class EstoqueLeiteService {
       method: 'update',
       estoqueId: id_estoque,
     });
-    return data;
+    return formatDateFields(data);
   }
 
   async remove(id_estoque: string) {

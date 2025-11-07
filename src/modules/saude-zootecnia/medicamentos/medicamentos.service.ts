@@ -2,6 +2,7 @@ import { Injectable, InternalServerErrorException, NotFoundException } from '@ne
 import { SupabaseService } from '../../../core/supabase/supabase.service';
 import { CreateMedicacaoDto } from './dto/create-medicacao.dto';
 import { UpdateMedicacaoDto } from './dto/update-medicacao.dto';
+import { formatDateFields, formatDateFieldsArray } from '../../../core/utils/date-formatter.utils';
 
 @Injectable()
 export class MedicamentosService {
@@ -15,7 +16,7 @@ export class MedicamentosService {
     if (error) {
       throw new InternalServerErrorException(`Falha ao criar medicação: ${error.message}`);
     }
-    return data;
+    return formatDateFields(data);
   }
 
   async findAll() {
@@ -24,7 +25,7 @@ export class MedicamentosService {
     if (error) {
       throw new InternalServerErrorException(`Falha ao buscar medicações: ${error.message}`);
     }
-    return data;
+    return formatDateFieldsArray(data);
   }
 
   async findByPropriedade(id_propriedade: string) {
@@ -38,7 +39,7 @@ export class MedicamentosService {
     if (error) {
       throw new InternalServerErrorException(`Falha ao buscar medicações da propriedade: ${error.message}`);
     }
-    return data;
+    return formatDateFieldsArray(data);
   }
 
   async findOne(id_medicacao: string) {
@@ -47,7 +48,7 @@ export class MedicamentosService {
     if (error || !data) {
       throw new NotFoundException(`Medicação com ID ${id_medicacao} não encontrada.`);
     }
-    return data;
+    return formatDateFields(data);
   }
 
   async update(id_medicacao: string, dto: UpdateMedicacaoDto) {
@@ -58,7 +59,7 @@ export class MedicamentosService {
     if (error) {
       throw new InternalServerErrorException(`Falha ao atualizar medicação: ${error.message}`);
     }
-    return data;
+    return formatDateFields(data);
   }
 
   async remove(id_medicacao: string) {

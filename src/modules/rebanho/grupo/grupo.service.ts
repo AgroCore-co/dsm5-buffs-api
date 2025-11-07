@@ -7,6 +7,7 @@ import { UpdateGrupoDto } from './dto/update-grupo.dto';
 import { PaginationDto } from '../../../core/dto/pagination.dto';
 import { PaginatedResponse } from '../../../core/dto/pagination.dto';
 import { createPaginatedResponse, calculatePaginationParams } from '../../../core/utils/pagination.utils';
+import { formatDateFields, formatDateFieldsArray } from '../../../core/utils/date-formatter.utils';
 
 @Injectable()
 export class GrupoService {
@@ -30,7 +31,7 @@ export class GrupoService {
     }
 
     this.logger.log('Grupo criado com sucesso', { module: 'GrupoService', method: 'create', grupoId: data.id_grupo });
-    return data;
+    return formatDateFields(data);
   }
 
   async findAll() {
@@ -44,7 +45,7 @@ export class GrupoService {
     }
 
     this.logger.log(`Busca de grupos concluída - ${data.length} grupos encontrados`, { module: 'GrupoService', method: 'findAll' });
-    return data;
+    return formatDateFieldsArray(data);
   }
 
   async findByPropriedade(id_propriedade: string, paginationDto: PaginationDto = {}): Promise<PaginatedResponse<any>> {
@@ -90,7 +91,8 @@ export class GrupoService {
       method: 'findByPropriedade',
     });
 
-    return createPaginatedResponse(data, count || 0, page, limitValue);
+    const formattedData = formatDateFieldsArray(data);
+    return createPaginatedResponse(formattedData, count || 0, page, limitValue);
   }
 
   async findOne(id: string) {
@@ -108,7 +110,7 @@ export class GrupoService {
     }
 
     this.logger.log('Grupo encontrado com sucesso', { module: 'GrupoService', method: 'findOne', grupoId: id });
-    return data;
+    return formatDateFields(data);
   }
 
   async update(id: string, updateGrupoDto: UpdateGrupoDto) {
@@ -125,7 +127,7 @@ export class GrupoService {
     }
 
     this.logger.log('Grupo atualizado com sucesso', { module: 'GrupoService', method: 'update', grupoId: id });
-    return data;
+    return formatDateFields(data);
   }
 
   async remove(id: string) {

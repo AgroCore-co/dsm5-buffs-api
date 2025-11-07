@@ -5,6 +5,7 @@ import { UpdateMaterialGeneticoDto } from './dto/update-material-genetico.dto';
 import { PaginationDto } from '../../../core/dto/pagination.dto';
 import { PaginatedResponse } from '../../../core/dto/pagination.dto';
 import { createPaginatedResponse, calculatePaginationParams } from '../../../core/utils/pagination.utils';
+import { formatDateFields, formatDateFieldsArray } from '../../../core/utils/date-formatter.utils';
 
 @Injectable()
 export class MaterialGeneticoService {
@@ -46,7 +47,7 @@ export class MaterialGeneticoService {
 
       return {
         message: 'Material genético criado com sucesso',
-        data,
+        data: formatDateFields(data),
       };
     } catch (error) {
       this.logger.error(`[ERRO_GERAL] ${error.message}`, error.stack);
@@ -84,7 +85,8 @@ export class MaterialGeneticoService {
 
       this.logger.log(`[SUCESSO] ${data?.length || 0} materiais genéticos encontrados (página ${page})`);
 
-      return createPaginatedResponse(data || [], count || 0, page, limitValue);
+      const formattedData = formatDateFieldsArray(data || []);
+      return createPaginatedResponse(formattedData, count || 0, page, limitValue);
     } catch (error) {
       this.logger.error(`[ERRO_GERAL] ${error.message}`);
       throw new InternalServerErrorException(`Erro ao buscar material genético: ${error.message}`);
@@ -125,7 +127,8 @@ export class MaterialGeneticoService {
 
       this.logger.log(`[SUCESSO] ${data?.length || 0} materiais genéticos encontrados na propriedade (página ${page})`);
 
-      return createPaginatedResponse(data || [], count || 0, page, limitValue);
+      const formattedData = formatDateFieldsArray(data || []);
+      return createPaginatedResponse(formattedData, count || 0, page, limitValue);
     } catch (error) {
       this.logger.error(`[ERRO_GERAL] ${error.message}`);
       throw new InternalServerErrorException(`Erro ao buscar material genético: ${error.message}`);
@@ -138,7 +141,7 @@ export class MaterialGeneticoService {
     if (error || !data) {
       throw new NotFoundException(`Material genético com ID ${id_material} não encontrado.`);
     }
-    return data;
+    return formatDateFields(data);
   }
 
   async update(id_material: string, dto: UpdateMaterialGeneticoDto) {
@@ -168,7 +171,7 @@ export class MaterialGeneticoService {
       }
 
       this.logger.log(`[SUCESSO] Material genético ID: ${id_material} atualizado`);
-      return data;
+      return formatDateFields(data);
     } catch (error) {
       if (error instanceof InternalServerErrorException) {
         throw error;

@@ -3,6 +3,7 @@ import { SupabaseClient } from '@supabase/supabase-js';
 import { SupabaseService } from '../../../core/supabase/supabase.service';
 import { CreatePropriedadeDto } from './dto/create-propiedade.dto';
 import { UpdatePropriedadeDto } from './dto/update-propriedade.dto';
+import { formatDateFields, formatDateFieldsArray } from '../../../core/utils/date-formatter.utils';
 
 @Injectable()
 export class PropriedadeService {
@@ -43,7 +44,7 @@ export class PropriedadeService {
       throw new InternalServerErrorException('Falha ao criar a propriedade.');
     }
 
-    return novaPropriedade;
+    return formatDateFields(novaPropriedade);
   }
 
   /**
@@ -55,10 +56,7 @@ export class PropriedadeService {
 
     try {
       // 1. Busca propriedades onde o usuário é DONO
-      const { data: propriedadesComoDono, error: errorDono } = await this.supabase
-        .from('propriedade')
-        .select('*')
-        .eq('id_dono', userId);
+      const { data: propriedadesComoDono, error: errorDono } = await this.supabase.from('propriedade').select('*').eq('id_dono', userId);
 
       if (errorDono) {
         this.logger.error(`[ERRO] Falha na consulta propriedades como dono: ${errorDono.message}`);
@@ -81,16 +79,15 @@ export class PropriedadeService {
       const todasPropriedades = [...(propriedadesComoDono || []), ...propriedadesFuncionario];
 
       // Remove duplicatas pelo id_propriedade
-      const propriedadesUnicas = Array.from(
-        new Map(todasPropriedades.map((p) => [p.id_propriedade, p])).values()
-      );
+      const propriedadesUnicas = Array.from(new Map(todasPropriedades.map((p) => [p.id_propriedade, p])).values());
 
       this.logger.log(`[SUCESSO] ${propriedadesUnicas.length} propriedades encontradas para o usuário ${userId}`);
 
+      const formattedPropriedades = formatDateFieldsArray(propriedadesUnicas);
       return {
         message: 'Propriedades recuperadas com sucesso',
-        total: propriedadesUnicas.length,
-        propriedades: propriedadesUnicas,
+        total: formattedPropriedades.length,
+        propriedades: formattedPropriedades,
       };
     } catch (error) {
       this.logger.error(`[ERRO_GERAL] ${error.message}`);
@@ -113,7 +110,7 @@ export class PropriedadeService {
       .single();
 
     if (propriedadeComoDono && !erroDono) {
-      return propriedadeComoDono;
+      return formatDateFields(propriedadeComoDono);
     }
 
     // 2. Verifica se o usuário é funcionário vinculado à propriedade
@@ -125,7 +122,7 @@ export class PropriedadeService {
       .single();
 
     if (vinculo && !erroVinculo) {
-      return vinculo.propriedade;
+      return formatDateFields(vinculo.propriedade);
     }
 
     throw new NotFoundException(`Propriedade com ID ${id} não encontrada ou não pertence a este usuário.`);
@@ -164,7 +161,7 @@ export class PropriedadeService {
       throw new InternalServerErrorException('Falha ao atualizar a propriedade.');
     }
 
-    return data;
+    return formatDateFields(data);
   }
 
   /**

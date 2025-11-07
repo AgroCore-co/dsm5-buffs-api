@@ -3,6 +3,7 @@ import { SupabaseClient } from '@supabase/supabase-js';
 import { SupabaseService } from '../../../core/supabase/supabase.service';
 import { CreateEnderecoDto } from './dto/create-endereco.dto';
 import { UpdateEnderecoDto } from './dto/update-endereco.dto';
+import { formatDateFields, formatDateFieldsArray } from '../../../core/utils/date-formatter.utils';
 
 @Injectable()
 export class EnderecoService {
@@ -20,7 +21,7 @@ export class EnderecoService {
       throw new InternalServerErrorException('Falha ao criar o endereço.');
     }
 
-    return data;
+    return formatDateFields(data);
   }
 
   async findAll() {
@@ -31,7 +32,7 @@ export class EnderecoService {
       throw new InternalServerErrorException('Falha ao buscar os endereços.');
     }
 
-    return data;
+    return formatDateFieldsArray(data);
   }
 
   async findOne(id: string) {
@@ -45,7 +46,7 @@ export class EnderecoService {
       throw new InternalServerErrorException('Falha ao buscar o endereço.');
     }
 
-    return data;
+    return formatDateFields(data);
   }
 
   async update(id: string, updateEnderecoDto: UpdateEnderecoDto) {
@@ -67,7 +68,7 @@ export class EnderecoService {
       throw new InternalServerErrorException('Falha ao atualizar o endereço.');
     }
 
-    return data;
+    return formatDateFields(data);
   }
 
   async remove(id: string) {

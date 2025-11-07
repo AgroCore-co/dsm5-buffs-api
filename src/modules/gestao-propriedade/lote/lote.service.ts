@@ -3,6 +3,7 @@ import { SupabaseClient } from '@supabase/supabase-js';
 import { SupabaseService } from '../../../core/supabase/supabase.service';
 import { CreateLoteDto } from './dto/create-lote.dto';
 import { UpdateLoteDto } from './dto/update-lote.dto';
+import { formatDateFields, formatDateFieldsArray } from '../../../core/utils/date-formatter.utils';
 
 @Injectable()
 export class LoteService {
@@ -58,11 +59,7 @@ export class LoteService {
   private async validateGrupoOwnership(grupoId: string, propriedadeId: string) {
     if (!grupoId) return; // Se não há grupo, não precisa validar
 
-    const { data: grupo, error } = await this.supabase
-      .from('grupo')
-      .select('id_grupo, id_propriedade')
-      .eq('id_grupo', grupoId)
-      .single();
+    const { data: grupo, error } = await this.supabase.from('grupo').select('id_grupo, id_propriedade').eq('id_grupo', grupoId).single();
 
     if (error || !grupo) {
       throw new NotFoundException(`Grupo com ID ${grupoId} não encontrado.`);
@@ -97,7 +94,7 @@ export class LoteService {
       throw new InternalServerErrorException('Falha ao criar o lote.');
     }
     // Parseia o retorno para o cliente
-    return this.parseGeoMapa(data);
+    return formatDateFields(this.parseGeoMapa(data));
   }
 
   async findAllByPropriedade(id_propriedade: string, user: any) {
@@ -119,7 +116,7 @@ export class LoteService {
       throw new InternalServerErrorException('Falha ao buscar os lotes da propriedade.');
     }
     // Parseia cada lote da lista
-    return data.map(this.parseGeoMapa);
+    return formatDateFieldsArray(data.map(this.parseGeoMapa));
   }
 
   async findOne(id: string, user: any) {
@@ -160,7 +157,7 @@ export class LoteService {
     }
 
     delete (data as any).propriedade;
-    return this.parseGeoMapa(data);
+    return formatDateFields(this.parseGeoMapa(data));
   }
 
   async update(id: string, updateLoteDto: UpdateLoteDto, user: any) {
@@ -196,7 +193,7 @@ export class LoteService {
     if (error) {
       throw new InternalServerErrorException('Falha ao atualizar o lote.');
     }
-    return this.parseGeoMapa(data);
+    return formatDateFields(this.parseGeoMapa(data));
   }
 
   async remove(id: string, user: any) {

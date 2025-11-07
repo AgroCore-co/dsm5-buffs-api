@@ -4,6 +4,7 @@ import { SupabaseService } from '../../../core/supabase/supabase.service';
 import { CreateAlimentacaoDefDto } from './dto/create-alimentacao-def.dto';
 import { UpdateAlimentacaoDefDto } from './dto/update-alimentacao-def.dto';
 import { LoggerService } from '../../../core/logger/logger.service';
+import { formatDateFields, formatDateFieldsArray } from '../../../core/utils/date-formatter.utils';
 
 @Injectable()
 export class AlimentacaoDefService {
@@ -23,7 +24,7 @@ export class AlimentacaoDefService {
       throw new InternalServerErrorException('Falha ao criar a alimentação definida.');
     }
 
-    return data;
+    return formatDateFields(data);
   }
 
   async findAll() {
@@ -36,7 +37,7 @@ export class AlimentacaoDefService {
       this.logger.logError(error, { module: 'AlimentacaoDef', method: 'findAll' });
       throw new InternalServerErrorException('Falha ao buscar as alimentações definidas.');
     }
-    return data ?? [];
+    return formatDateFieldsArray(data ?? []);
   }
 
   async findByPropriedade(idPropriedade: string) {
@@ -52,13 +53,13 @@ export class AlimentacaoDefService {
       throw new InternalServerErrorException('Falha ao buscar as alimentações definidas da propriedade.');
     }
 
-    return data;
+    return formatDateFieldsArray(data);
   }
 
   async findOne(id_aliment_def: string) {
     const { data, error } = await this.supabase.from('alimentacaodef').select('*').eq('id_aliment_def', id_aliment_def).single();
     if (error) throw new NotFoundException('Definição de alimentação não encontrada.');
-    return data;
+    return formatDateFields(data);
   }
 
   async update(id: string, updateAlimentacaoDefDto: UpdateAlimentacaoDefDto) {
@@ -72,7 +73,7 @@ export class AlimentacaoDefService {
       throw new InternalServerErrorException('Falha ao atualizar a alimentação definida.');
     }
 
-    return data;
+    return formatDateFields(data);
   }
 
   async remove(id: string) {

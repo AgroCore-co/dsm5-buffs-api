@@ -11,6 +11,7 @@ import { LoggerService } from 'src/core/logger/logger.service';
 import { CreateFuncionarioDto } from '../dto/create-funcionario.dto';
 import { Cargo } from '../enums/cargo.enum';
 import { SupabaseClient } from '@supabase/supabase-js';
+import { formatDateFields, formatDateFieldsArray } from '../../../core/utils/date-formatter.utils';
 
 @Injectable()
 export class FuncionarioService {
@@ -38,7 +39,7 @@ export class FuncionarioService {
       throw new NotFoundException('Usuário não encontrado no sistema.');
     }
 
-    return data;
+    return formatDateFields(data);
   }
 
   /**

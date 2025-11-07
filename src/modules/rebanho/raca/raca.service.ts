@@ -4,6 +4,7 @@ import { SupabaseService } from '../../../core/supabase/supabase.service';
 import { LoggerService } from '../../../core/logger/logger.service';
 import { CreateRacaDto } from './dto/create-raca.dto';
 import { UpdateRacaDto } from './dto/update-raca.dto';
+import { formatDateFields, formatDateFieldsArray } from '../../../core/utils/date-formatter.utils';
 
 @Injectable()
 export class RacaService {
@@ -27,7 +28,7 @@ export class RacaService {
     }
 
     this.logger.log('Raça criada com sucesso', { module: 'RacaService', method: 'create', racaId: data.id_raca });
-    return data;
+    return formatDateFields(data);
   }
 
   async findAll() {
@@ -41,7 +42,7 @@ export class RacaService {
     }
 
     this.logger.log(`Busca de raças concluída - ${data.length} raças encontradas`, { module: 'RacaService', method: 'findAll' });
-    return data;
+    return formatDateFieldsArray(data);
   }
 
   async findOne(id: string) {
@@ -59,7 +60,7 @@ export class RacaService {
     }
 
     this.logger.log('Raça encontrada com sucesso', { module: 'RacaService', method: 'findOne', racaId: id });
-    return data;
+    return formatDateFields(data);
   }
 
   async update(id: string, updateRacaDto: UpdateRacaDto) {
@@ -76,7 +77,7 @@ export class RacaService {
     }
 
     this.logger.log('Raça atualizada com sucesso', { module: 'RacaService', method: 'update', racaId: id });
-    return data;
+    return formatDateFields(data);
   }
 
   async remove(id: string) {

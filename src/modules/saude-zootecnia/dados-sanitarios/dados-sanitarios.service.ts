@@ -4,6 +4,7 @@ import { CreateDadosSanitariosDto } from './dto/create-dados-sanitarios.dto';
 import { UpdateDadosSanitariosDto } from './dto/update-dados-sanitarios.dto';
 import { PaginationDto, PaginatedResponse } from '../../../core/dto/pagination.dto';
 import { createPaginatedResponse, calculatePaginationParams } from '../../../core/utils/pagination.utils';
+import { formatDateFields, formatDateFieldsArray } from '../../../core/utils/date-formatter.utils';
 import { FrequenciaDoencasResponseDto } from './dto/frequencia-doencas.dto';
 import { StringSimilarityUtil } from '../../../core/utils/string-similarity.utils';
 import { DoencaNormalizerUtil } from './utils/doenca-normalizer.utils';
@@ -156,7 +157,7 @@ export class DadosSanitariosService {
       console.error('⚠️ Erro ao criar alerta clínico:', alertaError);
     }
 
-    return data;
+    return formatDateFields(data);
   }
 
   async findAll(paginationDto: PaginationDto = {}): Promise<PaginatedResponse<any>> {
@@ -186,7 +187,8 @@ export class DadosSanitariosService {
       throw new InternalServerErrorException(`Falha ao buscar dados sanitários: ${error.message}`);
     }
 
-    return createPaginatedResponse(data || [], count || 0, page, limit);
+    const formattedData = formatDateFieldsArray(data || []);
+    return createPaginatedResponse(formattedData, count || 0, page, limit);
   }
 
   async findByBufalo(id_bufalo: string, paginationDto: PaginationDto = {}): Promise<PaginatedResponse<any>> {
@@ -216,7 +218,8 @@ export class DadosSanitariosService {
       throw new InternalServerErrorException(`Falha ao buscar dados sanitários do búfalo: ${error.message}`);
     }
 
-    return createPaginatedResponse(data || [], count || 0, page, limit);
+    const formattedData = formatDateFieldsArray(data || []);
+    return createPaginatedResponse(formattedData, count || 0, page, limit);
   }
 
   async findByPropriedade(id_propriedade: string, paginationDto: PaginationDto = {}): Promise<PaginatedResponse<any>> {
@@ -252,7 +255,8 @@ export class DadosSanitariosService {
       throw new InternalServerErrorException(`Falha ao buscar dados sanitários da propriedade: ${error.message}`);
     }
 
-    return createPaginatedResponse(data || [], count || 0, page, limit);
+    const formattedData = formatDateFieldsArray(data || []);
+    return createPaginatedResponse(formattedData, count || 0, page, limit);
   }
 
   async findOne(id_sanit: string) {
@@ -261,7 +265,7 @@ export class DadosSanitariosService {
     if (error || !data) {
       throw new NotFoundException(`Dado sanitário com ID ${id_sanit} não encontrado.`);
     }
-    return data;
+    return formatDateFields(data);
   }
 
   async update(id_sanit: string, dto: UpdateDadosSanitariosDto) {
@@ -291,7 +295,7 @@ export class DadosSanitariosService {
     if (error) {
       throw new InternalServerErrorException(`Falha ao atualizar dado sanitário: ${error.message}`);
     }
-    return data;
+    return formatDateFields(data);
   }
 
   async remove(id_sanit: string) {

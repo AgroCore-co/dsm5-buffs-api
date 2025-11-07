@@ -2,6 +2,7 @@ import { Injectable, InternalServerErrorException, NotFoundException } from '@ne
 import { SupabaseService } from '../../../core/supabase/supabase.service';
 import { CreateRegistroAlimentacaoDto } from './dto/create-registro.dto';
 import { UpdateRegistroAlimentacaoDto } from './dto/update-registro.dto';
+import { formatDateFields, formatDateFieldsArray } from '../../../core/utils/date-formatter.utils';
 
 @Injectable()
 export class RegistrosService {
@@ -15,7 +16,7 @@ export class RegistrosService {
       console.error('Erro ao criar registro de alimentação:', error);
       throw new InternalServerErrorException(`Falha ao criar registro de alimentação: ${error.message}`);
     }
-    return data;
+    return formatDateFields(data);
   }
 
   async findAll() {
@@ -26,7 +27,7 @@ export class RegistrosService {
       }
       throw new InternalServerErrorException('Falha ao buscar registros de alimentação.');
     }
-    return data ?? [];
+    return formatDateFieldsArray(data ?? []);
   }
 
   async findByPropriedade(idPropriedade: string) {
@@ -50,20 +51,20 @@ export class RegistrosService {
       throw new InternalServerErrorException('Falha ao buscar registros de alimentação da propriedade.');
     }
 
-    return data;
+    return formatDateFieldsArray(data);
   }
 
   async findOne(id_registro: string) {
     const { data, error } = await this.supabase.getAdminClient().from(this.tableName).select('*').eq('id_registro', id_registro).single();
     if (error) throw new NotFoundException('Registro de alimentação não encontrado.');
-    return data;
+    return formatDateFields(data);
   }
 
   async update(id_registro: string, dto: UpdateRegistroAlimentacaoDto) {
     await this.findOne(id_registro);
     const { data, error } = await this.supabase.getAdminClient().from(this.tableName).update(dto).eq('id_registro', id_registro).select().single();
     if (error) throw new InternalServerErrorException('Falha ao atualizar registro de alimentação.');
-    return data;
+    return formatDateFields(data);
   }
 
   async remove(id_registro: string) {

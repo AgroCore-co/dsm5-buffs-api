@@ -7,6 +7,7 @@ import { CreateCicloLactacaoDto } from './dto/create-ciclo-lactacao.dto';
 import { UpdateCicloLactacaoDto } from './dto/update-ciclo-lactacao.dto';
 import { PaginationDto, PaginatedResponse } from '../../../core/dto/pagination.dto';
 import { createPaginatedResponse, calculatePaginationParams } from '../../../core/utils/pagination.utils';
+import { formatDateFields, formatDateFieldsArray } from '../../../core/utils/date-formatter.utils';
 
 @Injectable()
 export class CicloLactacaoService {
@@ -244,7 +245,7 @@ export class CicloLactacaoService {
       cicloId: data.id_ciclo_lactacao,
       bufalaId: dto.id_bufala,
     });
-    return data;
+    return formatDateFields(data);
   }
 
   async findAll(paginationDto: PaginationDto = {}): Promise<PaginatedResponse<any>> {
@@ -288,7 +289,8 @@ export class CicloLactacaoService {
       method: 'findAll',
     });
 
-    return createPaginatedResponse(data, count || 0, page, limitValue);
+    const formattedData = formatDateFieldsArray(data);
+    return createPaginatedResponse(formattedData, count || 0, page, limitValue);
   }
 
   async findByPropriedade(id_propriedade: string, paginationDto: PaginationDto = {}): Promise<PaginatedResponse<any>> {
@@ -349,7 +351,8 @@ export class CicloLactacaoService {
       method: 'findByPropriedade',
     });
 
-    return createPaginatedResponse(enrichedData, count || 0, page, limitValue);
+    const formattedData = formatDateFieldsArray(enrichedData);
+    return createPaginatedResponse(formattedData, count || 0, page, limitValue);
   }
 
   async findOne(id_ciclo_lactacao: string) {
@@ -375,7 +378,7 @@ export class CicloLactacaoService {
       method: 'findOne',
       cicloId: id_ciclo_lactacao,
     });
-    return data;
+    return formatDateFields(data);
   }
 
   async update(id_ciclo_lactacao: string, dto: UpdateCicloLactacaoDto) {
@@ -438,7 +441,7 @@ export class CicloLactacaoService {
       method: 'update',
       cicloId: id_ciclo_lactacao,
     });
-    return data;
+    return formatDateFields(data);
   }
 
   async remove(id_ciclo_lactacao: string) {

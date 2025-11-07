@@ -5,6 +5,7 @@ import { SupabaseClient } from '@supabase/supabase-js';
 import { PaginationDto } from '../../core/dto/pagination.dto';
 import { PaginatedResponse } from '../../core/dto/pagination.dto';
 import { createPaginatedResponse, calculatePaginationParams } from '../../core/utils/pagination.utils';
+import { formatDateFields, formatDateFieldsArray } from '../../core/utils/date-formatter.utils';
 
 @Injectable()
 export class AlertasService {
@@ -27,7 +28,7 @@ export class AlertasService {
         // Lançar um erro genérico do servidor em caso de falha na inserção.
         throw new InternalServerErrorException(`Falha ao criar o alerta: ${error.message}`);
       }
-      return data;
+      return formatDateFields(data);
     } catch (error) {
       // Repassar a exceção se já for uma exceção NestJS ou lançar uma nova.
       throw error instanceof InternalServerErrorException ? error : new InternalServerErrorException('Ocorreu um erro inesperado ao criar o alerta.');
@@ -158,7 +159,8 @@ export class AlertasService {
         throw new InternalServerErrorException(`Falha ao buscar os alertas: ${error.message}`);
       }
 
-      return createPaginatedResponse(data, count || 0, page, limitValue);
+      const formattedData = formatDateFieldsArray(data);
+      return createPaginatedResponse(formattedData, count || 0, page, limitValue);
     } catch (error) {
       throw error;
     }
@@ -221,7 +223,8 @@ export class AlertasService {
         throw new InternalServerErrorException(`Falha ao buscar alertas da propriedade: ${error.message}`);
       }
 
-      return createPaginatedResponse(data, count || 0, page, limitValue);
+      const formattedData = formatDateFieldsArray(data);
+      return createPaginatedResponse(formattedData, count || 0, page, limitValue);
     } catch (error) {
       throw error;
     }
@@ -242,7 +245,7 @@ export class AlertasService {
       }
       throw new InternalServerErrorException(error.message);
     }
-    return data;
+    return formatDateFields(data);
   }
 
   /**
@@ -269,7 +272,7 @@ export class AlertasService {
       }
       throw new InternalServerErrorException(`Falha ao atualizar o status do alerta: ${error.message}`);
     }
-    return data;
+    return formatDateFields(data);
   }
 
   /**

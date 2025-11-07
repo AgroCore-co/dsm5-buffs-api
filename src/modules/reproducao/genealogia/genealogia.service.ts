@@ -2,6 +2,7 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { SupabaseService } from '../../../core/supabase/supabase.service';
 import { SupabaseClient } from '@supabase/supabase-js';
 import { GenealogiaNodeDto } from './dto/genealogia-response.dto';
+import { formatDateFields } from '../../../core/utils/date-formatter.utils';
 
 export interface ArvoreGenealogicaNode {
   id_bufalo: string;
@@ -176,6 +177,6 @@ export class GenealogiaService {
       node.mae = this.converterParaGenealogiaNode(arvore.mae);
     }
 
-    return node;
+    return formatDateFields(node);
   }
 }

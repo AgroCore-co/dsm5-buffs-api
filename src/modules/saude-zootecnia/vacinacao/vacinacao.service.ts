@@ -2,6 +2,7 @@ import { Injectable, InternalServerErrorException, NotFoundException, Unauthoriz
 import { SupabaseService } from '../../../core/supabase/supabase.service';
 import { CreateVacinacaoDto } from './dto/create-vacinacao.dto';
 import { UpdateVacinacaoDto } from './dto/update-vacinacao.dto';
+import { formatDateFields, formatDateFieldsArray } from '../../../core/utils/date-formatter.utils';
 
 @Injectable()
 export class VacinacaoService {
@@ -61,7 +62,11 @@ export class VacinacaoService {
     }
 
     // 4. Se não encontrar nada, mostrar todos usuários para debug
-    const { data: allUsers, error: allError } = await this.supabase.getAdminClient().from('usuario').select('id_usuario, nome, email, auth_id').limit(5);
+    const { data: allUsers, error: allError } = await this.supabase
+      .getAdminClient()
+      .from('usuario')
+      .select('id_usuario, nome, email, auth_id')
+      .limit(5);
 
     console.log(`📋 Todos os usuários no sistema:`, allUsers);
 
@@ -93,7 +98,7 @@ export class VacinacaoService {
     if (error) {
       throw new InternalServerErrorException(`Falha ao criar registo de vacinação: ${error.message}`);
     }
-    return data;
+    return formatDateFields(data);
   }
 
   async findAllByBufalo(id_bufalo: string) {
@@ -121,7 +126,7 @@ export class VacinacaoService {
     if (error) {
       throw new InternalServerErrorException(`Falha ao buscar vacinas do búfalo: ${error.message}`);
     }
-    return data;
+    return formatDateFieldsArray(data);
   }
 
   async findOne(id_sanit: string) {
@@ -149,7 +154,7 @@ export class VacinacaoService {
     if (error || !data) {
       throw new NotFoundException(`Registo de vacinação com ID ${id_sanit} não encontrado.`);
     }
-    return data;
+    return formatDateFields(data);
   }
 
   async update(id_sanit: string, dto: UpdateVacinacaoDto) {
@@ -175,7 +180,7 @@ export class VacinacaoService {
     if (error) {
       throw new InternalServerErrorException(`Falha ao atualizar registo de vacinação: ${error.message}`);
     }
-    return data;
+    return formatDateFields(data);
   }
 
   async remove(id_sanit: string) {
@@ -217,6 +222,6 @@ export class VacinacaoService {
     if (error) {
       throw new InternalServerErrorException(`Falha ao buscar vacinas do búfalo: ${error.message}`);
     }
-    return data;
+    return formatDateFieldsArray(data);
   }
 }

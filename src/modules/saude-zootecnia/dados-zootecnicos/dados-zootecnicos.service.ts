@@ -5,6 +5,7 @@ import { UpdateDadoZootecnicoDto } from './dto/update-dado-zootecnico.dto';
 import { PaginationDto } from '../../../core/dto/pagination.dto';
 import { PaginatedResponse } from '../../../core/dto/pagination.dto';
 import { createPaginatedResponse, calculatePaginationParams } from '../../../core/utils/pagination.utils';
+import { formatDateFields, formatDateFieldsArray } from '../../../core/utils/date-formatter.utils';
 
 @Injectable()
 export class DadosZootecnicosService {
@@ -59,7 +60,7 @@ export class DadosZootecnicosService {
     if (error) {
       throw new InternalServerErrorException(`Falha ao criar dado zootécnico: ${error.message}`);
     }
-    return data;
+    return formatDateFields(data);
   }
 
   async findAllByBufalo(id_bufalo: string, paginationDto: PaginationDto = {}): Promise<PaginatedResponse<any>> {
@@ -90,7 +91,8 @@ export class DadosZootecnicosService {
       throw new InternalServerErrorException(`Falha ao buscar dados do búfalo: ${error.message}`);
     }
 
-    return createPaginatedResponse(data, count || 0, page, limitValue);
+    const formattedData = formatDateFieldsArray(data);
+    return createPaginatedResponse(formattedData, count || 0, page, limitValue);
   }
 
   async findAllByPropriedade(id_propriedade: string, paginationDto: PaginationDto = {}): Promise<PaginatedResponse<any>> {
@@ -126,7 +128,8 @@ export class DadosZootecnicosService {
       throw new InternalServerErrorException(`Falha ao buscar dados zootécnicos da propriedade: ${error.message}`);
     }
 
-    return createPaginatedResponse(data, count || 0, page, limitValue);
+    const formattedData = formatDateFieldsArray(data);
+    return createPaginatedResponse(formattedData, count || 0, page, limitValue);
   }
 
   async findOne(id_zootec: string) {
@@ -135,7 +138,7 @@ export class DadosZootecnicosService {
     if (error || !data) {
       throw new NotFoundException(`Dado zootécnico com ID ${id_zootec} não encontrado.`);
     }
-    return data;
+    return formatDateFields(data);
   }
 
   async update(id_zootec: string, dto: UpdateDadoZootecnicoDto) {
@@ -146,7 +149,7 @@ export class DadosZootecnicosService {
     if (error) {
       throw new InternalServerErrorException(`Falha ao atualizar dado zootécnico: ${error.message}`);
     }
-    return data;
+    return formatDateFields(data);
   }
 
   async remove(id_zootec: string) {

@@ -5,6 +5,7 @@ import { UpdateCoberturaDto } from './dto/update-cobertura.dto';
 import { PaginationDto } from '../../../core/dto/pagination.dto';
 import { PaginatedResponse } from '../../../core/dto/pagination.dto';
 import { createPaginatedResponse, calculatePaginationParams } from '../../../core/utils/pagination.utils';
+import { formatDateFields, formatDateFieldsArray } from '../../../core/utils/date-formatter.utils';
 import { FemeaDisponivelReproducaoDto } from './dto/femea-disponivel-reproducao.dto';
 import { RegistrarPartoDto } from './dto/registrar-parto.dto';
 import { AlertasService } from '../../alerta/alerta.service';
@@ -31,7 +32,7 @@ export class CoberturaService {
     if (error) {
       throw new InternalServerErrorException(`Falha ao criar dado de reprodução: ${error.message}`);
     }
-    return data;
+    return formatDateFields(data);
   }
 
   async findAll(paginationDto: PaginationDto = {}): Promise<PaginatedResponse<any>> {
@@ -57,7 +58,8 @@ export class CoberturaService {
       throw new InternalServerErrorException(`Falha ao buscar dados de reprodução: ${error.message}`);
     }
 
-    return createPaginatedResponse(data, count || 0, page, limitValue);
+    const formattedData = formatDateFieldsArray(data);
+    return createPaginatedResponse(formattedData, count || 0, page, limitValue);
   }
 
   async findByPropriedade(id_propriedade: string, paginationDto: PaginationDto = {}): Promise<PaginatedResponse<any>> {
@@ -86,7 +88,8 @@ export class CoberturaService {
       throw new InternalServerErrorException(`Falha ao buscar dados de reprodução da propriedade: ${error.message}`);
     }
 
-    return createPaginatedResponse(data, count || 0, page, limitValue);
+    const formattedData = formatDateFieldsArray(data);
+    return createPaginatedResponse(formattedData, count || 0, page, limitValue);
   }
 
   async findOne(id_repro: string) {
@@ -95,7 +98,7 @@ export class CoberturaService {
     if (error || !data) {
       throw new NotFoundException(`Dado de reprodução com ID ${id_repro} não encontrado.`);
     }
-    return data;
+    return formatDateFields(data);
   }
 
   async update(id_repro: string, dto: UpdateCoberturaDto) {
@@ -106,7 +109,7 @@ export class CoberturaService {
     if (error) {
       throw new InternalServerErrorException(`Falha ao atualizar dado de reprodução: ${error.message}`);
     }
-    return data;
+    return formatDateFields(data);
   }
 
   async remove(id_repro: string) {

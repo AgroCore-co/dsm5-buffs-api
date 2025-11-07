@@ -17,6 +17,7 @@ import { CreateAlertaDto, NichoAlerta, PrioridadeAlerta } from '../../alerta/dto
 import { GeminiService } from '../../../core/gemini/gemini.service';
 import { FemeaEmLactacaoDto } from './dto/femea-em-lactacao.dto';
 import { ResumoProducaoBufalaDto } from './dto/resumo-producao-bufala.dto';
+import { formatDateFields, formatDateFieldsArray } from '../../../core/utils/date-formatter.utils';
 
 @Injectable()
 export class ControleLeiteiroService {
@@ -118,7 +119,7 @@ export class ControleLeiteiroService {
       });
     }
 
-    return lactacaoData;
+    return formatDateFields(lactacaoData);
   }
 
   /**
@@ -280,7 +281,7 @@ export class ControleLeiteiroService {
         total: count ?? data.length,
         page,
         limit,
-        dados: data,
+        dados: formatDateFieldsArray(data),
       };
     } catch (error) {
       this.customLogger.logError(error, {
@@ -392,7 +393,7 @@ export class ControleLeiteiroService {
         total: count ?? data.length,
         page,
         limit,
-        dados: data,
+        dados: formatDateFieldsArray(data),
       };
     } catch (error) {
       this.customLogger.logError(error, {
@@ -436,7 +437,7 @@ export class ControleLeiteiroService {
       lactacaoId: id,
       userId: String(idUsuario),
     });
-    return data;
+    return formatDateFields(data);
   }
 
   /**
@@ -467,7 +468,7 @@ export class ControleLeiteiroService {
       method: 'update',
       lactacaoId: id,
     });
-    return data;
+    return formatDateFields(data);
   }
 
   /**
@@ -590,7 +591,7 @@ export class ControleLeiteiroService {
       });
 
       return {
-        data,
+        data: formatDateFieldsArray(data),
         pagination: {
           total: count || 0,
           page,
@@ -868,8 +869,8 @@ export class ControleLeiteiroService {
         nome: bufala.nome,
         brinco: bufala.brinco || 'Sem brinco',
       },
-      ciclo_atual: cicloAtualProcessado,
-      comparativo_ciclos: comparativoCiclos,
+      ciclo_atual: formatDateFields(cicloAtualProcessado),
+      comparativo_ciclos: formatDateFieldsArray(comparativoCiclos),
       grafico_producao: graficoProducao,
     };
   }

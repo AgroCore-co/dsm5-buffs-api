@@ -1,6 +1,7 @@
 import { Injectable, InternalServerErrorException, NotFoundException } from '@nestjs/common';
 import { SupabaseService } from '../../../core/supabase/supabase.service';
 import { LoggerService } from '../../../core/logger/logger.service';
+import { formatDateFields, formatDateFieldsArray } from '../../../core/utils/date-formatter.utils';
 import { CreateColetaDto } from './dto/create-coleta.dto';
 import { UpdateColetaDto } from './dto/update-coleta.dto';
 import { PaginationDto } from '../../../core/dto/pagination.dto';
@@ -41,7 +42,7 @@ export class ColetaService {
       coletaId: data.id_coleta,
       funcionarioId: id_funcionario,
     });
-    return data;
+    return formatDateFields(data);
   }
 
   async findAll(paginationDto: PaginationDto = {}): Promise<PaginatedResponse<any>> {
@@ -85,7 +86,8 @@ export class ColetaService {
       method: 'findAll',
     });
 
-    return createPaginatedResponse(data, count || 0, page, limitValue);
+    const formattedData = formatDateFieldsArray(data);
+    return createPaginatedResponse(formattedData, count || 0, page, limitValue);
   }
 
   async findByPropriedade(id_propriedade: string, paginationDto: PaginationDto = {}): Promise<any> {
@@ -204,7 +206,7 @@ export class ColetaService {
       method: 'findOne',
       coletaId: id_coleta,
     });
-    return data;
+    return formatDateFields(data);
   }
 
   async update(id_coleta: string, dto: UpdateColetaDto) {
@@ -232,7 +234,7 @@ export class ColetaService {
       method: 'update',
       coletaId: id_coleta,
     });
-    return data;
+    return formatDateFields(data);
   }
 
   async remove(id_coleta: string) {

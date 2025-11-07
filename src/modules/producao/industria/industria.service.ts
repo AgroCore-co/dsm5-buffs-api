@@ -3,6 +3,7 @@ import { SupabaseService } from '../../../core/supabase/supabase.service';
 import { LoggerService } from '../../../core/logger/logger.service';
 import { CreateIndustriaDto } from './dto/create-industria.dto';
 import { UpdateIndustriaDto } from './dto/update-industria.dto';
+import { formatDateFields, formatDateFieldsArray } from '../../../core/utils/date-formatter.utils';
 
 @Injectable()
 export class IndustriaService {
@@ -36,7 +37,7 @@ export class IndustriaService {
       industriaId: data.id_industria,
       nome: dto.nome,
     });
-    return data;
+    return formatDateFields(data);
   }
 
   async findAll() {
@@ -58,7 +59,7 @@ export class IndustriaService {
       module: 'IndustriaService',
       method: 'findAll',
     });
-    return data;
+    return formatDateFieldsArray(data);
   }
 
   async findByPropriedade(id_propriedade: string) {
@@ -89,7 +90,7 @@ export class IndustriaService {
       method: 'findByPropriedade',
       propriedadeId: id_propriedade,
     });
-    return data;
+    return formatDateFieldsArray(data);
   }
 
   async findOne(id_industria: string) {
@@ -114,7 +115,7 @@ export class IndustriaService {
       method: 'findOne',
       industriaId: id_industria,
     });
-    return data;
+    return formatDateFields(data);
   }
 
   async update(id_industria: string, dto: UpdateIndustriaDto) {
@@ -140,7 +141,7 @@ export class IndustriaService {
       method: 'update',
       industriaId: id_industria,
     });
-    return data;
+    return formatDateFields(data);
   }
 
   async remove(id_industria: string) {

@@ -7,6 +7,7 @@ import { LoggerService } from '../../../core/logger/logger.service';
 import { PaginationDto } from '../../../core/dto/pagination.dto';
 import { PaginatedResponse } from '../../../core/dto/pagination.dto';
 import { createPaginatedResponse, calculatePaginationParams } from '../../../core/utils/pagination.utils';
+import { formatDateFields, formatDateFieldsArray } from '../../../core/utils/date-formatter.utils';
 
 @Injectable()
 export class MovLoteService {
@@ -170,7 +171,7 @@ export class MovLoteService {
       }
       throw new InternalServerErrorException('Falha ao buscar as movimentações de lote.');
     }
-    return data ?? [];
+    return formatDateFieldsArray(data ?? []);
   }
 
   async findByPropriedade(id_propriedade: string, paginationDto: PaginationDto = {}): Promise<PaginatedResponse<any>> {
@@ -210,7 +211,8 @@ export class MovLoteService {
       method: 'findByPropriedade',
     });
 
-    return createPaginatedResponse(data || [], count || 0, page, limitValue);
+    const formattedData = formatDateFieldsArray(data || []);
+    return createPaginatedResponse(formattedData, count || 0, page, limitValue);
   }
 
   async findOne(id: string) {
@@ -219,7 +221,7 @@ export class MovLoteService {
     if (error || !data) {
       throw new NotFoundException(`Movimentação com ID ${id} não encontrada.`);
     }
-    return data;
+    return formatDateFields(data);
   }
 
   async update(id: string, updateDto: UpdateMovLoteDto) {
@@ -231,7 +233,7 @@ export class MovLoteService {
     if (error) {
       throw new InternalServerErrorException('Falha ao atualizar a movimentação.');
     }
-    return data;
+    return formatDateFields(data);
   }
 
   async remove(id: string) {
