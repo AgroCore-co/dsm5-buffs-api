@@ -28,7 +28,7 @@ export class AlertasService {
         // Lançar um erro genérico do servidor em caso de falha na inserção.
         throw new InternalServerErrorException(`Falha ao criar o alerta: ${error.message}`);
       }
-      return formatDateFields(data);
+      return formatDateFields(data, ['data_alerta']);
     } catch (error) {
       // Repassar a exceção se já for uma exceção NestJS ou lançar uma nova.
       throw error instanceof InternalServerErrorException ? error : new InternalServerErrorException('Ocorreu um erro inesperado ao criar o alerta.');
@@ -44,45 +44,52 @@ export class AlertasService {
     try {
       // Verifica se já existe um alerta com os mesmos critérios
       if (createAlertaDto.tipo_evento_origem && createAlertaDto.id_evento_origem) {
-        const { data: existingAlert, error: searchError } = await this.supabase
+        // Busca todos os alertas existentes (pode haver duplicatas)
+        const { data: existingAlerts, error: searchError } = await this.supabase
           .from('alertas')
-          .select('id_alerta, visto')
+          .select('id_alerta, visto, created_at')
           .eq('tipo_evento_origem', createAlertaDto.tipo_evento_origem)
           .eq('id_evento_origem', createAlertaDto.id_evento_origem)
           .eq('animal_id', createAlertaDto.animal_id)
           .eq('nicho', createAlertaDto.nicho)
-          .maybeSingle();
+          .order('created_at', { ascending: false });
 
         if (searchError) {
           console.error('Erro ao verificar alerta existente:', searchError.message);
           throw new InternalServerErrorException(`Erro ao verificar alerta existente: ${searchError.message}`);
         }
 
-        // Se o alerta JÁ EXISTE e NÃO foi visto, não cria duplicata
-        if (existingAlert && !existingAlert.visto) {
-          // console.log(`Alerta para evento ${createAlertaDto.tipo_evento_origem}:${createAlertaDto.id_evento_origem} já existe e não foi visto. Ignorando.`);
-          return existingAlert;
-        }
+        // Se existem alertas, pega o mais recente
+        if (existingAlerts && existingAlerts.length > 0) {
+          const existingAlert = existingAlerts[0]; // Mais recente
 
-        // Se o alerta existe mas foi visto, verifica se precisa criar um novo
-        // baseado na data do alerta (para alertas recorrentes como fêmeas vazias)
-        if (existingAlert && existingAlert.visto) {
-          // Para tipos recorrentes (FEMEA_VAZIA, COBERTURA_SEM_DIAGNOSTICO),
-          // verifica se já existe um alerta NÃO VISTO na mesma data
-          if (createAlertaDto.tipo_evento_origem === 'FEMEA_VAZIA' || createAlertaDto.tipo_evento_origem === 'COBERTURA_SEM_DIAGNOSTICO') {
-            const { data: alertaMesmaData } = await this.supabase
-              .from('alertas')
-              .select('id_alerta')
-              .eq('tipo_evento_origem', createAlertaDto.tipo_evento_origem)
-              .eq('id_evento_origem', createAlertaDto.id_evento_origem)
-              .eq('animal_id', createAlertaDto.animal_id)
-              .eq('data_alerta', createAlertaDto.data_alerta)
-              .eq('visto', false)
-              .maybeSingle();
+          // Se o alerta JÁ EXISTE e NÃO foi visto, não cria duplicata
+          if (!existingAlert.visto) {
+            // console.log(`Alerta para evento ${createAlertaDto.tipo_evento_origem}:${createAlertaDto.id_evento_origem} já existe e não foi visto. Ignorando.`);
+            return existingAlert;
+          }
 
-            if (alertaMesmaData) {
-              // console.log(`Alerta recorrente já existe para hoje e não foi visto. Ignorando.`);
-              return alertaMesmaData;
+          // Se o alerta existe mas foi visto, verifica se precisa criar um novo
+          // baseado na data do alerta (para alertas recorrentes como fêmeas vazias)
+          if (existingAlert.visto) {
+            // Para tipos recorrentes (FEMEA_VAZIA, COBERTURA_SEM_DIAGNOSTICO),
+            // verifica se já existe um alerta NÃO VISTO na mesma data
+            if (createAlertaDto.tipo_evento_origem === 'FEMEA_VAZIA' || createAlertaDto.tipo_evento_origem === 'COBERTURA_SEM_DIAGNOSTICO') {
+              const { data: alertaMesmaData } = await this.supabase
+                .from('alertas')
+                .select('id_alerta')
+                .eq('tipo_evento_origem', createAlertaDto.tipo_evento_origem)
+                .eq('id_evento_origem', createAlertaDto.id_evento_origem)
+                .eq('animal_id', createAlertaDto.animal_id)
+                .eq('data_alerta', createAlertaDto.data_alerta)
+                .eq('visto', false)
+                .limit(1)
+                .single();
+
+              if (alertaMesmaData) {
+                // console.log(`Alerta recorrente já existe para hoje e não foi visto. Ignorando.`);
+                return alertaMesmaData;
+              }
             }
           }
         }
@@ -159,7 +166,7 @@ export class AlertasService {
         throw new InternalServerErrorException(`Falha ao buscar os alertas: ${error.message}`);
       }
 
-      const formattedData = formatDateFieldsArray(data);
+      const formattedData = formatDateFieldsArray(data, ['data_alerta']);
       return createPaginatedResponse(formattedData, count || 0, page, limitValue);
     } catch (error) {
       throw error;
@@ -223,7 +230,7 @@ export class AlertasService {
         throw new InternalServerErrorException(`Falha ao buscar alertas da propriedade: ${error.message}`);
       }
 
-      const formattedData = formatDateFieldsArray(data);
+      const formattedData = formatDateFieldsArray(data, ['data_alerta']);
       return createPaginatedResponse(formattedData, count || 0, page, limitValue);
     } catch (error) {
       throw error;
@@ -245,7 +252,7 @@ export class AlertasService {
       }
       throw new InternalServerErrorException(error.message);
     }
-    return formatDateFields(data);
+    return formatDateFields(data, ['data_alerta']);
   }
 
   /**
@@ -272,7 +279,7 @@ export class AlertasService {
       }
       throw new InternalServerErrorException(`Falha ao atualizar o status do alerta: ${error.message}`);
     }
-    return formatDateFields(data);
+    return formatDateFields(data, ['data_alerta']);
   }
 
   /**

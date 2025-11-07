@@ -41,16 +41,20 @@ export class AlertasScheduler {
     this.logger.log('Iniciando verificação de tratamentos sanitários agendados...');
 
     try {
-      const dataAlvo = new Date();
-      dataAlvo.setDate(dataAlvo.getDate() + ANTECEDENCIA_SANITARIO_DIAS);
-      const dataAlvoString = dataAlvo.toISOString().split('T')[0];
+      const hoje = new Date();
+      const dataInicio = hoje.toISOString().split('T')[0];
 
-      // Busca tratamentos que precisam de retorno na data alvo
+      const dataFim = new Date();
+      dataFim.setDate(hoje.getDate() + 30); // Próximos 30 dias
+      const dataFimString = dataFim.toISOString().split('T')[0];
+
+      // Busca tratamentos que precisam de retorno nos próximos 30 dias
       const { data: tratamentos, error } = await this.supabase
         .from('dadossanitarios')
         .select('id_sanit, dt_retorno, doenca, id_bufalo')
         .eq('necessita_retorno', true)
-        .eq('dt_retorno', dataAlvoString);
+        .gte('dt_retorno', dataInicio)
+        .lte('dt_retorno', dataFimString);
 
       if (error) {
         this.logger.error('Erro ao buscar tratamentos sanitários:', error.message);
@@ -530,9 +534,12 @@ export class AlertasScheduler {
     this.logger.log(`Verificando tratamentos para propriedade ${id_propriedade}...`);
 
     try {
-      const dataAlvo = new Date();
-      dataAlvo.setDate(dataAlvo.getDate() + ANTECEDENCIA_SANITARIO_DIAS);
-      const dataAlvoString = dataAlvo.toISOString().split('T')[0];
+      const hoje = new Date();
+      const dataInicio = hoje.toISOString().split('T')[0];
+
+      const dataFim = new Date();
+      dataFim.setDate(hoje.getDate() + 30); // Próximos 30 dias
+      const dataFimString = dataFim.toISOString().split('T')[0];
 
       // Busca búfalos da propriedade
       const { data: bufalos, error: bufaloError } = await this.supabase.from('bufalo').select('id_bufalo').eq('id_propriedade', id_propriedade);
@@ -544,16 +551,25 @@ export class AlertasScheduler {
 
       const bufaloIds = bufalos.map((b) => b.id_bufalo);
 
-      // Busca tratamentos dos búfalos da propriedade
+      // Busca tratamentos dos búfalos da propriedade nos próximos 30 dias
       const { data: tratamentos, error } = await this.supabase
         .from('dadossanitarios')
         .select('id_sanit, dt_retorno, doenca, id_bufalo')
         .eq('necessita_retorno', true)
-        .eq('dt_retorno', dataAlvoString)
+        .gte('dt_retorno', dataInicio)
+        .lte('dt_retorno', dataFimString)
         .in('id_bufalo', bufaloIds);
+
+      this.logger.log(`Buscando tratamentos entre ${dataInicio} e ${dataFimString}`);
+      this.logger.log(`Encontrados ${tratamentos?.length || 0} tratamentos para verificar`);
 
       if (error || !tratamentos) {
         this.logger.error('Erro ao buscar tratamentos:', error?.message);
+        return 0;
+      }
+
+      if (tratamentos.length === 0) {
+        this.logger.log('Nenhum tratamento encontrado para a propriedade nos próximos 30 dias.');
         return 0;
       }
 
