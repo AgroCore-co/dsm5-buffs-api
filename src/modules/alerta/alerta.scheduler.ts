@@ -9,6 +9,7 @@ import { AlertasService } from './alerta.service';
 const TEMPO_GESTAÇÃO_DIAS = 315;
 const ANTECEDENCIA_PARTO_DIAS = 30; // Alerta será gerado 30 dias antes
 const ANTECEDENCIA_SANITARIO_DIAS = 15; // Alerta será gerado 15 dias antes
+const ANTECEDENCIA_VACINACAO_DIAS = 30; // Alerta será gerado 30 dias antes
 
 /**
  * Função auxiliar para formatar datas no padrão brasileiro.
@@ -444,17 +445,21 @@ export class AlertasScheduler {
     this.logger.log('Iniciando verificação de vacinações programadas...');
 
     try {
-      const dataAlvo = new Date();
-      dataAlvo.setDate(dataAlvo.getDate() + 7); // 7 dias de antecedência
-      const dataAlvoStr = dataAlvo.toISOString().split('T')[0];
+      const hoje = new Date();
+      const dataLimite = new Date();
+      dataLimite.setDate(hoje.getDate() + ANTECEDENCIA_VACINACAO_DIAS);
+
+      const hojeStr = hoje.toISOString().split('T')[0];
+      const dataLimiteStr = dataLimite.toISOString().split('T')[0];
 
       const { data: vacinacoes, error } = await this.supabase
         .from('vacinacao')
         .select('id_vacinacao, dt_aplicacao, tipo_vacina, id_bufalo, id_propriedade')
-        .eq('dt_aplicacao', dataAlvoStr);
+        .gte('dt_aplicacao', hojeStr)
+        .lte('dt_aplicacao', dataLimiteStr);
 
       if (error || !vacinacoes || vacinacoes.length === 0) {
-        this.logger.log('Nenhuma vacinação programada para a data alvo.');
+        this.logger.log('Nenhuma vacinação programada para os próximos 30 dias.');
         return;
       }
 
@@ -880,18 +885,22 @@ export class AlertasScheduler {
     this.logger.log(`Verificando vacinações para propriedade ${id_propriedade}...`);
 
     try {
-      const dataAlvo = new Date();
-      dataAlvo.setDate(dataAlvo.getDate() + 7);
-      const dataAlvoStr = dataAlvo.toISOString().split('T')[0];
+      const hoje = new Date();
+      const dataLimite = new Date();
+      dataLimite.setDate(hoje.getDate() + ANTECEDENCIA_VACINACAO_DIAS);
+
+      const hojeStr = hoje.toISOString().split('T')[0];
+      const dataLimiteStr = dataLimite.toISOString().split('T')[0];
 
       const { data: vacinacoes, error } = await this.supabase
         .from('vacinacao')
         .select('id_vacinacao, dt_aplicacao, tipo_vacina, id_bufalo, id_propriedade')
-        .eq('dt_aplicacao', dataAlvoStr)
+        .gte('dt_aplicacao', hojeStr)
+        .lte('dt_aplicacao', dataLimiteStr)
         .eq('id_propriedade', id_propriedade);
 
       if (error || !vacinacoes) {
-        this.logger.log('Nenhuma vacinação programada para a propriedade.');
+        this.logger.log('Nenhuma vacinação programada para os próximos 30 dias na propriedade.');
         return 0;
       }
 
