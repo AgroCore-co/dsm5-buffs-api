@@ -311,7 +311,7 @@ export class ControleLeiteiroService {
     // Buscamos a búfala e a propriedade associada para verificar o dono (id_dono).
     const { data: bufalaData, error: bufalaError } = await this.supabase
       .from('bufalo')
-      .select('id_bufalo, propriedade:Propriedade(id_dono)')
+      .select('id_bufalo, id_propriedade, propriedade:id_propriedade(id_dono)')
       .eq('id_bufalo', id_bufala)
       .single();
 
@@ -320,6 +320,7 @@ export class ControleLeiteiroService {
         module: 'ControleLeiteiroService',
         method: 'findAllByBufala',
         bufalaId: id_bufala,
+        error: bufalaError?.message,
       });
       throw new NotFoundException(`Búfala com ID ${id_bufala} não encontrada.`);
     }
