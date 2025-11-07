@@ -18,7 +18,7 @@ export class GeminiService {
     if (!this.apiKey) {
       throw new Error('GEMINI_API_KEY não está definida no ficheiro .env');
     }
-    this.apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${this.apiKey}`;
+    this.apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${this.apiKey}`;
   }
 
   /**
@@ -55,12 +55,10 @@ export class GeminiService {
     };
 
     try {
-      const { data } = await firstValueFrom(
-        this.httpService.post(this.apiUrl, payload),
-      );
+      const { data } = await firstValueFrom(this.httpService.post(this.apiUrl, payload));
 
       const responseText = data.candidates?.[0]?.content?.parts?.[0]?.text?.trim().toUpperCase();
-      
+
       // Log da resposta bruta para depuração
       this.logger.debug(`Resposta bruta da IA: ${JSON.stringify(data)}`);
       this.logger.debug(`Texto extraído da IA: ${responseText}`);
@@ -72,7 +70,6 @@ export class GeminiService {
 
       this.logger.warn(`Resposta da IA inválida ou vazia. Resposta recebida: "${responseText}". Usando prioridade ALTA como padrão.`);
       return PrioridadeAlerta.ALTA;
-
     } catch (error) {
       // Log de erro MUITO mais detalhado
       this.logger.error('Erro CRÍTICO ao chamar a API da Gemini. Verifique a chave e as configurações do projeto Google Cloud.');
@@ -81,10 +78,9 @@ export class GeminiService {
       } else {
         this.logger.error('Erro de Rede ou Configuração:', error.message);
       }
-      
+
       this.logger.warn('Usando prioridade ALTA como padrão devido a erro na API.');
       return PrioridadeAlerta.ALTA;
     }
   }
 }
-
