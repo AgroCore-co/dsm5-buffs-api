@@ -10,6 +10,16 @@ const TEMPO_GESTAÇÃO_DIAS = 315;
 const ANTECEDENCIA_PARTO_DIAS = 30; // Alerta será gerado 30 dias antes
 const ANTECEDENCIA_SANITARIO_DIAS = 15; // Alerta será gerado 15 dias antes
 
+/**
+ * Função auxiliar para formatar datas no padrão brasileiro.
+ * @param date - Data a ser formatada (string ISO ou objeto Date)
+ * @returns String formatada no padrão dd/MM/yyyy
+ */
+function formatarDataBR(date: string | Date): string {
+  const dateObj = typeof date === 'string' ? new Date(date) : date;
+  return dateObj.toLocaleDateString('pt-BR', { timeZone: 'UTC' });
+}
+
 @Injectable()
 export class AlertasScheduler {
   private readonly logger = new Logger(AlertasScheduler.name);
@@ -220,7 +230,7 @@ export class AlertasScheduler {
               nicho: NichoAlerta.REPRODUCAO,
               data_alerta: dataPrevistaParto.toISOString().split('T')[0],
               prioridade: PrioridadeAlerta.ALTA,
-              observacao: `Preparar área de maternidade. Gestação confirmada em ${new Date(rep.dt_evento).toLocaleDateString('pt-BR')}.`,
+              observacao: `Preparar área de maternidade. Gestação confirmada em ${formatarDataBR(rep.dt_evento)}.`,
               id_evento_origem: rep.id_reproducao,
               tipo_evento_origem: 'DADOS_REPRODUCAO',
             };
@@ -307,7 +317,7 @@ export class AlertasScheduler {
               nicho: NichoAlerta.REPRODUCAO,
               data_alerta: hoje.toISOString().split('T')[0],
               prioridade: PrioridadeAlerta.MEDIA,
-              observacao: `Cobertura realizada em ${dtCobertura.toLocaleDateString('pt-BR')} (${cob.tipo_inseminacao}). Realizar ultrassonografia.`,
+              observacao: `Cobertura realizada em ${formatarDataBR(cob.dt_evento)} (${cob.tipo_inseminacao}). Realizar ultrassonografia.`,
               id_evento_origem: cob.id_reproducao,
               tipo_evento_origem: 'COBERTURA_SEM_DIAGNOSTICO',
             });
@@ -483,7 +493,7 @@ export class AlertasScheduler {
             nicho: NichoAlerta.SANITARIO,
             data_alerta: vac.dt_aplicacao,
             prioridade: PrioridadeAlerta.MEDIA,
-            observacao: `Preparar vacina e equipamentos. Data: ${new Date(vac.dt_aplicacao).toLocaleDateString('pt-BR')}.`,
+            observacao: `Preparar vacina e equipamentos. Data: ${formatarDataBR(vac.dt_aplicacao)}.`,
             id_evento_origem: vac.id_vacinacao,
             tipo_evento_origem: 'VACINACAO_PROGRAMADA',
           });
@@ -663,7 +673,7 @@ export class AlertasScheduler {
               nicho: NichoAlerta.REPRODUCAO,
               data_alerta: dataPrevistaParto.toISOString().split('T')[0],
               prioridade: PrioridadeAlerta.ALTA,
-              observacao: `Preparar área de maternidade. Gestação confirmada em ${new Date(rep.dt_evento).toLocaleDateString('pt-BR')}.`,
+              observacao: `Preparar área de maternidade. Gestação confirmada em ${formatarDataBR(rep.dt_evento)}.`,
               id_evento_origem: rep.id_reproducao,
               tipo_evento_origem: 'DADOS_REPRODUCAO',
             };
@@ -744,7 +754,7 @@ export class AlertasScheduler {
               nicho: NichoAlerta.REPRODUCAO,
               data_alerta: hoje.toISOString().split('T')[0],
               prioridade: PrioridadeAlerta.MEDIA,
-              observacao: `Cobertura realizada em ${dtCobertura.toLocaleDateString('pt-BR')} (${cob.tipo_inseminacao}). Realizar ultrassonografia.`,
+              observacao: `Cobertura realizada em ${formatarDataBR(cob.dt_evento)} (${cob.tipo_inseminacao}). Realizar ultrassonografia.`,
               id_evento_origem: cob.id_reproducao,
               tipo_evento_origem: 'COBERTURA_SEM_DIAGNOSTICO',
             });
@@ -918,7 +928,7 @@ export class AlertasScheduler {
             nicho: NichoAlerta.SANITARIO,
             data_alerta: vac.dt_aplicacao,
             prioridade: PrioridadeAlerta.MEDIA,
-            observacao: `Preparar vacina e equipamentos. Data: ${new Date(vac.dt_aplicacao).toLocaleDateString('pt-BR')}.`,
+            observacao: `Preparar vacina e equipamentos. Data: ${formatarDataBR(vac.dt_aplicacao)}.`,
             id_evento_origem: vac.id_vacinacao,
             tipo_evento_origem: 'VACINACAO_PROGRAMADA',
           });
