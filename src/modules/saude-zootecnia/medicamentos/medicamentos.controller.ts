@@ -26,6 +26,14 @@ export class MedicamentosController {
     return this.service.findAll();
   }
 
+  @Get('propriedade/:id_propriedade')
+  @ApiOperation({ summary: 'Lista todas as medicações de uma propriedade específica' })
+  @ApiParam({ name: 'id_propriedade', description: 'ID da propriedade', type: 'string' })
+  @ApiResponse({ status: 200, description: 'Lista de medicações da propriedade retornada com sucesso.' })
+  findByPropriedade(@Param('id_propriedade', ParseUUIDPipe) id_propriedade: string) {
+    return this.service.findByPropriedade(id_propriedade);
+  }
+
   @Get(':id')
   @ApiOperation({ summary: 'Busca uma medicação pelo ID' })
   @ApiParam({ name: 'id', description: 'ID da medicação', type: 'string' })

@@ -27,6 +27,20 @@ export class MedicamentosService {
     return data;
   }
 
+  async findByPropriedade(id_propriedade: string) {
+    const { data, error } = await this.supabase
+      .getAdminClient()
+      .from(this.tableName)
+      .select('*')
+      .eq('id_propriedade', id_propriedade)
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      throw new InternalServerErrorException(`Falha ao buscar medicações da propriedade: ${error.message}`);
+    }
+    return data;
+  }
+
   async findOne(id_medicacao: string) {
     const { data, error } = await this.supabase.getAdminClient().from(this.tableName).select('*').eq('id_medicacao', id_medicacao).single();
 
