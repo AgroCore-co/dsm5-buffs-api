@@ -3,6 +3,8 @@ import { SupabaseService } from '../../core/supabase/supabase.service';
 import { DashboardStatsDto } from './dto/dashboard-stats.dto';
 import { DashboardLactacaoDto, CicloLactacaoMetricaDto } from './dto/dashboard-lactacao.dto';
 import { DashboardProducaoMensalDto, ProducaoMensalItemDto } from './dto/dashboard-producao-mensal.dto';
+import { DashboardReproducaoDto } from './dto/dashboard-reproducao.dto';
+import { formatToSimpleDate } from '../../core/utils/date-formatter.utils';
 
 @Injectable()
 export class DashboardService {
@@ -412,6 +414,57 @@ export class DashboardService {
         throw error;
       }
       throw new InternalServerErrorException(`Erro inesperado ao gerar métricas de produção mensal: ${error.message}`);
+    }
+  }
+
+  /**
+   * Retorna estatísticas de reprodução de uma propriedade
+   */
+  async getReproducaoMetricas(id_propriedade: string): Promise<DashboardReproducaoDto> {
+    const supabase = this.supabaseService.getAdminClient();
+
+    try {
+      // Verifica se a propriedade existe
+      const { data: propriedadeExists, error: propError } = await supabase
+        .from('propriedade')
+        .select('id_propriedade')
+        .eq('id_propriedade', id_propriedade)
+        .single();
+
+      if (propError || !propriedadeExists) {
+        throw new NotFoundException(`Propriedade com ID ${id_propriedade} não encontrada`);
+      }
+
+      // Busca todas as reproduções da propriedade
+      const { data: reproducoes, error: reproducaoError } = await supabase
+        .from('dadosreproducao')
+        .select('status, dt_evento')
+        .eq('id_propriedade', id_propriedade)
+        .order('dt_evento', { ascending: false });
+
+      if (reproducaoError) {
+        throw new InternalServerErrorException(`Erro ao buscar reproduções: ${reproducaoError.message}`);
+      }
+
+      // Contabilizar por status
+      const totalEmAndamento = reproducoes?.filter((r) => r.status === 'Em andamento').length || 0;
+      const totalConfirmada = reproducoes?.filter((r) => r.status === 'Confirmada').length || 0;
+      const totalFalha = reproducoes?.filter((r) => r.status === 'Falha').length || 0;
+
+      // Buscar a data da última reprodução (já ordenada desc)
+      const ultimaDataReproducao = reproducoes && reproducoes.length > 0 ? formatToSimpleDate(reproducoes[0].dt_evento) : null;
+
+      return {
+        totalEmAndamento,
+        totalConfirmada,
+        totalFalha,
+        ultimaDataReproducao,
+      };
+    } catch (error) {
+      if (error instanceof NotFoundException || error instanceof InternalServerErrorException) {
+        throw error;
+      }
+      throw new InternalServerErrorException(`Erro inesperado ao gerar métricas de reprodução: ${error.message}`);
     }
   }
 }

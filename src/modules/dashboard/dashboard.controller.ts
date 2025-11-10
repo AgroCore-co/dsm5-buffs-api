@@ -5,6 +5,7 @@ import { DashboardService } from './dashboard.service';
 import { DashboardStatsDto } from './dto/dashboard-stats.dto';
 import { DashboardLactacaoDto } from './dto/dashboard-lactacao.dto';
 import { DashboardProducaoMensalDto } from './dto/dashboard-producao-mensal.dto';
+import { DashboardReproducaoDto } from './dto/dashboard-reproducao.dto';
 
 @ApiBearerAuth('JWT-auth')
 @UseGuards(SupabaseAuthGuard)
@@ -108,5 +109,33 @@ export class DashboardController {
     @Query('ano') ano?: number,
   ): Promise<DashboardProducaoMensalDto> {
     return this.dashboardService.getProducaoMensal(id_propriedade, ano ? Number(ano) : undefined);
+  }
+
+  @Get('reproducao/:id_propriedade')
+  @ApiOperation({
+    summary: 'Obter métricas de reprodução de uma propriedade',
+    description: 'Retorna totais de reproduções por status (Em andamento, Confirmada, Falha) e data da última reprodução',
+  })
+  @ApiParam({
+    name: 'id_propriedade',
+    description: 'ID da propriedade (UUID)',
+    type: 'string',
+    example: 'f47ac10b-58cc-4372-a567-0e02b2c3d479',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Métricas de reprodução retornadas com sucesso.',
+    type: DashboardReproducaoDto,
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Propriedade não encontrada.',
+  })
+  @ApiResponse({
+    status: 500,
+    description: 'Erro interno do servidor.',
+  })
+  async getReproducaoMetricas(@Param('id_propriedade', ParseUUIDPipe) id_propriedade: string): Promise<DashboardReproducaoDto> {
+    return this.dashboardService.getReproducaoMetricas(id_propriedade);
   }
 }
