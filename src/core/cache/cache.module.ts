@@ -8,7 +8,7 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
       imports: [ConfigModule],
       useFactory: async (configService: ConfigService) => {
         const isProduction = configService.get('NODE_ENV') === 'production';
-        
+
         return {
           ttl: 300000, // 5 minutos padrão em millisegundos
           max: isProduction ? 500 : 100, // Mais cache em produção

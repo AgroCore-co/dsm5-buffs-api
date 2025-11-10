@@ -13,7 +13,7 @@ export class SimulacaoService {
   constructor(
     private readonly bufaloService: BufaloService,
     private readonly httpService: HttpService,
-  ) { }
+  ) {}
 
   async preverPotencial(dto: SimularAcasalamentoDto, user: any) {
     const { id_macho, id_femea } = dto;
@@ -54,8 +54,8 @@ export class SimulacaoService {
       const response = await firstValueFrom(
         this.httpService.get(`${this.iaApiUrl}/machos-compatíveis/${id_femea}`, {
           params: {
-            max_consanguinidade: max_consanguinidade
-          }
+            max_consanguinidade: max_consanguinidade,
+          },
         }),
       );
 
@@ -76,13 +76,10 @@ export class SimulacaoService {
       console.log('Realizando análise genealógica para a búfala: ' + bufalo.id_bufalo);
 
       const response = await firstValueFrom(
-        this.httpService.post(`${this.iaApiUrl}/analise-genealogica`,
-          { id_bufalo: bufalo.id_bufalo },
-          { timeout: 60000 }
-        )
+        this.httpService.post(`${this.iaApiUrl}/analise-genealogica`, { id_bufalo: bufalo.id_bufalo }, { timeout: 60000 }),
       );
 
-      console.log("Análise genealógica feita com sucesso");
+      console.log('Análise genealógica feita com sucesso');
 
       return response.data;
     } catch (error) {

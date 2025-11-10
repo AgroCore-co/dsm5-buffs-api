@@ -8,11 +8,11 @@ export class EncontrarMachosCompativeisDto {
   @IsUUID()
   id_femea: string;
 
-  @ApiProperty({ 
-    description: 'Consanguinidade máxima aceitável em %', 
+  @ApiProperty({
+    description: 'Consanguinidade máxima aceitável em %',
     example: 6.25,
     required: false,
-    default: 6.25
+    default: 6.25,
   })
   @IsOptional()
   @IsNumber()

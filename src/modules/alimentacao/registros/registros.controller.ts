@@ -13,7 +13,7 @@ export class RegistrosController {
   constructor(private readonly service: RegistrosService) {}
 
   @Post()
-  @ApiOperation({ 
+  @ApiOperation({
     summary: 'Cria um registro de alimentação',
     description: `Registra uma ocorrência de alimentação fornecida a um grupo de búfalos.
     
@@ -46,7 +46,7 @@ export class RegistrosController {
   }
 
   @Get('propriedade/:id_propriedade')
-  @ApiOperation({ 
+  @ApiOperation({
     summary: 'Lista todos os registros de alimentação de uma propriedade',
     description: `Retorna todos os registros de alimentação de uma propriedade específica.
     
@@ -72,7 +72,7 @@ export class RegistrosController {
   }
 
   @Patch(':id')
-  @ApiOperation({ 
+  @ApiOperation({
     summary: 'Atualiza um registro de alimentação',
     description: `Atualiza parcialmente um registro de alimentação existente.
     

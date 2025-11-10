@@ -3,13 +3,13 @@ import { IsInt, IsNumber, IsOptional, IsString, IsUUID, IsNotEmpty, Min, MaxLeng
 
 /**
  * DTO para criação de registro de alimentação
- * 
+ *
  * Endpoint: POST /alimentacao/registros
- * 
+ *
  * Este DTO define os campos necessários para registrar uma ocorrência de alimentação
  * fornecida a um grupo específico de búfalos, vinculando-a a uma definição de alimentação
  * pré-cadastrada.
- * 
+ *
  * Campos obrigatórios: id_propriedade, id_grupo, id_aliment_def, id_usuario, quantidade, unidade_medida
  * Campos opcionais: freq_dia, dt_registro
  */
@@ -33,7 +33,8 @@ export class CreateRegistroAlimentacaoDto {
   id_grupo: string;
 
   @ApiProperty({
-    description: 'ID da definição de alimentação cadastrada previamente (UUID). Use GET /alimentacoes-def/propriedade/:id para listar as opções disponíveis.',
+    description:
+      'ID da definição de alimentação cadastrada previamente (UUID). Use GET /alimentacoes-def/propriedade/:id para listar as opções disponíveis.',
     example: '09800905-1d30-4ffa-9b95-b2bb09fca0ef',
     required: true,
   })
@@ -84,7 +85,8 @@ export class CreateRegistroAlimentacaoDto {
   freq_dia?: number;
 
   @ApiProperty({
-    description: 'Data e hora do registro no formato ISO 8601 (YYYY-MM-DDTHH:mm:ss.sssZ). Se não fornecida, será usada a data/hora atual do servidor.',
+    description:
+      'Data e hora do registro no formato ISO 8601 (YYYY-MM-DDTHH:mm:ss.sssZ). Se não fornecida, será usada a data/hora atual do servidor.',
     example: '2025-10-13T10:00:00.000Z',
     required: false,
   })

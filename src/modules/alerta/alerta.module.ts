@@ -5,7 +5,7 @@ import { AlertasScheduler } from './alerta.scheduler';
 import { SupabaseModule } from 'src/core/supabase/supabase.module';
 
 @Module({
-  imports: [SupabaseModule], 
+  imports: [SupabaseModule],
   controllers: [AlertasController],
   providers: [AlertasService, AlertasScheduler],
   exports: [AlertasService],

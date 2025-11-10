@@ -3,9 +3,9 @@ import { IsString, IsNotEmpty, MaxLength, IsOptional, IsUUID } from 'class-valid
 
 /**
  * DTO para criação de definição de alimentação
- * 
+ *
  * Endpoint: POST /alimentacoes-def
- * 
+ *
  * Este DTO define os campos necessários para criar uma nova definição de alimentação
  * que pode ser reutilizada em múltiplos registros de alimentação do rebanho.
  */

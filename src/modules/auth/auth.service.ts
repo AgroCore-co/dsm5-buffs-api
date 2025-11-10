@@ -24,7 +24,8 @@ export class AuthService {
     // ✅ CRIAR PERFIL AUTOMATICAMENTE na tabela usuario
     if (data.user && metadata?.nome) {
       try {
-        const { error: perfilError } = await this.supabase.getAdminClient()
+        const { error: perfilError } = await this.supabase
+          .getAdminClient()
           .from('usuario')
           .insert({
             auth_id: data.user.id,

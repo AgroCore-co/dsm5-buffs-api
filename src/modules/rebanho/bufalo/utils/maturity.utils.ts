@@ -7,10 +7,10 @@ export class BufaloMaturityUtils {
   static calculateAgeInMonths(birthDate: Date): number {
     const now = new Date();
     const birth = new Date(birthDate);
-    
+
     const yearDiff = now.getFullYear() - birth.getFullYear();
     const monthDiff = now.getMonth() - birth.getMonth();
-    
+
     return yearDiff * 12 + monthDiff;
   }
 
@@ -20,14 +20,14 @@ export class BufaloMaturityUtils {
   static calculateAgeInYears(birthDate: Date): number {
     const now = new Date();
     const birth = new Date(birthDate);
-    
+
     let age = now.getFullYear() - birth.getFullYear();
     const monthDiff = now.getMonth() - birth.getMonth();
-    
+
     if (monthDiff < 0 || (monthDiff === 0 && now.getDate() < birth.getDate())) {
       age--;
     }
-    
+
     return age;
   }
 
@@ -41,17 +41,17 @@ export class BufaloMaturityUtils {
    */
   static determineMaturityLevel(birthDate: Date, sexo: SexoBufalo, hasOffspring: boolean = false): NivelMaturidade {
     const ageInMonths = this.calculateAgeInMonths(birthDate);
-    
+
     // Bezerro: 0-12 meses
     if (ageInMonths < 12) {
       return NivelMaturidade.BEZERRO;
     }
-    
+
     // Novilho/Novilha: 12-24 meses
     if (ageInMonths < 24) {
       return NivelMaturidade.NOVILHO_NOVILHA;
     }
-    
+
     // Para fêmeas: se tem descendentes, é vaca; senão, ainda é novilha até os 36 meses
     if (sexo === SexoBufalo.FEMEA) {
       if (hasOffspring || ageInMonths >= 36) {
@@ -59,7 +59,7 @@ export class BufaloMaturityUtils {
       }
       return NivelMaturidade.NOVILHO_NOVILHA;
     }
-    
+
     // Para machos: se tem descendentes ou é reprodutor, é touro
     if (sexo === SexoBufalo.MACHO) {
       if (hasOffspring || ageInMonths >= 24) {
@@ -67,7 +67,7 @@ export class BufaloMaturityUtils {
       }
       return NivelMaturidade.NOVILHO_NOVILHA;
     }
-    
+
     return NivelMaturidade.NOVILHO_NOVILHA;
   }
 
@@ -94,14 +94,14 @@ export class BufaloMaturityUtils {
     const ageInYears = this.calculateAgeInYears(birthDate);
     const maturityLevel = this.determineMaturityLevel(birthDate, sexo, hasOffspring);
     const isValidAge = this.validateAge(birthDate);
-    
+
     return {
       ageInMonths,
       ageInYears,
       maturityLevel,
       isValidAge,
       shouldBeInactive: !isValidAge,
-      description: this.getMaturityDescription(maturityLevel, sexo, ageInMonths)
+      description: this.getMaturityDescription(maturityLevel, sexo, ageInMonths),
     };
   }
 
@@ -112,20 +112,20 @@ export class BufaloMaturityUtils {
     switch (maturityLevel) {
       case NivelMaturidade.BEZERRO:
         return `Bezerro(a) - ${ageInMonths} meses de idade`;
-      
+
       case NivelMaturidade.NOVILHO_NOVILHA:
         if (sexo === SexoBufalo.FEMEA) {
           return `Novilha - ${ageInMonths} meses de idade. Puberdade entre 18-30 meses`;
         } else {
           return `Novilho - ${ageInMonths} meses de idade. Castração comum entre 12-18 meses`;
         }
-      
+
       case NivelMaturidade.VACA:
         return `Vaca - ${ageInMonths} meses de idade. Vida reprodutiva ativa`;
-      
+
       case NivelMaturidade.TOURO:
         return `Touro - ${ageInMonths} meses de idade. Reprodutor ativo`;
-      
+
       default:
         return 'Nível de maturidade não definido';
     }

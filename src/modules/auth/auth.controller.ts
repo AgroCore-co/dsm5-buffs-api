@@ -4,34 +4,34 @@ import { IsEmail, IsString, IsOptional, MinLength } from 'class-validator';
 import { AuthService } from './auth.service';
 
 export class SignUpDto {
-  @ApiProperty({ 
+  @ApiProperty({
     description: 'Email do usuário',
-    example: 'usuario@example.com'
+    example: 'usuario@example.com',
   })
   @IsEmail()
   email: string;
 
-  @ApiProperty({ 
+  @ApiProperty({
     description: 'Senha do usuário (mínimo 6 caracteres)',
-    example: 'minhasenha123'
+    example: 'minhasenha123',
   })
   @IsString()
   @MinLength(6, { message: 'Senha deve ter pelo menos 6 caracteres' })
   password: string;
 
-  @ApiProperty({ 
+  @ApiProperty({
     description: 'Nome completo do usuário',
     example: 'João Silva',
-    required: false
+    required: false,
   })
   @IsOptional()
   @IsString()
   nome?: string;
 
-  @ApiProperty({ 
+  @ApiProperty({
     description: 'Telefone do usuário',
     example: '11999999999',
-    required: false
+    required: false,
   })
   @IsOptional()
   @IsString()
@@ -39,25 +39,25 @@ export class SignUpDto {
 }
 
 export class SignInDto {
-  @ApiProperty({ 
+  @ApiProperty({
     description: 'Email do usuário',
-    example: 'usuario@example.com'
+    example: 'usuario@example.com',
   })
   @IsEmail()
   email: string;
 
-  @ApiProperty({ 
+  @ApiProperty({
     description: 'Senha do usuário',
-    example: 'minhasenha123'
+    example: 'minhasenha123',
   })
   @IsString()
   password: string;
 }
 
 export class RefreshDto {
-  @ApiProperty({ 
+  @ApiProperty({
     description: 'Token de refresh',
-    example: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...'
+    example: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...',
   })
   @IsString()
   refresh_token: string;
@@ -69,9 +69,10 @@ export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
   @Post('signup')
-  @ApiOperation({ 
+  @ApiOperation({
     summary: 'Registra um novo usuário no Supabase Auth',
-    description: 'Cria uma conta de autenticação para um usuário. Após o signup bem-sucedido, o usuário deve confirmar o email e depois fazer login para obter um token JWT válido.'
+    description:
+      'Cria uma conta de autenticação para um usuário. Após o signup bem-sucedido, o usuário deve confirmar o email e depois fazer login para obter um token JWT válido.',
   })
   @ApiResponse({ status: 201, description: 'Usuário criado com sucesso. Verificação de email enviada.' })
   @ApiResponse({ status: 400, description: 'Email já está em uso ou dados inválidos.' })
@@ -82,9 +83,10 @@ export class AuthController {
   }
 
   @Post('signin')
-  @ApiOperation({ 
+  @ApiOperation({
     summary: 'Faz login do usuário',
-    description: 'Autentica o usuário e retorna tokens de acesso. O access_token deve ser usado no header Authorization: Bearer <token> para acessar endpoints protegidos.'
+    description:
+      'Autentica o usuário e retorna tokens de acesso. O access_token deve ser usado no header Authorization: Bearer <token> para acessar endpoints protegidos.',
   })
   @ApiResponse({ status: 200, description: 'Login realizado com sucesso.' })
   @ApiResponse({ status: 401, description: 'Credenciais inválidas ou email não confirmado.' })
@@ -93,9 +95,9 @@ export class AuthController {
   }
 
   @Post('refresh')
-  @ApiOperation({ 
+  @ApiOperation({
     summary: 'Renova o token de acesso',
-    description: 'Usa o refresh_token para obter um novo access_token quando o atual expira.'
+    description: 'Usa o refresh_token para obter um novo access_token quando o atual expira.',
   })
   @ApiResponse({ status: 200, description: 'Token renovado com sucesso.' })
   @ApiResponse({ status: 401, description: 'Refresh token inválido ou expirado.' })
@@ -104,9 +106,9 @@ export class AuthController {
   }
 
   @Post('signout')
-  @ApiOperation({ 
+  @ApiOperation({
     summary: 'Faz logout do usuário',
-    description: 'Invalida a sessão atual do usuário.'
+    description: 'Invalida a sessão atual do usuário.',
   })
   @ApiResponse({ status: 200, description: 'Logout realizado com sucesso.' })
   async signOut() {

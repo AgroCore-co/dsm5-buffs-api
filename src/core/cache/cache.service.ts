@@ -65,19 +65,15 @@ export class CacheService {
   /**
    * Padrão cache-aside - buscar ou executar função
    */
-  async getOrSet<T>(
-    key: string, 
-    fetchFunction: () => Promise<T>, 
-    ttl: number = 300000
-  ): Promise<T> {
+  async getOrSet<T>(key: string, fetchFunction: () => Promise<T>, ttl: number = 300000): Promise<T> {
     try {
       let data = await this.get<T>(key);
-      
+
       if (!data) {
         data = await fetchFunction();
         await this.set(key, data, ttl);
       }
-      
+
       return data;
     } catch (error) {
       this.logger.warn(`Erro no getOrSet para ${key}`, error);

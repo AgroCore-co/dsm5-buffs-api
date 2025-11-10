@@ -5,10 +5,10 @@ export class BufaloAgeUtils {
   static calculateAgeInMonths(birthDate: Date): number {
     const now = new Date();
     const birth = new Date(birthDate);
-    
+
     const yearDiff = now.getFullYear() - birth.getFullYear();
     const monthDiff = now.getMonth() - birth.getMonth();
-    
+
     return yearDiff * 12 + monthDiff;
   }
 
@@ -18,14 +18,14 @@ export class BufaloAgeUtils {
   static calculateAgeInYears(birthDate: Date): number {
     const now = new Date();
     const birth = new Date(birthDate);
-    
+
     let age = now.getFullYear() - birth.getFullYear();
     const monthDiff = now.getMonth() - birth.getMonth();
-    
+
     if (monthDiff < 0 || (monthDiff === 0 && now.getDate() < birth.getDate())) {
       age--;
     }
-    
+
     return age;
   }
 
@@ -43,7 +43,7 @@ export class BufaloAgeUtils {
   static getAgeRange(birthDate: Date): string {
     const ageInMonths = this.calculateAgeInMonths(birthDate);
     const ageInYears = this.calculateAgeInYears(birthDate);
-    
+
     if (ageInMonths < 12) {
       return `${ageInMonths} meses (${ageInYears} ano(s))`;
     } else if (ageInMonths < 24) {
@@ -59,13 +59,13 @@ export class BufaloAgeUtils {
   static daysUntilNextBirthday(birthDate: Date): number {
     const now = new Date();
     const birth = new Date(birthDate);
-    
+
     const nextBirthday = new Date(now.getFullYear(), birth.getMonth(), birth.getDate());
-    
+
     if (nextBirthday < now) {
       nextBirthday.setFullYear(nextBirthday.getFullYear() + 1);
     }
-    
+
     const diffTime = nextBirthday.getTime() - now.getTime();
     return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
   }

@@ -8,10 +8,7 @@ export class RolesGuard implements CanActivate {
   constructor(private reflector: Reflector) {}
 
   canActivate(context: ExecutionContext): boolean {
-    const requiredRoles = this.reflector.getAllAndOverride<Cargo[]>(ROLES_KEY, [
-      context.getHandler(),
-      context.getClass(),
-    ]);
+    const requiredRoles = this.reflector.getAllAndOverride<Cargo[]>(ROLES_KEY, [context.getHandler(), context.getClass()]);
 
     if (!requiredRoles) {
       return true; // Se não há roles definidas, permite acesso
@@ -25,11 +22,9 @@ export class RolesGuard implements CanActivate {
     }
 
     const hasRole = requiredRoles.includes(user.cargo);
-    
+
     if (!hasRole) {
-      throw new ForbiddenException(
-        `Acesso negado. Cargos permitidos: ${requiredRoles.join(', ')}`
-      );
+      throw new ForbiddenException(`Acesso negado. Cargos permitidos: ${requiredRoles.join(', ')}`);
     }
 
     return true;

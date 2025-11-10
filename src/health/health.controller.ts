@@ -6,8 +6,8 @@ import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
 export class HealthController {
   @Get()
   @ApiOperation({ summary: 'Health check endpoint' })
-  @ApiResponse({ 
-    status: 200, 
+  @ApiResponse({
+    status: 200,
     description: 'Service is healthy',
     schema: {
       type: 'object',
@@ -17,9 +17,9 @@ export class HealthController {
         service: { type: 'string', example: 'BUFFS API' },
         version: { type: 'string', example: '1.0.0' },
         uptime: { type: 'number', example: 3600 },
-        environment: { type: 'string', example: 'production' }
-      }
-    }
+        environment: { type: 'string', example: 'production' },
+      },
+    },
   })
   check() {
     return {
@@ -29,19 +29,19 @@ export class HealthController {
       version: '1.0.0',
       uptime: Math.floor(process.uptime()),
       environment: process.env.NODE_ENV || 'development',
-      port: process.env.PORT || 3001
+      port: process.env.PORT || 3001,
     };
   }
 
   @Get('detailed')
   @ApiOperation({ summary: 'Detailed health check with system info' })
-  @ApiResponse({ 
-    status: 200, 
-    description: 'Detailed health information'
+  @ApiResponse({
+    status: 200,
+    description: 'Detailed health information',
   })
   checkDetailed() {
     const memoryUsage = process.memoryUsage();
-    
+
     return {
       status: 'ok',
       timestamp: new Date().toISOString(),
@@ -52,7 +52,7 @@ export class HealthController {
       services: {
         api: 'running',
         database: 'supabase_configured',
-        gemini: process.env.GEMINI_API_KEY ? 'configured' : 'not_configured'
+        gemini: process.env.GEMINI_API_KEY ? 'configured' : 'not_configured',
       },
       system: {
         nodeVersion: process.version,
@@ -62,9 +62,9 @@ export class HealthController {
           rss: Math.round(memoryUsage.rss / 1024 / 1024) + ' MB',
           heapTotal: Math.round(memoryUsage.heapTotal / 1024 / 1024) + ' MB',
           heapUsed: Math.round(memoryUsage.heapUsed / 1024 / 1024) + ' MB',
-          external: Math.round(memoryUsage.external / 1024 / 1024) + ' MB'
-        }
-      }
+          external: Math.round(memoryUsage.external / 1024 / 1024) + ' MB',
+        },
+      },
     };
   }
 }

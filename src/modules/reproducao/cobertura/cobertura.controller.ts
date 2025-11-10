@@ -8,6 +8,7 @@ import { UpdateCoberturaDto } from './dto/update-cobertura.dto';
 import { PaginationDto } from '../../../core/dto/pagination.dto';
 import { FemeaDisponivelReproducaoDto } from './dto/femea-disponivel-reproducao.dto';
 import { RegistrarPartoDto } from './dto/registrar-parto.dto';
+import { RecomendacaoFemeaDto, RecomendacaoMachoDto } from './dto/recomendacao-acasalamento.dto';
 
 @ApiBearerAuth('JWT-auth')
 @UseGuards(SupabaseAuthGuard)
@@ -113,5 +114,69 @@ export class CoberturaController {
   @ApiResponse({ status: 404, description: 'Cobertura não encontrada' })
   registrarParto(@Param('id', ParseUUIDPipe) id: string, @Body() dto: RegistrarPartoDto) {
     return this.service.registrarParto(id, dto);
+  }
+
+  @Get('recomendacoes/femeas/:id_propriedade')
+  @ApiOperation({
+    summary: 'Retorna ranking de fêmeas recomendadas para acasalamento',
+    description: `Calcula score de prioridade baseado em critérios zootécnicos:
+    - Experiência reprodutiva (0-50 pts)
+    - Intervalo reprodutivo adequado (0-25 pts)
+    - Idade ideal (0-20 pts)
+    - Ausência de restrições (0-15 pts)
+    - Status de lactação (0-10 pts)
+    
+    Retorna lista ordenada por score decrescente (0-100).`,
+  })
+  @ApiParam({ name: 'id_propriedade', description: 'ID da propriedade', type: 'string' })
+  @ApiQuery({
+    name: 'limit',
+    required: false,
+    type: Number,
+    description: 'Limitar quantidade de resultados (ex: top 10)',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Ranking de fêmeas retornado com sucesso',
+    type: [RecomendacaoFemeaDto],
+  })
+  async getRecomendacoesFemeas(
+    @Param('id_propriedade', ParseUUIDPipe) id_propriedade: string,
+    @Query('limit') limit?: number,
+  ): Promise<RecomendacaoFemeaDto[]> {
+    return this.service.findRecomendacoesFemeas(id_propriedade, limit);
+  }
+
+  @Get('recomendacoes/machos/:id_propriedade')
+  @ApiOperation({
+    summary: 'Retorna ranking de machos recomendados para acasalamento',
+    description: `Calcula score de prioridade baseado em critérios:
+    - Idade e maturidade (0-25 pts)
+    - Histórico de acasalamentos (0-25 pts)
+    - Taxa de sucesso (0-30 pts)
+    - Intervalo de descanso (0-10 pts)
+    - Qualidade genética ABCB (0-10 pts)
+    
+    Retorna lista ordenada por score decrescente (0-100).
+    
+    NOTA: Critérios em validação - podem ser ajustados conforme orientação zootécnica.`,
+  })
+  @ApiParam({ name: 'id_propriedade', description: 'ID da propriedade', type: 'string' })
+  @ApiQuery({
+    name: 'limit',
+    required: false,
+    type: Number,
+    description: 'Limitar quantidade de resultados (ex: top 5)',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Ranking de machos retornado com sucesso',
+    type: [RecomendacaoMachoDto],
+  })
+  async getRecomendacoesMachos(
+    @Param('id_propriedade', ParseUUIDPipe) id_propriedade: string,
+    @Query('limit') limit?: number,
+  ): Promise<RecomendacaoMachoDto[]> {
+    return this.service.findRecomendacoesMachos(id_propriedade, limit);
   }
 }

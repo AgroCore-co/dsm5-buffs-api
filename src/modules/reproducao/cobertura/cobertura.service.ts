@@ -2,14 +2,32 @@ import { Injectable, InternalServerErrorException, NotFoundException, BadRequest
 import { SupabaseService } from '../../../core/supabase/supabase.service';
 import { CreateCoberturaDto } from './dto/create-cobertura.dto';
 import { UpdateCoberturaDto } from './dto/update-cobertura.dto';
-import { PaginationDto } from '../../../core/dto/pagination.dto';
-import { PaginatedResponse } from '../../../core/dto/pagination.dto';
+import { PaginationDto, PaginatedResponse } from '../../../core/dto/pagination.dto';
 import { createPaginatedResponse, calculatePaginationParams } from '../../../core/utils/pagination.utils';
 import { formatDateFields, formatDateFieldsArray } from '../../../core/utils/date-formatter.utils';
 import { FemeaDisponivelReproducaoDto } from './dto/femea-disponivel-reproducao.dto';
 import { RegistrarPartoDto } from './dto/registrar-parto.dto';
 import { AlertasService } from '../../alerta/alerta.service';
 import { NichoAlerta, PrioridadeAlerta } from '../../alerta/dto/create-alerta.dto';
+import { RecomendacaoFemeaDto, RecomendacaoMachoDto, MotivoScore } from './dto/recomendacao-acasalamento.dto';
+import {
+  calcularIAR,
+  calcularFPProntidao,
+  calcularFPIdade,
+  calcularFPHistorico,
+  calcularFPLactacao,
+  gerarMotivosIAR,
+  type FatoresPonderacao,
+} from './utils/calcular-iar.util';
+import { calcularIVR, calcularMediaRebanho, gerarMotivosIVR, type DadosIVR } from './utils/calcular-ivr.util';
+import {
+  buscarCicloAtivo,
+  contarCiclosTotais,
+  calcularIEPMedio,
+  buscarHistoricoCoberturasTouro,
+  estatisticasRebanho,
+} from './utils/reproducao-queries.util';
+import { calcularIdadeEmMeses, determinarStatusFemea } from './utils/reproducao-helpers.util';
 
 @Injectable()
 export class CoberturaService {
@@ -387,5 +405,236 @@ export class CoberturaService {
       ciclo_lactacao: cicloLactacao,
       message: cicloLactacao ? 'Parto registrado, ciclo de lactação criado e alerta de secagem agendado com sucesso' : 'Parto registrado com sucesso',
     };
+  }
+
+  /**
+   * Retorna recomendações ranqueadas de fêmeas para acasalamento
+   * Baseado no Índice de Aptidão Reprodutiva (IAR)
+   *
+   * IAR = (FP_Prontidao * 0.50) + (FP_Idade * 0.15) + (FP_Historico * 0.20) + (FP_Lactacao * 0.15)
+   *
+   * Fatores:
+   * - FP_Prontidao (50%): Prontidão fisiológica baseada em DPP ou idade (novilha)
+   * - FP_Idade (15%): Janela de idade produtiva
+   * - FP_Historico (20%): Eficiência reprodutiva histórica (IEP médio)
+   * - FP_Lactacao (15%): Modulador de lactação (penaliza pico)
+   */
+  async findRecomendacoesFemeas(id_propriedade: string, limit?: number): Promise<RecomendacaoFemeaDto[]> {
+    // 1. Buscar todas as fêmeas ativas da propriedade com idade mínima reprodutiva (18 meses)
+    const idadeMinimaReproducao = new Date();
+    idadeMinimaReproducao.setMonth(idadeMinimaReproducao.getMonth() - 18);
+
+    const { data: femeas, error: femeasError } = await this.supabase
+      .getAdminClient()
+      .from('bufalo')
+      .select(
+        `
+        id_bufalo,
+        nome,
+        brinco,
+        dt_nascimento,
+        id_raca,
+        raca:id_raca(nome)
+      `,
+      )
+      .eq('id_propriedade', id_propriedade)
+      .eq('sexo', 'F')
+      .eq('status', true)
+      .lte('dt_nascimento', idadeMinimaReproducao.toISOString());
+
+    if (femeasError) {
+      throw new InternalServerErrorException(`Erro ao buscar fêmeas: ${femeasError.message}`);
+    }
+
+    if (!femeas || femeas.length === 0) {
+      return [];
+    }
+
+    const recomendacoes: RecomendacaoFemeaDto[] = [];
+
+    for (const femea of femeas) {
+      // 2. Calcular idade em meses
+      const idadeMeses = calcularIdadeEmMeses(femea.dt_nascimento);
+
+      // 3. Buscar ciclo de lactação ativo (mais recente)
+      const cicloAtivo = await buscarCicloAtivo(this.supabase.getAdminClient(), femea.id_bufalo);
+
+      // 4. Contar total de ciclos (número de partos)
+      const totalCiclos = await contarCiclosTotais(this.supabase.getAdminClient(), femea.id_bufalo);
+
+      // 5. Calcular dias pós-parto (DPP)
+      let diasPosParto: number | null = null;
+      let diasEmLactacao: number | null = null;
+      let statusLactacao = 'Seca';
+
+      if (cicloAtivo) {
+        diasPosParto = Math.floor((Date.now() - new Date(cicloAtivo.dt_parto).getTime()) / (1000 * 60 * 60 * 24));
+
+        if (cicloAtivo.status === 'Em Lactação') {
+          diasEmLactacao = diasPosParto;
+          statusLactacao = 'Em Lactação';
+        }
+      }
+
+      // 6. Calcular IEP médio (se >= 2 partos)
+      const iepMedio = await calcularIEPMedio(this.supabase.getAdminClient(), femea.id_bufalo, totalCiclos);
+
+      // 7. Calcular fatores do IAR
+      const fp_prontidao = calcularFPProntidao(totalCiclos, idadeMeses, diasPosParto);
+      const fp_idade = calcularFPIdade(idadeMeses, totalCiclos);
+      const fp_historico = calcularFPHistorico(totalCiclos, iepMedio);
+      const fp_lactacao = calcularFPLactacao(statusLactacao, diasEmLactacao);
+
+      // 8. Calcular IAR final
+      const fatores: FatoresPonderacao = {
+        fp_prontidao,
+        fp_idade,
+        fp_historico,
+        fp_lactacao,
+      };
+
+      const score = calcularIAR(fatores);
+
+      // 9. Gerar motivos
+      const motivosTexto = gerarMotivosIAR(fatores, totalCiclos, diasPosParto, idadeMeses, iepMedio, diasEmLactacao);
+      const motivos: MotivoScore[] = motivosTexto.map((descricao) => ({ descricao }));
+
+      // 10. Determinar status reprodutivo
+      const status = determinarStatusFemea(fp_prontidao, totalCiclos, diasPosParto);
+
+      // 11. Montar resposta
+      const recomendacao: RecomendacaoFemeaDto = {
+        id_bufalo: femea.id_bufalo,
+        nome: femea.nome,
+        brinco: femea.brinco || 'S/N',
+        idade_meses: idadeMeses,
+        raca: (femea.raca as any)?.nome || 'Não informada',
+        dados_reprodutivos: {
+          status,
+          dias_pos_parto: diasPosParto,
+          dias_em_lactacao: diasEmLactacao,
+          numero_ciclos: totalCiclos,
+          iep_medio_dias: iepMedio,
+        },
+        score,
+        motivos,
+      };
+
+      recomendacoes.push(recomendacao);
+    }
+
+    // Ordenar por score decrescente
+    const recomendacoesOrdenadas = recomendacoes.sort((a, b) => b.score - a.score);
+
+    // Aplicar limite se especificado
+    return limit ? recomendacoesOrdenadas.slice(0, limit) : recomendacoesOrdenadas;
+  }
+
+  /**
+   * Retorna recomendações ranqueadas de machos para acasalamento
+   * Baseado no Índice de Valor Reprodutivo (IVR)
+   *
+   * IVR usa Taxa de Concepção Ajustada (TCA) com Regressão Bayesiana:
+   * TCA = ((N * TCB) + (K * MR)) / (N + K)
+   *
+   * Onde:
+   * - N = número de coberturas do touro
+   * - TCB = Taxa de Concepção Bruta do touro
+   * - K = fator de confiabilidade (20)
+   * - MR = Média do Rebanho (taxa de concepção média da propriedade)
+   *
+   * Usa tipo_parto como indicador de sucesso (Normal/Cesárea = prenhez confirmada)
+   */
+  async findRecomendacoesMachos(id_propriedade: string, limit?: number): Promise<RecomendacaoMachoDto[]> {
+    // 1. Calcular média do rebanho (MR_TC) - estatística global da propriedade
+    const { totalPrenhezes, totalCoberturas } = await estatisticasRebanho(this.supabase.getAdminClient(), id_propriedade);
+    const mr_tc = calcularMediaRebanho(totalPrenhezes, totalCoberturas);
+
+    // 2. Buscar todos os machos ativos da propriedade com idade mínima reprodutiva (24 meses)
+    const idadeMinimaReproducao = new Date();
+    idadeMinimaReproducao.setMonth(idadeMinimaReproducao.getMonth() - 24);
+
+    const { data: machos, error: machosError } = await this.supabase
+      .getAdminClient()
+      .from('bufalo')
+      .select(
+        `
+        id_bufalo,
+        nome,
+        brinco,
+        dt_nascimento,
+        categoria,
+        id_raca,
+        raca:id_raca(nome)
+      `,
+      )
+      .eq('id_propriedade', id_propriedade)
+      .eq('sexo', 'M')
+      .eq('status', true)
+      .lte('dt_nascimento', idadeMinimaReproducao.toISOString());
+
+    if (machosError) {
+      throw new InternalServerErrorException(`Erro ao buscar machos: ${machosError.message}`);
+    }
+
+    if (!machos || machos.length === 0) {
+      return [];
+    }
+
+    const recomendacoes: RecomendacaoMachoDto[] = [];
+
+    for (const macho of machos) {
+      // 3. Calcular idade em meses
+      const idadeMeses = calcularIdadeEmMeses(macho.dt_nascimento);
+
+      // 4. Buscar histórico de coberturas do touro
+      const historico = await buscarHistoricoCoberturasTouro(this.supabase.getAdminClient(), macho.id_bufalo);
+
+      const n_touro = historico.total_coberturas;
+      const totalPrenhezes = historico.total_prenhezes;
+      const tcb_touro = n_touro > 0 ? (totalPrenhezes / n_touro) * 100 : 0;
+
+      // 5. Calcular IVR usando regressão bayesiana
+      const dadosIVR: DadosIVR = {
+        n_touro,
+        tcb_touro,
+        mr_tc,
+      };
+
+      const resultado = calcularIVR(dadosIVR);
+
+      // 6. Gerar motivos (justificativas)
+      const motivosTexto = gerarMotivosIVR(resultado, n_touro, tcb_touro);
+      const motivos: MotivoScore[] = motivosTexto.map((descricao) => ({ descricao }));
+
+      // 7. Montar resposta
+      const recomendacao: RecomendacaoMachoDto = {
+        id_bufalo: macho.id_bufalo,
+        nome: macho.nome,
+        brinco: macho.brinco || 'S/N',
+        idade_meses: idadeMeses,
+        raca: (macho.raca as any)?.nome || 'Não informada',
+        categoria_abcb: macho.categoria || null,
+        dados_reprodutivos: {
+          total_coberturas: n_touro,
+          total_prenhezes: totalPrenhezes,
+          taxa_concepcao_bruta: tcb_touro,
+          taxa_concepcao_ajustada: resultado.tca,
+          confiabilidade: resultado.confiabilidade,
+          ultima_cobertura: historico.ultima_cobertura,
+          dias_desde_ultima_cobertura: historico.dias_desde_ultima,
+        },
+        score: resultado.score,
+        motivos,
+      };
+
+      recomendacoes.push(recomendacao);
+    }
+
+    // Ordenar por score decrescente
+    const recomendacoesOrdenadas = recomendacoes.sort((a, b) => b.score - a.score);
+
+    // Aplicar limite se especificado
+    return limit ? recomendacoesOrdenadas.slice(0, limit) : recomendacoesOrdenadas;
   }
 }

@@ -8,7 +8,7 @@ import { SupabaseService } from '../../core/supabase/supabase.service';
 export class SupabaseStrategy extends PassportStrategy(Strategy, 'jwt') {
   constructor(
     private readonly configService: ConfigService,
-    private readonly supabaseService: SupabaseService
+    private readonly supabaseService: SupabaseService,
   ) {
     const supabaseJwtSecret = configService.get<string>('SUPABASE_JWT_SECRET');
 
@@ -42,7 +42,7 @@ export class SupabaseStrategy extends PassportStrategy(Strategy, 'jwt') {
       email: payload.email,
       cargo: usuario?.cargo || null, // null se ainda não criou perfil
       id_usuario: usuario?.id_usuario || null,
-      ...payload
+      ...payload,
     };
   }
 }

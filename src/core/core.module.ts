@@ -6,19 +6,8 @@ import { CacheConfigModule } from './cache/cache.module';
 import { CacheService } from './cache/cache.service';
 
 @Module({
-  imports: [
-    GeminiModule,
-    LoggerModule,
-    SupabaseModule,
-    CacheConfigModule,
-  ],
+  imports: [GeminiModule, LoggerModule, SupabaseModule, CacheConfigModule],
   providers: [CacheService],
-  exports: [
-    GeminiModule,
-    LoggerModule,
-    SupabaseModule,
-    CacheConfigModule,
-    CacheService,
-  ],
+  exports: [GeminiModule, LoggerModule, SupabaseModule, CacheConfigModule, CacheService],
 })
 export class CoreModule {}
