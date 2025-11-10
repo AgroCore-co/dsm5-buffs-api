@@ -13,7 +13,78 @@ jobs:
       - name: Checkout código
         uses: actions/checkout@v4
 
-      - name: Deploy para EC2
+      # --- ETAPA DE BUILD (Roda no GitHub) ---
+
+      - name: Configurar Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20' # Use a versão do Node que você usa
+
+      - name: Instalar dependências (com as de dev)
+        run: npm install
+
+      - name: Buildar o projeto
+        run: npm run build
+
+      - name: Instalar APENAS dependências de produção
+        run: npm install --omit=dev
+
+      # --- ETAPA DE DEPLOY (Copia para o EC2) ---
+
+      - name: Copiar arquivos para EC2
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ec2-user
+          key: ${{ secrets.EC2_SSH_KEY }}
+          port: 22
+          script: |
+            # 1. Define o diretório de destino
+            TARGET_DIR="/home/ec2-user/dsm5-buffs-api"
+
+            # 2. Para o PM2 antes de mexer nos arquivos
+            pm2 stop dsm5-buffs-api || true
+
+            # 3. Cria o diretório se não existir
+            mkdir -p $TARGET_DIR
+
+            # 4. Vai para o diretório
+            cd $TARGET_DIR
+
+            # 5. Limpa SÓ o código antigo (mantém o .pm2 e outros)
+            rm -rf dist package.json package-lock.json node_modules
+
+      - name: Copiar 'dist' para EC2
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ec2-user
+          key: ${{ secrets.EC2_SSH_KEY }}
+          port: 22
+          source: 'dist/'
+          target: '/home/ec2-user/dsm5-buffs-api/dist/'
+
+      - name: Copiar 'node_modules' de produção para EC2
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ec2-user
+          key: ${{ secrets.EC2_SSH_KEY }}
+          port: 22
+          source: 'node_modules/'
+          target: '/home/ec2-user/dsm5-buffs-api/node_modules/'
+
+      - name: Copiar 'package.json' e 'lock' para EC2
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ec2-user
+          key: ${{ secrets.EC2_SSH_KEY }}
+          port: 22
+          source: 'package.json,package-lock.json'
+          target: '/home/ec2-user/dsm5-buffs-api/'
+
+      - name: Reiniciar a API no EC2
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.EC2_HOST }}
@@ -22,7 +93,4 @@ jobs:
           port: 22
           script: |
             cd /home/ec2-user/dsm5-buffs-api
-            git pull origin main
-            npm install
-            npm run build
             pm2 restart dsm5-buffs-api
