@@ -455,7 +455,17 @@ export class BufaloService {
 
     // Log para debug
     console.log('🔍 Filtros recebidos:', JSON.stringify(filtros, null, 2));
-    console.log('📊 Paginação:', { page, limit, offset });
+    console.log(
+      '� Status bruto:',
+      filtros.status,
+      'tipo:',
+      typeof filtros.status,
+      'é undefined?',
+      filtros.status === undefined,
+      'é null?',
+      filtros.status === null,
+    );
+    console.log('�📊 Paginação:', { page, limit, offset });
 
     // Query base para contagem
     let queryCount = this.supabase.from(this.tableName).select('*', { count: 'exact', head: true }).eq('id_propriedade', id_propriedade);
@@ -515,10 +525,15 @@ export class BufaloService {
     console.log('📊 Total de registros encontrados:', count);
 
     // Executa busca com ordenação padrão e paginação
-    const { data, error } = await queryData
-      .order('status', { ascending: false })
-      .order('dt_nascimento', { ascending: true })
-      .range(offset, offset + limit - 1);
+    // Se status está sendo filtrado, não ordena por status (já está filtrado)
+    // Senão, prioriza ativos (status DESC) e depois ordena por data de nascimento
+    if (filtros.status !== undefined && filtros.status !== null) {
+      queryData = queryData.order('dt_nascimento', { ascending: true });
+    } else {
+      queryData = queryData.order('status', { ascending: false }).order('dt_nascimento', { ascending: true });
+    }
+
+    const { data, error } = await queryData.range(offset, offset + limit - 1);
 
     if (error) {
       console.error('❌ Erro ao buscar dados:', error);
@@ -532,6 +547,15 @@ export class BufaloService {
     await this.updateMaturityIfNeeded(bufalosAtivos);
 
     const formattedData = formatDateFieldsArray(data || []);
+
+    // Log dos resultados para debug do status
+    if (filtros.status !== undefined) {
+      console.log(
+        '🔍 Status dos búfalos retornados:',
+        formattedData.map((b) => ({ nome: b.nome, status: b.status })),
+      );
+    }
+
     return createPaginatedResponse(formattedData, count || 0, page, limit);
   }
 
