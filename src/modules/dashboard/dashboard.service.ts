@@ -435,7 +435,7 @@ export class DashboardService {
         throw new NotFoundException(`Propriedade com ID ${id_propriedade} não encontrada`);
       }
 
-      // Busca todas as reproduções da propriedade
+      // Busca todas as reproduções da propriedade (ordenadas da mais recente para a mais antiga)
       const { data: reproducoes, error: reproducaoError } = await supabase
         .from('dadosreproducao')
         .select('status, dt_evento')
@@ -451,7 +451,7 @@ export class DashboardService {
       const totalConfirmada = reproducoes?.filter((r) => r.status === 'Confirmada').length || 0;
       const totalFalha = reproducoes?.filter((r) => r.status === 'Falha').length || 0;
 
-      // Buscar a data da última reprodução (já ordenada desc)
+      // A primeira reprodução é a mais recente (já ordenada DESC)
       const ultimaDataReproducao = reproducoes && reproducoes.length > 0 ? formatToSimpleDate(reproducoes[0].dt_evento) : null;
 
       return {
