@@ -453,20 +453,6 @@ export class BufaloService {
       throw new NotFoundException(`Propriedade com ID ${id_propriedade} não encontrada ou você não tem acesso a ela.`);
     }
 
-    // Log para debug
-    console.log('🔍 Filtros recebidos:', JSON.stringify(filtros, null, 2));
-    console.log(
-      '� Status bruto:',
-      filtros.status,
-      'tipo:',
-      typeof filtros.status,
-      'é undefined?',
-      filtros.status === undefined,
-      'é null?',
-      filtros.status === null,
-    );
-    console.log('�📊 Paginação:', { page, limit, offset });
-
     // Query base para contagem
     let queryCount = this.supabase.from(this.tableName).select('*', { count: 'exact', head: true }).eq('id_propriedade', id_propriedade);
 
@@ -485,31 +471,26 @@ export class BufaloService {
 
     // Aplica filtros dinamicamente
     if (filtros.id_raca) {
-      console.log('✅ Aplicando filtro de raça:', filtros.id_raca);
       queryCount = queryCount.eq('id_raca', filtros.id_raca);
       queryData = queryData.eq('id_raca', filtros.id_raca);
     }
 
     if (filtros.sexo) {
-      console.log('✅ Aplicando filtro de sexo:', filtros.sexo);
       queryCount = queryCount.eq('sexo', filtros.sexo);
       queryData = queryData.eq('sexo', filtros.sexo);
     }
 
     if (filtros.nivel_maturidade) {
-      console.log('✅ Aplicando filtro de maturidade:', filtros.nivel_maturidade);
       queryCount = queryCount.eq('nivel_maturidade', filtros.nivel_maturidade);
       queryData = queryData.eq('nivel_maturidade', filtros.nivel_maturidade);
     }
 
     if (filtros.status !== undefined && filtros.status !== null) {
-      console.log('✅ Aplicando filtro de status:', filtros.status, 'tipo:', typeof filtros.status);
       queryCount = queryCount.eq('status', filtros.status);
       queryData = queryData.eq('status', filtros.status);
     }
 
     if (filtros.brinco) {
-      console.log('✅ Aplicando filtro de brinco:', filtros.brinco);
       queryCount = queryCount.ilike('brinco', `${filtros.brinco}%`);
       queryData = queryData.ilike('brinco', `${filtros.brinco}%`);
     }
@@ -518,11 +499,8 @@ export class BufaloService {
     const { count, error: countError } = await queryCount;
 
     if (countError) {
-      console.error('❌ Erro ao contar:', countError);
       throw new InternalServerErrorException('Falha ao contar búfalos com filtros avançados.');
     }
-
-    console.log('📊 Total de registros encontrados:', count);
 
     // Executa busca com ordenação padrão e paginação
     // Se status está sendo filtrado, não ordena por status (já está filtrado)
@@ -536,25 +514,14 @@ export class BufaloService {
     const { data, error } = await queryData.range(offset, offset + limit - 1);
 
     if (error) {
-      console.error('❌ Erro ao buscar dados:', error);
       throw new InternalServerErrorException('Falha ao buscar búfalos com filtros avançados.');
     }
-
-    console.log(`✅ Retornando ${data?.length || 0} búfalos`);
 
     // Atualiza maturidade de búfalos ativos
     const bufalosAtivos = (data || []).filter((bufalo) => bufalo.status === true);
     await this.updateMaturityIfNeeded(bufalosAtivos);
 
     const formattedData = formatDateFieldsArray(data || []);
-
-    // Log dos resultados para debug do status
-    if (filtros.status !== undefined) {
-      console.log(
-        '🔍 Status dos búfalos retornados:',
-        formattedData.map((b) => ({ nome: b.nome, status: b.status })),
-      );
-    }
 
     return createPaginatedResponse(formattedData, count || 0, page, limit);
   }

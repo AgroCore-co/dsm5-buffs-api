@@ -1,7 +1,8 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { IsEnum, IsOptional, IsBoolean, IsUUID, IsString, IsInt, Min, Max } from 'class-validator';
-import { Transform, Type } from 'class-transformer';
+import { Type } from 'class-transformer';
 import { NivelMaturidade, SexoBufalo } from './create-bufalo.dto';
+import { ToBoolean } from '../../../../core/decorators/to-boolean.decorator';
 
 export class FiltroAvancadoBufaloDto {
   // Filtros de búfalo
@@ -38,24 +39,12 @@ export class FiltroAvancadoBufaloDto {
     description: 'Status do búfalo (true para ativo, false para inativo)',
     example: true,
     required: false,
+    type: 'boolean',
   })
-  @IsBoolean()
   @IsOptional()
-  @Transform(({ value }) => {
-    // Se já é boolean, retorna como está
-    if (typeof value === 'boolean') return value;
-
-    // Converte strings para boolean
-    if (value === 'true' || value === '1') return true;
-    if (value === 'false' || value === '0') return false;
-
-    // Se for undefined ou null, retorna undefined
-    if (value === undefined || value === null || value === '') return undefined;
-
-    return value;
-  })
+  @ToBoolean()
+  @IsBoolean()
   status?: boolean;
-
   @ApiProperty({
     description: 'Início do código do brinco para busca progressiva (ex: "IZ", "IZ-0", "IZ-001")',
     example: 'IZ',

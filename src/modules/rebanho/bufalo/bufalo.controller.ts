@@ -175,15 +175,8 @@ export class BufaloController {
   @ApiResponse({ status: 200, description: 'Lista paginada de búfalos filtrados.' })
   @ApiResponse({ status: 404, description: 'Propriedade não encontrada ou sem acesso.' })
   findByFiltros(@Param('id_propriedade', ParseUUIDPipe) id_propriedade: string, @Query() queryParams: FiltroAvancadoBufaloDto, @User() user: any) {
-    console.log('🎯 Controller: queryParams recebidos:', queryParams);
-    console.log('🎯 Controller: status bruto:', queryParams.status, 'tipo:', typeof queryParams.status);
-
     const { page, limit, ...filtros } = queryParams;
     const paginationDto = { page, limit };
-
-    console.log('🎯 Controller: filtros após destructuring:', filtros);
-    console.log('🎯 Controller: status nos filtros:', filtros.status, 'tipo:', typeof filtros.status);
-
     return this.bufaloService.findByFiltros(id_propriedade, filtros, user, paginationDto);
   }
 

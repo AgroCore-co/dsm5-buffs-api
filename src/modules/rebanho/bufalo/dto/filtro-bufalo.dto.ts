@@ -37,22 +37,36 @@ export class FiltroBufaloDto {
     description: 'Status do búfalo (true para ativo, false para inativo)',
     example: true,
     required: false,
+    type: Boolean,
   })
-  @IsBoolean()
+  @Transform(
+    ({ value }) => {
+      // Se for undefined, null ou string vazia, retorna undefined (sem filtro)
+      if (value === undefined || value === null || value === '') {
+        return undefined;
+      }
+
+      // Se já é boolean, retorna como está
+      if (typeof value === 'boolean') {
+        return value;
+      }
+
+      // Converte strings para boolean
+      const stringValue = String(value).toLowerCase();
+      if (stringValue === 'true' || stringValue === '1') {
+        return true;
+      }
+      if (stringValue === 'false' || stringValue === '0') {
+        return false;
+      }
+
+      // Valor não reconhecido, retorna undefined
+      return undefined;
+    },
+    { toClassOnly: true },
+  )
   @IsOptional()
-  @Transform(({ value }) => {
-    // Se já é boolean, retorna como está
-    if (typeof value === 'boolean') return value;
-
-    // Converte strings para boolean
-    if (value === 'true' || value === '1') return true;
-    if (value === 'false' || value === '0') return false;
-
-    // Se for undefined ou null, retorna undefined
-    if (value === undefined || value === null || value === '') return undefined;
-
-    return value;
-  })
+  @IsBoolean()
   status?: boolean;
 
   @ApiProperty({
