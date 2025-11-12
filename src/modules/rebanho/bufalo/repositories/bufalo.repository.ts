@@ -65,10 +65,6 @@ export class BufaloRepository {
       { field: 'dt_nascimento', ascending: true },
     ],
   ) {
-    this.logger.debug(`🔍 Repository findWithFilters chamado`);
-    this.logger.debug(`📋 Filtros recebidos: ${JSON.stringify(filtros)}`);
-    this.logger.debug(`📄 Paginação: ${JSON.stringify(pagination)}`);
-    
     let query = this.getBaseQuery();
 
     // Aplica filtros dinamicamente
