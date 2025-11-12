@@ -1,3 +1,10 @@
+/**
+ * CONTROLLER REFATORADO - USA DOMAIN SERVICES EM VEZ DO SCHEDULER
+ *
+ * Endpoint /verificar agora delega para os serviços de domínio diretos.
+ * Elimina dependência de métodos específicos do scheduler.
+ */
+
 import {
   Controller,
   Get,
@@ -20,7 +27,13 @@ import { CreateAlertaDto, PrioridadeAlerta, NichoAlerta } from './dto/create-ale
 import { SupabaseAuthGuard } from '../auth/guards/auth.guard';
 import { ApiBearerAuth, ApiOperation, ApiQuery, ApiResponse, ApiTags, ApiParam } from '@nestjs/swagger';
 import { PaginationDto } from '../../core/dto/pagination.dto';
-import { AlertasScheduler } from './alerta.scheduler';
+
+// Domain Services
+import { AlertaReproducaoService } from './services/alerta-reproducao.service';
+import { AlertaSanitarioService } from './services/alerta-sanitario.service';
+import { AlertaProducaoService } from './services/alerta-producao.service';
+import { AlertaManejoService } from './services/alerta-manejo.service';
+import { AlertaClinicoService } from './services/alerta-clinico.service';
 
 @ApiBearerAuth('JWT-auth')
 @UseGuards(SupabaseAuthGuard)
@@ -29,7 +42,12 @@ import { AlertasScheduler } from './alerta.scheduler';
 export class AlertasController {
   constructor(
     private readonly alertasService: AlertasService,
-    private readonly alertasScheduler: AlertasScheduler,
+    // Domain services para verificação manual
+    private readonly reproducaoService: AlertaReproducaoService,
+    private readonly sanitarioService: AlertaSanitarioService,
+    private readonly producaoService: AlertaProducaoService,
+    private readonly manejoService: AlertaManejoService,
+    private readonly clinicoService: AlertaClinicoService,
   ) {}
 
   // Este endpoint seria mais para testes ou criação manual,
@@ -41,8 +59,8 @@ export class AlertasController {
       Cria um alerta que pode ser classificado automaticamente usando IA (Gemini).
       
       **Funcionalidades:**
-      - 🤖 **Classificação automática de prioridade**: Se fornecido texto de ocorrência clínica, a IA analisará e definirá a prioridade (BAIXA, MEDIA, ALTA)
-      - 📋 **Criação manual**: Também permite criação manual com prioridade pré-definida
+      -  **Classificação automática de prioridade**: Se fornecido texto de ocorrência clínica, a IA analisará e definirá a prioridade (BAIXA, MEDIA, ALTA)
+      -  **Criação manual**: Também permite criação manual com prioridade pré-definida
       
       **Classificação IA - Critérios:**
       - **ALTA**: Risco de vida, alto contágio, sintomas graves (ex: animal caído, febre alta, mastite gangrenosa)
@@ -75,12 +93,13 @@ export class AlertasController {
       - SANITARIO: Questões sanitárias do rebanho
       - REPRODUCAO: Alertas reprodutivos
       - MANEJO: Alertas de manejo geral
+      - PRODUCAO: Alertas de produção de leite
     `,
   })
   @ApiQuery({
     name: 'tipo',
     required: false,
-    description: 'Filtra pelo tipo do alerta (CLINICO, SANITARIO, REPRODUCAO, MANEJO)',
+    description: 'Filtra pelo tipo do alerta (CLINICO, SANITARIO, REPRODUCAO, MANEJO, PRODUCAO)',
     enum: NichoAlerta,
   })
   @ApiQuery({
@@ -263,21 +282,24 @@ export class AlertasController {
       Executa verificação manual de alertas para uma propriedade, processando dados históricos e atuais.
       
       **Funcionalidade:**
-      - 🔍 **Verificação sob demanda**: Processa dados da propriedade sem esperar os schedulers diários
-      - 🎯 **Filtro por nicho**: Permite verificar apenas nichos específicos (CLINICO, SANITARIO, REPRODUCAO, MANEJO)
-      - 📊 **Processamento de dados históricos**: Ideal para processar dados anteriores à implementação do sistema de alertas
+      -  **Verificação sob demanda**: Processa dados da propriedade sem esperar os schedulers diários
+      -  **Filtro por nicho**: Permite verificar apenas nichos específicos (CLINICO, SANITARIO, REPRODUCAO, MANEJO, PRODUCAO)
+      -  **Processamento de dados históricos**: Ideal para processar dados anteriores à implementação do sistema de alertas
       - ⚡ **Performance otimizada**: Processa apenas uma propriedade por vez para evitar sobrecarga
       
       **Nichos Disponíveis:**
-      - **CLINICO**: Doenças graves que necessitam atenção imediata
-      - **SANITARIO**: Tratamentos com retorno próximo (15 dias) e vacinações programadas (7 dias)
-      - **REPRODUCAO**: Nascimentos previstos (30 dias), coberturas sem diagnóstico (90+ dias), fêmeas vazias (180+ dias)
-      - **MANEJO**: Secagem de búfalas (alertas criados automaticamente no registro de parto)
+      - **CLINICO**: Sinais clínicos precoces (múltiplos tratamentos, ganho de peso insuficiente)
+      - **SANITARIO**: Tratamentos com retorno próximo e vacinações programadas
+      - **REPRODUCAO**: Nascimentos previstos, coberturas sem diagnóstico, fêmeas vazias
+      - **MANEJO**: Secagem de búfalas gestantes
+      - **PRODUCAO**: Queda significativa na produção de leite
       
-      **Exemplo de uso:**
-      - Verificar todos os nichos: não enviar parâmetro nichos
-      - Verificar apenas reprodução: ?nichos=REPRODUCAO
-      - Verificar sanitário e reprodução: ?nichos=SANITARIO&nichos=REPRODUCAO
+      **Diferença: GET /propriedade/:id vs POST /verificar/:id**
+      
+      | Endpoint                         | Ação                              | Quando Usar                              |
+      |----------------------------------|-----------------------------------|------------------------------------------|
+      | GET /alertas/propriedade/:id     | LISTA alertas existentes          | Dashboard, visualização normal           |
+      | POST /alertas/verificar/:id      | PROCESSA dados e CRIA alertas     | Botão "Verificar Alertas", importação    |
     `,
   })
   @ApiParam({
@@ -301,8 +323,8 @@ export class AlertasController {
         success: true,
         message: 'Verificação de alertas concluída',
         propriedade: 'f47ac10b-58cc-4372-a567-0e02b2c3d479',
-        nichos_verificados: ['SANITARIO', 'REPRODUCAO'],
-        alertas_criados: 5,
+        nichos_verificados: ['SANITARIO', 'REPRODUCAO', 'PRODUCAO'],
+        alertas_criados: 7,
         detalhes: {
           SANITARIO: {
             tratamentos: 2,
@@ -313,43 +335,38 @@ export class AlertasController {
             coberturas_sem_diagnostico: 0,
             femeas_vazias: 1,
           },
+          PRODUCAO: {
+            queda_producao: 2,
+          },
         },
       },
     },
   })
-  @ApiResponse({
-    status: 400,
-    description: 'Parâmetros inválidos fornecidos.',
-  })
-  @ApiResponse({
-    status: 404,
-    description: 'Propriedade não encontrada.',
-  })
   async verificarAlertas(@Param('id_propriedade', ParseUUIDPipe) id_propriedade: string, @Query('nichos') nichos?: string | string[]) {
-    // Normaliza nichos para array
+    // Normaliza nichos para array: se não fornecido, verifica todos os nichos disponíveis
     const nichosArray: NichoAlerta[] = nichos
       ? Array.isArray(nichos)
         ? (nichos as NichoAlerta[])
         : [nichos as NichoAlerta]
-      : [NichoAlerta.CLINICO, NichoAlerta.SANITARIO, NichoAlerta.REPRODUCAO, NichoAlerta.MANEJO];
+      : [NichoAlerta.CLINICO, NichoAlerta.SANITARIO, NichoAlerta.REPRODUCAO, NichoAlerta.MANEJO, NichoAlerta.PRODUCAO];
 
     const detalhes: any = {};
     let totalAlertas = 0;
 
-    // Verifica cada nicho solicitado
+    // Processa cada nicho solicitado de forma sequencial
     for (const nicho of nichosArray) {
       switch (nicho) {
         case NichoAlerta.SANITARIO:
-          const tratamentos = await this.alertasScheduler.verificarTratamentosPropriedade(id_propriedade);
-          const vacinacoes = await this.alertasScheduler.verificarVacinacoesPropriedade(id_propriedade);
+          const tratamentos = await this.sanitarioService.verificarTratamentos(id_propriedade);
+          const vacinacoes = await this.sanitarioService.verificarVacinacoes(id_propriedade);
           detalhes[nicho] = { tratamentos, vacinacoes };
           totalAlertas += tratamentos + vacinacoes;
           break;
 
         case NichoAlerta.REPRODUCAO:
-          const nascimentos = await this.alertasScheduler.verificarNascimentosPropriedade(id_propriedade);
-          const coberturasSemDiag = await this.alertasScheduler.verificarCoberturaSemDiagnosticoPropriedade(id_propriedade);
-          const femeasVazias = await this.alertasScheduler.verificarFemeasVaziasPropriedade(id_propriedade);
+          const nascimentos = await this.reproducaoService.verificarNascimentos(id_propriedade);
+          const coberturasSemDiag = await this.reproducaoService.verificarCoberturaSemDiagnostico(id_propriedade);
+          const femeasVazias = await this.reproducaoService.verificarFemeasVazias(id_propriedade);
           detalhes[nicho] = {
             nascimentos,
             coberturas_sem_diagnostico: coberturasSemDiag,
@@ -358,16 +375,22 @@ export class AlertasController {
           totalAlertas += nascimentos + coberturasSemDiag + femeasVazias;
           break;
 
-        case NichoAlerta.CLINICO:
-          detalhes[nicho] = {
-            message: 'Alertas clínicos são criados automaticamente ao registrar doenças graves',
-          };
+        case NichoAlerta.PRODUCAO:
+          const quedaProducao = await this.producaoService.verificarQuedaProducao(id_propriedade);
+          detalhes[nicho] = { queda_producao: quedaProducao };
+          totalAlertas += quedaProducao;
           break;
 
         case NichoAlerta.MANEJO:
-          detalhes[nicho] = {
-            message: 'Alertas de manejo (secagem) são criados automaticamente ao registrar partos',
-          };
+          const secagem = await this.manejoService.verificarSecagemPendente(id_propriedade);
+          detalhes[nicho] = { secagem_pendente: secagem };
+          totalAlertas += secagem;
+          break;
+
+        case NichoAlerta.CLINICO:
+          const sinaisClinicos = await this.clinicoService.verificarSinaisClinicosPrecoces(id_propriedade);
+          detalhes[nicho] = { sinais_clinicos_precoces: sinaisClinicos };
+          totalAlertas += sinaisClinicos;
           break;
       }
     }
