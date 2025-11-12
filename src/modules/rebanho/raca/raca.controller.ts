@@ -2,8 +2,7 @@ import { Controller, Get, Post, Body, UseGuards, Param, Patch, Delete, ParseUUID
 import { CacheInterceptor, CacheTTL } from '@nestjs/cache-manager';
 import { RacaService } from './raca.service';
 import { LoggerService } from '../../../core/logger/logger.service';
-import { CreateRacaDto } from './dto/create-raca.dto';
-import { UpdateRacaDto } from './dto/update-raca.dto';
+import { CreateRacaDto, UpdateRacaDto } from './dto';
 import { ApiTags, ApiBearerAuth, ApiOperation, ApiResponse, ApiParam } from '@nestjs/swagger';
 import { SupabaseAuthGuard } from '../../auth/guards/auth.guard';
 

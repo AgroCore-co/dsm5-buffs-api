@@ -1,20 +1,21 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, ParseUUIDPipe, UseGuards, HttpCode, Logger, Query } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, ParseUUIDPipe, UseGuards, HttpCode, Query } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags, ApiOperation, ApiResponse, ApiParam, ApiQuery } from '@nestjs/swagger';
 import { SupabaseAuthGuard } from '../../auth/guards/auth.guard';
 import { User } from '../../auth/decorators/user.decorator';
 import { MovLoteService } from './mov-lote.service';
-import { CreateMovLoteDto } from './dto/create-mov-lote.dto';
-import { UpdateMovLoteDto } from './dto/update-mov-lote.dto';
+import { CreateMovLoteDto, UpdateMovLoteDto } from './dto';
 import { PaginationDto } from '../../../core/dto/pagination.dto';
+import { LoggerService } from '../../../core/logger/logger.service';
 
 @ApiBearerAuth('JWT-auth')
 @UseGuards(SupabaseAuthGuard)
 @ApiTags('Rebanho - Movimentação de Lotes')
 @Controller('mov-lote')
 export class MovLoteController {
-  private readonly logger = new Logger(MovLoteController.name);
-
-  constructor(private readonly service: MovLoteService) {}
+  constructor(
+    private readonly service: MovLoteService,
+    private readonly logger: LoggerService,
+  ) {}
 
   @Post()
   @ApiOperation({
@@ -24,31 +25,23 @@ export class MovLoteController {
   @ApiResponse({ status: 201, description: 'Movimentação registrada com sucesso.' })
   @ApiResponse({ status: 400, description: 'Dados de entrada inválidos.' })
   async create(@Body() createDto: CreateMovLoteDto, @User() user: any) {
-    const startTime = Date.now();
-    const userInfo = user?.sub || user?.id || 'unknown';
+    this.logger.logApiRequest('POST', '/mov-lote', undefined, {
+      module: 'MovLoteController',
+      method: 'create',
+      userId: user?.sub || user?.id,
+    });
 
-    this.logger.log(`[REQUEST] Movimentacao fisica solicitada - Usuario: ${userInfo}, Payload: ${JSON.stringify(createDto)}`);
-
-    try {
-      const result = await this.service.create(createDto, user);
-      const duration = Date.now() - startTime;
-
-      this.logger.log(
-        `[RESPONSE_SUCCESS] Movimentacao fisica registrada - Usuario: ${userInfo}, Movimento ID: ${result.movimentacao.id}, Duracao: ${duration}ms`,
-      );
-
-      return result;
-    } catch (error) {
-      const duration = Date.now() - startTime;
-      this.logger.error(`[RESPONSE_ERROR] Falha na movimentacao fisica - Usuario: ${userInfo}, Erro: ${error.message}, Duracao: ${duration}ms`);
-      throw error;
-    }
+    return this.service.create(createDto, user);
   }
 
   @Get()
   @ApiOperation({ summary: 'Lista todas as movimentações de lotes' })
   @ApiResponse({ status: 200, description: 'Lista de movimentações retornada com sucesso.' })
   findAll() {
+    this.logger.logApiRequest('GET', '/mov-lote', undefined, {
+      module: 'MovLoteController',
+      method: 'findAll',
+    });
     return this.service.findAll();
   }
 
@@ -59,6 +52,11 @@ export class MovLoteController {
   @ApiQuery({ name: 'limit', required: false, type: Number, description: 'Itens por página (padrão: 10)' })
   @ApiResponse({ status: 200, description: 'Lista retornada com sucesso.' })
   findByPropriedade(@Param('id_propriedade', ParseUUIDPipe) id_propriedade: string, @Query() paginationDto: PaginationDto) {
+    this.logger.logApiRequest('GET', `/mov-lote/propriedade/${id_propriedade}`, undefined, {
+      module: 'MovLoteController',
+      method: 'findByPropriedade',
+      propriedadeId: id_propriedade,
+    });
     return this.service.findByPropriedade(id_propriedade, paginationDto);
   }
 

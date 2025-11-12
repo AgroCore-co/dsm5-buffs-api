@@ -7,8 +7,8 @@ export class CreateRacaDto {
     example: 'Murrah',
     maxLength: 50,
   })
-  @IsString()
-  @IsNotEmpty()
-  @MaxLength(50)
+  @IsString({ message: 'O nome da raça deve ser uma string' })
+  @IsNotEmpty({ message: 'O nome da raça é obrigatório' })
+  @MaxLength(50, { message: 'O nome da raça deve ter no máximo 50 caracteres' })
   nome: string;
 }

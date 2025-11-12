@@ -1,39 +1,23 @@
-import {
-  Controller,
-  Get,
-  Post,
-  Body,
-  Patch,
-  Param,
-  Delete,
-  UseGuards,
-  ParseUUIDPipe,
-  HttpCode,
-  UseInterceptors,
-  Logger,
-  Query,
-} from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, ParseUUIDPipe, HttpCode, UseInterceptors, Query } from '@nestjs/common';
 import { CacheInterceptor, CacheTTL } from '@nestjs/cache-manager';
 import { BufaloService } from './bufalo.service';
-import { CreateBufaloDto } from './dto/create-bufalo.dto';
-import { UpdateBufaloDto } from './dto/update-bufalo.dto';
-import { UpdateGrupoBufaloDto } from './dto/update-grupo-bufalo.dto';
-import { FiltroAvancadoBufaloDto } from './dto/filtro-avancado-bufalo.dto';
+import { CreateBufaloDto, UpdateBufaloDto, UpdateGrupoBufaloDto, FiltroAvancadoBufaloDto, CategoriaABCB } from './dto';
 import { ApiTags, ApiOperation, ApiResponse, ApiParam, ApiBearerAuth, ApiQuery } from '@nestjs/swagger';
 import { SupabaseAuthGuard } from '../../auth/guards/auth.guard';
 import { User } from '../../auth/decorators/user.decorator';
-import { CategoriaABCB } from './dto/categoria-abcb.dto';
 import { NotFoundException, InternalServerErrorException } from '@nestjs/common';
 import { PaginationDto } from '../../../core/dto/pagination.dto';
+import { LoggerService } from '../../../core/logger/logger.service';
 
 @ApiBearerAuth('JWT-auth')
 @UseGuards(SupabaseAuthGuard)
 @ApiTags('Rebanho - Búfalos')
 @Controller('bufalos')
 export class BufaloController {
-  private readonly logger = new Logger(BufaloController.name);
-
-  constructor(private readonly bufaloService: BufaloService) {}
+  constructor(
+    private readonly bufaloService: BufaloService,
+    private readonly logger: LoggerService,
+  ) {}
 
   @Post()
   @ApiOperation({ summary: 'Registra um novo búfalo para o usuário logado' })
@@ -41,9 +25,11 @@ export class BufaloController {
   @ApiResponse({ status: 400, description: 'Dados inválidos.' })
   @ApiResponse({ status: 404, description: 'Propriedade, raça ou outra referência não encontrada.' })
   create(@Body() createBufaloDto: CreateBufaloDto, @User() user: any) {
-    console.log('🎯 Controller POST /bufalos chamado');
-    console.log('📝 DTO recebido:', createBufaloDto);
-    console.log('👤 User:', user?.email || user?.sub);
+    this.logger.logApiRequest('POST', '/bufalos', undefined, {
+      module: 'BufaloController',
+      method: 'create',
+      userEmail: user?.email || user?.sub,
+    });
 
     return this.bufaloService.create(createBufaloDto, user);
   }
@@ -58,6 +44,11 @@ export class BufaloController {
   @ApiQuery({ name: 'limit', required: false, type: Number, description: 'Número de itens por página (máximo 100)' })
   @ApiResponse({ status: 200, description: 'Lista paginada de búfalos retornada com sucesso.' })
   findAll(@User() user: any, @Query() paginationDto: PaginationDto) {
+    this.logger.logApiRequest('GET', '/bufalos', undefined, {
+      module: 'BufaloController',
+      method: 'findAll',
+      userEmail: user?.email || user?.sub,
+    });
     return this.bufaloService.findAll(user, paginationDto);
   }
 

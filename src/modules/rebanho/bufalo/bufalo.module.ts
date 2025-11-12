@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { BufaloService } from './bufalo.service';
 import { BufaloController } from './bufalo.controller';
 import { SupabaseModule } from '../../../core/supabase/supabase.module';
+import { LoggerModule } from '../../../core/logger/logger.module';
 import { AuthModule } from '../../auth/auth.module';
 import { GenealogiaModule } from '../../reproducao/genealogia/genealogia.module';
 
@@ -22,7 +23,7 @@ import { BufaloFiltrosService } from './services/bufalo-filtros.service';
  * - BufaloFiltrosService (lógica de filtros unificados)
  */
 @Module({
-  imports: [SupabaseModule, AuthModule, GenealogiaModule],
+  imports: [SupabaseModule, LoggerModule, AuthModule, GenealogiaModule],
   controllers: [BufaloController],
   providers: [BufaloService, BufaloRepository, BufaloMaturidadeService, BufaloCategoriaService, BufaloFiltrosService],
   exports: [BufaloService],

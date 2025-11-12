@@ -11,7 +11,7 @@ export enum CategoriaABCB {
 
 export class FiltroCategoriaBufaloDto {
   @ApiProperty({ description: 'Categoria ABCB para filtrar', enum: CategoriaABCB, required: false })
-  @IsEnum(CategoriaABCB)
+  @IsEnum(CategoriaABCB, { message: 'A categoria deve ser PO, PC, PA, CCG ou SRD' })
   @IsOptional()
   categoria?: CategoriaABCB;
 }

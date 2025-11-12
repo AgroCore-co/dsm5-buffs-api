@@ -2,8 +2,7 @@ import { Controller, Get, Post, Body, UseGuards, Param, Patch, Delete, ParseUUID
 import { CacheInterceptor, CacheTTL } from '@nestjs/cache-manager';
 import { GrupoService } from './grupo.service';
 import { LoggerService } from '../../../core/logger/logger.service';
-import { CreateGrupoDto } from './dto/create-grupo.dto';
-import { UpdateGrupoDto } from './dto/update-grupo.dto';
+import { CreateGrupoDto, UpdateGrupoDto } from './dto';
 import { ApiTags, ApiBearerAuth, ApiOperation, ApiResponse, ApiParam, ApiQuery } from '@nestjs/swagger';
 import { SupabaseAuthGuard } from '../../auth/guards/auth.guard';
 import { PaginationDto } from '../../../core/dto/pagination.dto';
