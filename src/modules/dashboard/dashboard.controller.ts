@@ -2,10 +2,7 @@ import { Controller, Get, Param, ParseUUIDPipe, Query, UseGuards } from '@nestjs
 import { ApiTags, ApiOperation, ApiResponse, ApiParam, ApiBearerAuth, ApiQuery } from '@nestjs/swagger';
 import { SupabaseAuthGuard } from '../auth/guards/auth.guard';
 import { DashboardService } from './dashboard.service';
-import { DashboardStatsDto } from './dto/dashboard-stats.dto';
-import { DashboardLactacaoDto } from './dto/dashboard-lactacao.dto';
-import { DashboardProducaoMensalDto } from './dto/dashboard-producao-mensal.dto';
-import { DashboardReproducaoDto } from './dto/dashboard-reproducao.dto';
+import { DashboardStatsDto, DashboardLactacaoDto, DashboardProducaoMensalDto, DashboardReproducaoDto } from './dto';
 
 @ApiBearerAuth('JWT-auth')
 @UseGuards(SupabaseAuthGuard)

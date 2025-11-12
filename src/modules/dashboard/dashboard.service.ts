@@ -1,14 +1,22 @@
 import { Injectable, NotFoundException, InternalServerErrorException } from '@nestjs/common';
 import { SupabaseService } from '../../core/supabase/supabase.service';
-import { DashboardStatsDto } from './dto/dashboard-stats.dto';
-import { DashboardLactacaoDto, CicloLactacaoMetricaDto } from './dto/dashboard-lactacao.dto';
-import { DashboardProducaoMensalDto, ProducaoMensalItemDto } from './dto/dashboard-producao-mensal.dto';
-import { DashboardReproducaoDto } from './dto/dashboard-reproducao.dto';
+import { LoggerService } from '../../core/logger/logger.service';
+import {
+  DashboardStatsDto,
+  DashboardLactacaoDto,
+  CicloLactacaoMetricaDto,
+  DashboardProducaoMensalDto,
+  ProducaoMensalItemDto,
+  DashboardReproducaoDto,
+} from './dto';
 import { formatToSimpleDate } from '../../core/utils/date-formatter.utils';
 
 @Injectable()
 export class DashboardService {
-  constructor(private readonly supabaseService: SupabaseService) {}
+  constructor(
+    private readonly supabaseService: SupabaseService,
+    private readonly logger: LoggerService,
+  ) {}
 
   /**
    * Retorna estatísticas do dashboard para uma propriedade específica
@@ -35,6 +43,7 @@ export class DashboardService {
         .eq('id_propriedade', id_propriedade);
 
       if (bufalosError) {
+        this.logger.logError(bufalosError, { module: 'Dashboard', method: 'getStats', context: 'bufalos', id_propriedade });
         throw new InternalServerErrorException(`Erro ao buscar dados dos búfalos: ${bufalosError.message}`);
       }
 
@@ -46,6 +55,7 @@ export class DashboardService {
         .eq('status', 'Em Lactação');
 
       if (lactacaoError) {
+        this.logger.logError(lactacaoError, { module: 'Dashboard', method: 'getStats', context: 'lactacao', id_propriedade });
         throw new InternalServerErrorException(`Erro ao buscar dados de lactação: ${lactacaoError.message}`);
       }
 
@@ -56,6 +66,7 @@ export class DashboardService {
         .eq('id_propriedade', id_propriedade);
 
       if (lotesError) {
+        this.logger.logError(lotesError, { module: 'Dashboard', method: 'getStats', context: 'lotes', id_propriedade });
         throw new InternalServerErrorException(`Erro ao buscar dados dos lotes: ${lotesError.message}`);
       }
 
@@ -66,6 +77,7 @@ export class DashboardService {
         .eq('id_propriedade', id_propriedade);
 
       if (usuariosError) {
+        this.logger.logError(usuariosError, { module: 'Dashboard', method: 'getStats', context: 'usuarios', id_propriedade });
         throw new InternalServerErrorException(`Erro ao buscar dados dos usuários: ${usuariosError.message}`);
       }
 
@@ -104,6 +116,7 @@ export class DashboardService {
       if (error instanceof NotFoundException || error instanceof InternalServerErrorException) {
         throw error;
       }
+      this.logger.logError(error, { module: 'Dashboard', method: 'getStats', id_propriedade });
       throw new InternalServerErrorException(`Erro inesperado ao gerar estatísticas: ${error.message}`);
     }
   }
@@ -143,6 +156,7 @@ export class DashboardService {
         .not('dt_secagem_real', 'is', null);
 
       if (fetchError) {
+        this.logger.logError(fetchError, { module: 'Dashboard', method: 'getLactacaoMetricas', id_propriedade, ano });
         throw new InternalServerErrorException(`Erro ao buscar dados de lactação: ${fetchError.message}`);
       }
 
@@ -224,6 +238,7 @@ export class DashboardService {
       if (error instanceof NotFoundException || error instanceof InternalServerErrorException) {
         throw error;
       }
+      this.logger.logError(error, { module: 'Dashboard', method: 'getLactacaoMetricas', id_propriedade, ano });
       throw new InternalServerErrorException(`Erro inesperado ao gerar métricas de lactação: ${error.message}`);
     }
   }
@@ -251,38 +266,41 @@ export class DashboardService {
       const dataInicio = `${anoReferencia}-01-01`;
       const dataFim = `${anoReferencia}-12-31`;
 
-      console.log(`🔍 Buscando ordenhas para propriedade ${id_propriedade} entre ${dataInicio} e ${dataFim}`);
+      this.logger.log(`Buscando ordenhas para propriedade ${id_propriedade} entre ${dataInicio} e ${dataFim}`, {
+        module: 'Dashboard',
+        method: 'getProducaoMensal',
+        id_propriedade,
+        anoReferencia,
+      });
 
-      // Primeiro, verificar se existem dados SEM filtro de propriedade
-      const { data: todasOrdenhasSemFiltro, error: errorSemFiltro } = await supabase
+      // Verificar dados disponíveis (apenas para debug)
+      const { data: todasOrdenhasSemFiltro } = await supabase
         .from('dadoslactacao')
         .select('dt_ordenha, id_propriedade, id_bufala')
         .order('dt_ordenha', { ascending: true })
         .limit(5);
 
-      console.log(`🔎 Teste SEM filtro de propriedade:`, {
+      this.logger.log(`Teste sem filtro de propriedade`, {
+        module: 'Dashboard',
+        method: 'getProducaoMensal',
         total: todasOrdenhasSemFiltro?.length || 0,
-        amostra: todasOrdenhasSemFiltro,
-        erro: errorSemFiltro,
       });
 
-      // Agora verificar COM filtro de propriedade
-      const { data: todasOrdenhas, error: errorComFiltro } = await supabase
+      const { data: todasOrdenhas } = await supabase
         .from('dadoslactacao')
         .select('dt_ordenha, id_propriedade, id_bufala')
         .eq('id_propriedade', id_propriedade)
         .order('dt_ordenha', { ascending: true })
         .limit(5);
 
-      console.log(`🔎 Teste COM filtro de propriedade:`, {
+      this.logger.log(`Teste com filtro de propriedade`, {
+        module: 'Dashboard',
+        method: 'getProducaoMensal',
         id_propriedade,
         total: todasOrdenhas?.length || 0,
-        amostra: todasOrdenhas,
-        erro: errorComFiltro,
       });
 
       if (todasOrdenhas && todasOrdenhas.length > 0) {
-        // Buscar range completo
         const { data: rangeData } = await supabase
           .from('dadoslactacao')
           .select('dt_ordenha')
@@ -292,10 +310,12 @@ export class DashboardService {
         if (rangeData && rangeData.length > 0) {
           const primeiraData = rangeData[0].dt_ordenha;
           const ultimaData = rangeData[rangeData.length - 1].dt_ordenha;
-          console.log(`📅 Dados disponíveis de ${primeiraData} até ${ultimaData} (${rangeData.length} registros)`);
+          this.logger.log(`Dados disponíveis de ${primeiraData} até ${ultimaData} (${rangeData.length} registros)`, {
+            module: 'Dashboard',
+            method: 'getProducaoMensal',
+            id_propriedade,
+          });
         }
-      } else {
-        console.log(`⚠️ Nenhum dado de ordenha encontrado para esta propriedade`);
       }
 
       const { data: ordenhas, error: ordenhasError } = await supabase
@@ -306,14 +326,21 @@ export class DashboardService {
         .lte('dt_ordenha', dataFim)
         .order('dt_ordenha', { ascending: true });
 
-      console.log(`📊 Ordenhas encontradas no período ${dataInicio} a ${dataFim}: ${ordenhas?.length || 0}`);
-      if (ordenhas && ordenhas.length > 0) {
-        console.log(`🔹 Primeira ordenha:`, ordenhas[0]);
-        console.log(`🔹 Última ordenha:`, ordenhas[ordenhas.length - 1]);
-      }
+      this.logger.log(`Ordenhas encontradas no período`, {
+        module: 'Dashboard',
+        method: 'getProducaoMensal',
+        id_propriedade,
+        periodo: `${dataInicio} a ${dataFim}`,
+        total: ordenhas?.length || 0,
+      });
 
       if (ordenhasError) {
-        console.error(`❌ Erro ao buscar ordenhas:`, ordenhasError);
+        this.logger.logError(ordenhasError, {
+          module: 'Dashboard',
+          method: 'getProducaoMensal',
+          context: 'buscar_ordenhas',
+          id_propriedade,
+        });
         throw new InternalServerErrorException(`Erro ao buscar dados de ordenha: ${ordenhasError.message}`);
       }
 
@@ -333,15 +360,17 @@ export class DashboardService {
         mesData.dias.add(ordenha.dt_ordenha.substring(0, 10)); // YYYY-MM-DD
       });
 
-      console.log(`📅 Meses com produção:`, Array.from(producaoPorMes.keys()));
-      console.log(
-        `📊 Totais por mês:`,
-        Array.from(producaoPorMes.entries()).map(([mes, dados]) => ({
+      this.logger.log(`Meses com produção`, {
+        module: 'Dashboard',
+        method: 'getProducaoMensal',
+        id_propriedade,
+        meses: Array.from(producaoPorMes.keys()),
+        totais: Array.from(producaoPorMes.entries()).map(([mes, dados]) => ({
           mes,
-          total: dados.total,
+          total: Math.round(dados.total * 100) / 100,
           bufalas: dados.bufalas.size,
         })),
-      );
+      });
 
       // Construir série histórica
       const serieHistorica: ProducaoMensalItemDto[] = [];
@@ -368,8 +397,13 @@ export class DashboardService {
       const mesAnteriorStr =
         mesReferenciaAtual > 1 ? `${anoReferencia}-${mesReferenciaAnterior.toString().padStart(2, '0')}` : `${anoReferencia - 1}-12`;
 
-      console.log(`📊 Último mês com dados: ${mesAtualStr} (mês ${mesReferenciaAtual})`);
-      console.log(`📊 Mês anterior: ${mesAnteriorStr} (mês ${mesReferenciaAnterior})`);
+      this.logger.log(`Referências de meses calculadas`, {
+        module: 'Dashboard',
+        method: 'getProducaoMensal',
+        id_propriedade,
+        mesAtual: mesAtualStr,
+        mesAnterior: mesAnteriorStr,
+      });
 
       // Preencher todos os 12 meses do ano
       for (let mes = 1; mes <= 12; mes++) {
@@ -413,6 +447,7 @@ export class DashboardService {
       if (error instanceof NotFoundException || error instanceof InternalServerErrorException) {
         throw error;
       }
+      this.logger.logError(error, { module: 'Dashboard', method: 'getProducaoMensal', id_propriedade, ano: anoReferencia });
       throw new InternalServerErrorException(`Erro inesperado ao gerar métricas de produção mensal: ${error.message}`);
     }
   }
@@ -432,6 +467,7 @@ export class DashboardService {
         .single();
 
       if (propError || !propriedadeExists) {
+        this.logger.logError(propError, { module: 'Dashboard', method: 'getReproducaoMetricas', id_propriedade });
         throw new NotFoundException(`Propriedade com ID ${id_propriedade} não encontrada`);
       }
 
@@ -443,6 +479,7 @@ export class DashboardService {
         .order('dt_evento', { ascending: false });
 
       if (reproducaoError) {
+        this.logger.logError(reproducaoError, { module: 'Dashboard', method: 'getReproducaoMetricas', id_propriedade });
         throw new InternalServerErrorException(`Erro ao buscar reproduções: ${reproducaoError.message}`);
       }
 
@@ -464,6 +501,7 @@ export class DashboardService {
       if (error instanceof NotFoundException || error instanceof InternalServerErrorException) {
         throw error;
       }
+      this.logger.logError(error, { module: 'Dashboard', method: 'getReproducaoMetricas', id_propriedade });
       throw new InternalServerErrorException(`Erro inesperado ao gerar métricas de reprodução: ${error.message}`);
     }
   }
