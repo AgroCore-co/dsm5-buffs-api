@@ -698,6 +698,7 @@ export class ControleLeiteiroService {
         brinco: bufala.brinco || 'Sem brinco',
         idade_meses: idadeMeses,
         raca: nomeRaca,
+        classificacao: '', // Será calculado após obter a média do rebanho
         ciclo_atual: {
           id_ciclo_lactacao: ciclo.id_ciclo_lactacao,
           numero_ciclo: count || 0,
@@ -720,9 +721,26 @@ export class ControleLeiteiroService {
       });
     }
 
+    // 7. Calcular média do rebanho e classificar
+    const mediaRebanho = resultado.length > 0 ? resultado.reduce((sum, f) => sum + f.producao_atual.total_produzido, 0) / resultado.length : 0;
+
+    // 8. Atribuir classificação baseada na média do rebanho
+    resultado.forEach((femea) => {
+      const totalProduzido = femea.producao_atual.total_produzido;
+      femea.classificacao =
+        totalProduzido >= mediaRebanho * 1.2
+          ? 'Ótima'
+          : totalProduzido >= mediaRebanho
+            ? 'Boa'
+            : totalProduzido >= mediaRebanho * 0.8
+              ? 'Mediana'
+              : 'Ruim';
+    });
+
     this.customLogger.log(`${resultado.length} fêmeas em lactação encontradas`, {
       module: 'ControleLeiteiroService',
       method: 'findFemeasEmLactacao',
+      mediaRebanho: mediaRebanho.toFixed(2),
     });
 
     return resultado;

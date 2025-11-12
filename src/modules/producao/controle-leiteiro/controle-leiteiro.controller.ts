@@ -149,13 +149,19 @@ export class ControleLeiteiroController {
   @ApiOperation({
     summary: '📋 Listar búfalas disponíveis para ordenha',
     description: `
-**Retorna:** Todas as búfalas com ciclo de lactação ATIVO.
+**Retorna:** Todas as búfalas com ciclo de lactação ATIVO, incluindo classificação de produção.
+
+**Classificação baseada na média do rebanho:**
+- **Ótima**: produção >= 120% da média
+- **Boa**: produção >= média
+- **Mediana**: produção >= 80% da média  
+- **Ruim**: produção < 80% da média
 
 **Use antes de:** Registrar uma nova ordenha para ver quais búfalas podem ser ordenhadas.
     `,
   })
   @ApiParam({ name: 'id_propriedade', description: 'ID da propriedade', type: 'string' })
-  @ApiResponse({ status: 200, description: 'Fêmeas em lactação com dados de produção', type: [FemeaEmLactacaoDto] })
+  @ApiResponse({ status: 200, description: 'Fêmeas em lactação com dados de produção e classificação', type: [FemeaEmLactacaoDto] })
   async getFemeasEmLactacao(@Param('id_propriedade', ParseUUIDPipe) id_propriedade: string): Promise<FemeaEmLactacaoDto[]> {
     this.logger.logApiRequest('GET', `/lactacao/femeas/em-lactacao/${id_propriedade}`, undefined, {
       module: 'ControleLeiteiroController',

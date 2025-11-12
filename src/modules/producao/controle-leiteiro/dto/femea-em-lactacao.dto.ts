@@ -14,6 +14,7 @@ import { ApiProperty } from '@nestjs/swagger';
  *   "brinco": "BR-12345",
  *   "idade_meses": 48,
  *   "raca": "Murrah",
+ *   "classificacao": "Ótima",
  *   "ciclo_atual": {
  *     "id_ciclo_lactacao": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
  *     "numero_ciclo": 2,
@@ -88,16 +89,26 @@ export class FemeaEmLactacaoDto {
    * Obtido através da relação com a tabela 'raca'.
    * @example 'Murrah'
    */
-  /**
-   * Nome da raça da búfala conforme cadastro.
-   * Obtido através da relação com a tabela 'raca'.
-   * @example 'Murrah'
-   */
   @ApiProperty({
     description: 'Nome da raça da búfala',
     example: 'Murrah',
   })
   raca: string;
+
+  /**
+   * Classificação da búfala baseada na produção comparada à média do rebanho.
+   * - Ótima: produção >= 120% da média
+   * - Boa: produção >= média
+   * - Mediana: produção >= 80% da média
+   * - Ruim: produção < 80% da média
+   * @example 'Ótima'
+   */
+  @ApiProperty({
+    description: 'Classificação da produção (Ótima, Boa, Mediana, Ruim)',
+    example: 'Ótima',
+    enum: ['Ótima', 'Boa', 'Mediana', 'Ruim'],
+  })
+  classificacao: string;
 
   /**
    * Informações do ciclo de lactação ativo.
