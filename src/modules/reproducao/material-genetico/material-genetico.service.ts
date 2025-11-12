@@ -1,5 +1,6 @@
-import { Injectable, InternalServerErrorException, NotFoundException, Logger } from '@nestjs/common';
+import { Injectable, InternalServerErrorException, NotFoundException } from '@nestjs/common';
 import { SupabaseService } from '../../../core/supabase/supabase.service';
+import { LoggerService } from '../../../core/logger/logger.service';
 import { CreateMaterialGeneticoDto } from './dto/create-material-genetico.dto';
 import { UpdateMaterialGeneticoDto } from './dto/update-material-genetico.dto';
 import { PaginationDto } from '../../../core/dto/pagination.dto';
@@ -9,14 +10,17 @@ import { formatDateFields, formatDateFieldsArray } from '../../../core/utils/dat
 
 @Injectable()
 export class MaterialGeneticoService {
-  private readonly logger = new Logger(MaterialGeneticoService.name);
-
-  constructor(private readonly supabase: SupabaseService) {}
+  constructor(
+    private readonly supabase: SupabaseService,
+    private readonly logger: LoggerService,
+  ) {}
 
   private readonly tableName = 'materialgenetico';
 
   async create(createMaterialGeneticoDto: CreateMaterialGeneticoDto) {
-    this.logger.log('[INICIO] Criando novo material genético');
+    const module = 'MaterialGeneticoService';
+    const method = 'create';
+    this.logger.log('Criando novo material genético', { module, method });
 
     try {
       // IMPORTANTE: Garantir que NÃO enviamos id_material - deixa o banco gerar automaticamente
@@ -29,7 +33,7 @@ export class MaterialGeneticoService {
         data_coleta: createMaterialGeneticoDto.data_coleta,
       };
 
-      this.logger.debug(`[DADOS_LIMPOS] Inserindo: ${JSON.stringify(dadosLimpos)}`);
+      this.logger.debug('Dados preparados para inserção', { module, method, dadosLimpos });
 
       const { data, error } = await this.supabase
         .getAdminClient()
@@ -39,24 +43,26 @@ export class MaterialGeneticoService {
         .single();
 
       if (error) {
-        this.logger.error(`[ERRO_INSERCAO] ${error.message}`);
+        this.logger.error('Erro ao inserir material genético', error.message, { module, method });
         throw new InternalServerErrorException(`Falha ao criar material genético: ${error.message}`);
       }
 
-      this.logger.log(`[SUCESSO] Material genético criado com ID: ${data.id_material}`);
+      this.logger.log('Material genético criado com sucesso', { module, method, id_material: data.id_material });
 
       return {
         message: 'Material genético criado com sucesso',
         data: formatDateFields(data),
       };
     } catch (error) {
-      this.logger.error(`[ERRO_GERAL] ${error.message}`, error.stack);
+      this.logger.error('Erro ao criar material genético', error.message, { module, method });
       throw error;
     }
   }
 
   async findAll(paginationDto: PaginationDto = {}): Promise<PaginatedResponse<any>> {
-    this.logger.log('[INICIO] Buscando todos os materiais genéticos com paginação');
+    const module = 'MaterialGeneticoService';
+    const method = 'findAll';
+    this.logger.log('Buscando todos os materiais genéticos', { module, method });
 
     try {
       const { page = 1, limit = 10 } = paginationDto;
@@ -66,7 +72,7 @@ export class MaterialGeneticoService {
       const { count, error: countError } = await this.supabase.getAdminClient().from(this.tableName).select('*', { count: 'exact', head: true });
 
       if (countError) {
-        this.logger.error(`[ERRO] Falha ao contar: ${countError.message}`);
+        this.logger.error('Erro ao contar registros', countError.message, { module, method });
         throw new InternalServerErrorException(`Erro ao contar material genético: ${countError.message}`);
       }
 
@@ -79,22 +85,24 @@ export class MaterialGeneticoService {
         .range(offset, offset + limitValue - 1);
 
       if (error) {
-        this.logger.error(`[ERRO] Falha na consulta: ${error.message}`);
+        this.logger.error('Erro ao buscar materiais genéticos', error.message, { module, method });
         throw new InternalServerErrorException(`Erro ao buscar material genético: ${error.message}`);
       }
 
-      this.logger.log(`[SUCESSO] ${data?.length || 0} materiais genéticos encontrados (página ${page})`);
+      this.logger.log('Materiais genéticos encontrados', { module, method, count: data?.length || 0, page });
 
       const formattedData = formatDateFieldsArray(data || []);
       return createPaginatedResponse(formattedData, count || 0, page, limitValue);
     } catch (error) {
-      this.logger.error(`[ERRO_GERAL] ${error.message}`);
+      this.logger.error('Erro ao buscar materiais genéticos', error.message, { module, method });
       throw new InternalServerErrorException(`Erro ao buscar material genético: ${error.message}`);
     }
   }
 
   async findByPropriedade(id_propriedade: string, paginationDto: PaginationDto = {}): Promise<PaginatedResponse<any>> {
-    this.logger.log('[INICIO] Buscando materiais genéticos por propriedade com paginação');
+    const module = 'MaterialGeneticoService';
+    const method = 'findByPropriedade';
+    this.logger.log('Buscando materiais genéticos por propriedade', { module, method, id_propriedade });
 
     try {
       const { page = 1, limit = 10 } = paginationDto;
@@ -107,7 +115,7 @@ export class MaterialGeneticoService {
         .eq('id_propriedade', id_propriedade);
 
       if (countError) {
-        this.logger.error(`[ERRO] Falha ao contar materiais da propriedade: ${countError.message}`);
+        this.logger.error('Erro ao contar materiais da propriedade', countError.message, { module, method });
         throw new InternalServerErrorException(`Erro ao contar material genético: ${countError.message}`);
       }
 
@@ -121,16 +129,16 @@ export class MaterialGeneticoService {
         .range(offset, offset + limitValue - 1);
 
       if (error) {
-        this.logger.error(`[ERRO] Falha na consulta por propriedade: ${error.message}`);
+        this.logger.error('Erro ao buscar por propriedade', error.message, { module, method });
         throw new InternalServerErrorException(`Erro ao buscar material genético: ${error.message}`);
       }
 
-      this.logger.log(`[SUCESSO] ${data?.length || 0} materiais genéticos encontrados na propriedade (página ${page})`);
+      this.logger.log('Materiais genéticos encontrados na propriedade', { module, method, count: data?.length || 0, page });
 
       const formattedData = formatDateFieldsArray(data || []);
       return createPaginatedResponse(formattedData, count || 0, page, limitValue);
     } catch (error) {
-      this.logger.error(`[ERRO_GERAL] ${error.message}`);
+      this.logger.error('Erro ao buscar por propriedade', error.message, { module, method });
       throw new InternalServerErrorException(`Erro ao buscar material genético: ${error.message}`);
     }
   }
@@ -145,8 +153,9 @@ export class MaterialGeneticoService {
   }
 
   async update(id_material: string, dto: UpdateMaterialGeneticoDto) {
-    this.logger.log(`[INICIO] Atualizando material genético ID: ${id_material}`);
-    this.logger.debug(`[UPDATE] Dados recebidos: ${JSON.stringify(dto)}`);
+    const module = 'MaterialGeneticoService';
+    const method = 'update';
+    this.logger.log('Atualizando material genético', { module, method, id_material });
 
     // Verifica se existe
     await this.findOne(id_material);
@@ -155,7 +164,7 @@ export class MaterialGeneticoService {
       // Remove qualquer id_material que possa ter vindo no dto
       const { id_material: _, ...cleanedDto } = dto as any;
 
-      this.logger.debug(`[UPDATE] Dados limpos para atualização: ${JSON.stringify(cleanedDto)}`);
+      this.logger.debug('Dados preparados para atualização', { module, method, cleanedDto });
 
       const { data, error } = await this.supabase
         .getAdminClient()
@@ -166,24 +175,26 @@ export class MaterialGeneticoService {
         .single();
 
       if (error) {
-        this.logger.error(`[ERRO] Falha na atualização: ${error.message}`);
+        this.logger.error('Erro ao atualizar material genético', error.message, { module, method });
         throw new InternalServerErrorException(`Falha ao atualizar material genético: ${error.message}`);
       }
 
-      this.logger.log(`[SUCESSO] Material genético ID: ${id_material} atualizado`);
+      this.logger.log('Material genético atualizado com sucesso', { module, method, id_material });
       return formatDateFields(data);
     } catch (error) {
       if (error instanceof InternalServerErrorException) {
         throw error;
       }
 
-      this.logger.error(`[ERRO] Erro inesperado na atualização: ${error.message}`);
+      this.logger.error('Erro inesperado ao atualizar', error.message, { module, method });
       throw new InternalServerErrorException(`Erro interno ao atualizar material genético: ${error.message}`);
     }
   }
 
   async remove(id_material: string) {
-    this.logger.log(`[INICIO] Removendo material genético ID: ${id_material}`);
+    const module = 'MaterialGeneticoService';
+    const method = 'remove';
+    this.logger.log('Removendo material genético', { module, method, id_material });
 
     // Verifica se existe
     await this.findOne(id_material);
@@ -192,18 +203,18 @@ export class MaterialGeneticoService {
       const { error } = await this.supabase.getAdminClient().from(this.tableName).delete().eq('id_material', id_material);
 
       if (error) {
-        this.logger.error(`[ERRO] Falha na remoção: ${error.message}`);
+        this.logger.error('Erro ao remover material genético', error.message, { module, method });
         throw new InternalServerErrorException(`Falha ao remover material genético: ${error.message}`);
       }
 
-      this.logger.log(`[SUCESSO] Material genético ID: ${id_material} removido`);
+      this.logger.log('Material genético removido com sucesso', { module, method, id_material });
       return { message: 'Registro removido com sucesso' };
     } catch (error) {
       if (error instanceof InternalServerErrorException) {
         throw error;
       }
 
-      this.logger.error(`[ERRO] Erro inesperado na remoção: ${error.message}`);
+      this.logger.error('Erro inesperado ao remover', error.message, { module, method });
       throw new InternalServerErrorException(`Erro interno ao remover material genético: ${error.message}`);
     }
   }

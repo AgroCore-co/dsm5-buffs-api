@@ -3,7 +3,7 @@ import { GenealogiaService } from './genealogia.service';
 import { ApiTags, ApiOperation, ApiParam, ApiQuery, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { SupabaseAuthGuard } from '../../auth/guards/auth.guard';
 import { User } from '../../auth/decorators/user.decorator';
-import { GenealogiaNodeDto } from './dto/genealogia-response.dto';
+import { GenealogiaNodeDto } from './dto';
 
 @ApiBearerAuth('JWT-auth')
 @UseGuards(SupabaseAuthGuard)

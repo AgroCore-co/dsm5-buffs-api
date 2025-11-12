@@ -3,12 +3,15 @@ import { ApiBearerAuth, ApiOperation, ApiResponse, ApiTags, ApiParam, ApiBody, A
 import { SupabaseAuthGuard } from '../../auth/guards/auth.guard';
 import { User } from '../../auth/decorators/user.decorator';
 import { CoberturaService } from './cobertura.service';
-import { CreateCoberturaDto } from './dto/create-cobertura.dto';
-import { UpdateCoberturaDto } from './dto/update-cobertura.dto';
+import {
+  CreateCoberturaDto,
+  UpdateCoberturaDto,
+  FemeaDisponivelReproducaoDto,
+  RegistrarPartoDto,
+  RecomendacaoFemeaDto,
+  RecomendacaoMachoDto,
+} from './dto';
 import { PaginationDto } from '../../../core/dto/pagination.dto';
-import { FemeaDisponivelReproducaoDto } from './dto/femea-disponivel-reproducao.dto';
-import { RegistrarPartoDto } from './dto/registrar-parto.dto';
-import { RecomendacaoFemeaDto, RecomendacaoMachoDto } from './dto/recomendacao-acasalamento.dto';
 
 @ApiBearerAuth('JWT-auth')
 @UseGuards(SupabaseAuthGuard)

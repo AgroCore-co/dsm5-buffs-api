@@ -1,8 +1,6 @@
 import { Controller, Post, Body, UseGuards, Get, Param, Query } from '@nestjs/common';
 import { SimulacaoService } from './simulacao.service';
-import { SimularAcasalamentoDto } from './dto/simular-acasalamento.dto';
-import { EncontrarMachosCompativeisDto } from './dto/encontrar-machos-compativeis.dto';
-import { AnaliseGenealogicaDto } from './dto/analise-genealogica.dto';
+import { SimularAcasalamentoDto, EncontrarMachosCompativeisDto, AnaliseGenealogicaDto } from './dto';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiParam, ApiQuery } from '@nestjs/swagger';
 import { SupabaseAuthGuard } from '../../auth/guards/auth.guard';
 import { User } from '../../auth/decorators/user.decorator';

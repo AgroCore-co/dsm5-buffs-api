@@ -4,9 +4,10 @@ import { CoberturaService } from './cobertura.service';
 import { SupabaseModule } from 'src/core/supabase/supabase.module';
 import { AuthModule } from 'src/modules/auth/auth.module';
 import { AlertasModule } from 'src/modules/alerta/alerta.module';
+import { LoggerModule } from 'src/core/logger/logger.module';
 
 @Module({
-  imports: [SupabaseModule, AuthModule, AlertasModule],
+  imports: [SupabaseModule, AuthModule, AlertasModule, LoggerModule],
   controllers: [CoberturaController],
   providers: [CoberturaService],
 })

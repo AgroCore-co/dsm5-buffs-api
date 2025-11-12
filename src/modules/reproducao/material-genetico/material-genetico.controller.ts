@@ -2,8 +2,7 @@ import { Controller, Get, Post, Body, Patch, Param, Delete, ParseUUIDPipe, UseGu
 import { ApiBearerAuth, ApiOperation, ApiResponse, ApiTags, ApiParam, ApiBody, ApiQuery } from '@nestjs/swagger';
 import { SupabaseAuthGuard } from '../../auth/guards/auth.guard';
 import { MaterialGeneticoService } from './material-genetico.service';
-import { CreateMaterialGeneticoDto } from './dto/create-material-genetico.dto';
-import { UpdateMaterialGeneticoDto } from './dto/update-material-genetico.dto';
+import { CreateMaterialGeneticoDto, UpdateMaterialGeneticoDto } from './dto';
 import { PaginationDto } from '../../../core/dto/pagination.dto';
 
 @ApiBearerAuth('JWT-auth')
