@@ -1,5 +1,6 @@
 import { Injectable, InternalServerErrorException, NotFoundException, BadRequestException, UnauthorizedException } from '@nestjs/common';
 import { SupabaseService } from '../../../core/supabase/supabase.service';
+import { LoggerService } from '../../../core/logger/logger.service';
 import { CreateDadosSanitariosDto } from './dto/create-dados-sanitarios.dto';
 import { UpdateDadosSanitariosDto } from './dto/update-dados-sanitarios.dto';
 import { PaginationDto, PaginatedResponse } from '../../../core/dto/pagination.dto';
@@ -16,6 +17,7 @@ export class DadosSanitariosService {
   constructor(
     private readonly supabase: SupabaseService,
     private readonly alertasService: AlertasService,
+    private readonly logger: LoggerService,
   ) {}
 
   private readonly tableName = 'dadossanitarios';
@@ -149,12 +151,17 @@ export class DadosSanitariosService {
             tipo_evento_origem: 'DADOS_SANITARIOS_GRAVE',
           });
 
-          console.log(`✅ Alerta clínico criado para ${bufaloData.nome} - ${doencaNormalizada}`);
+          this.logger.log('Alerta clínico criado', {
+            module: 'DadosSanitariosService',
+            method: 'create',
+            bufalo: bufaloData.nome,
+            doenca: doencaNormalizada,
+          });
         }
       }
     } catch (alertaError) {
       // Não bloqueia o fluxo se o alerta falhar
-      console.error('⚠️ Erro ao criar alerta clínico:', alertaError);
+      this.logger.error('Erro ao criar alerta clínico', alertaError.message, { module: 'DadosSanitariosService', method: 'create' });
     }
 
     return formatDateFields(data);

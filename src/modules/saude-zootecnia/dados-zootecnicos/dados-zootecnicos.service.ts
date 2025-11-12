@@ -1,5 +1,6 @@
 import { Injectable, InternalServerErrorException, NotFoundException, UnauthorizedException } from '@nestjs/common';
 import { SupabaseService } from '../../../core/supabase/supabase.service';
+import { LoggerService } from '../../../core/logger/logger.service';
 import { CreateDadoZootecnicoDto } from './dto/create-dado-zootecnico.dto';
 import { UpdateDadoZootecnicoDto } from './dto/update-dado-zootecnico.dto';
 import { PaginationDto } from '../../../core/dto/pagination.dto';
@@ -9,7 +10,10 @@ import { formatDateFields, formatDateFieldsArray } from '../../../core/utils/dat
 
 @Injectable()
 export class DadosZootecnicosService {
-  constructor(private readonly supabase: SupabaseService) {}
+  constructor(
+    private readonly supabase: SupabaseService,
+    private readonly logger: LoggerService,
+  ) {}
 
   private readonly tableName = 'dadoszootecnicos';
 

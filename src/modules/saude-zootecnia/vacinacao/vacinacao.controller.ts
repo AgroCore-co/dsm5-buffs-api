@@ -3,8 +3,7 @@ import { ApiBearerAuth, ApiOperation, ApiResponse, ApiTags, ApiParam } from '@ne
 import { SupabaseAuthGuard } from '../../auth/guards/auth.guard';
 import { User } from '../../auth/decorators/user.decorator';
 import { VacinacaoService } from './vacinacao.service';
-import { CreateVacinacaoDto } from './dto/create-vacinacao.dto';
-import { UpdateVacinacaoDto } from './dto/update-vacinacao.dto';
+import { CreateVacinacaoDto, UpdateVacinacaoDto } from './dto';
 
 @ApiBearerAuth('JWT-auth')
 @UseGuards(SupabaseAuthGuard)

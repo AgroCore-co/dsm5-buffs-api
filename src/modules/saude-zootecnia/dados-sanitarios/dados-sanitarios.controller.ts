@@ -3,10 +3,8 @@ import { ApiBearerAuth, ApiOperation, ApiResponse, ApiTags, ApiParam, ApiQuery }
 import { SupabaseAuthGuard } from '../../auth/guards/auth.guard';
 import { User } from '../../auth/decorators/user.decorator';
 import { DadosSanitariosService } from './dados-sanitarios.service';
-import { CreateDadosSanitariosDto } from './dto/create-dados-sanitarios.dto';
-import { UpdateDadosSanitariosDto } from './dto/update-dados-sanitarios.dto';
+import { CreateDadosSanitariosDto, UpdateDadosSanitariosDto, FrequenciaDoencasResponseDto } from './dto';
 import { PaginationDto } from '../../../core/dto/pagination.dto';
-import { FrequenciaDoencasResponseDto } from './dto/frequencia-doencas.dto';
 
 @ApiBearerAuth('JWT-auth')
 @UseGuards(SupabaseAuthGuard)

@@ -2,8 +2,7 @@ import { Controller, Get, Post, Body, Patch, Param, Delete, ParseUUIDPipe, UseGu
 import { ApiBearerAuth, ApiOperation, ApiResponse, ApiTags, ApiParam } from '@nestjs/swagger';
 import { SupabaseAuthGuard } from '../../auth/guards/auth.guard';
 import { MedicamentosService } from './medicamentos.service';
-import { CreateMedicacaoDto } from './dto/create-medicacao.dto';
-import { UpdateMedicacaoDto } from './dto/update-medicacao.dto';
+import { CreateMedicacaoDto, UpdateMedicacaoDto } from './dto';
 
 @ApiBearerAuth('JWT-auth')
 @UseGuards(SupabaseAuthGuard)

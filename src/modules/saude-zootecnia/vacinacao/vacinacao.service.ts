@@ -1,12 +1,16 @@
 import { Injectable, InternalServerErrorException, NotFoundException, UnauthorizedException } from '@nestjs/common';
 import { SupabaseService } from '../../../core/supabase/supabase.service';
+import { LoggerService } from '../../../core/logger/logger.service';
 import { CreateVacinacaoDto } from './dto/create-vacinacao.dto';
 import { UpdateVacinacaoDto } from './dto/update-vacinacao.dto';
 import { formatDateFields, formatDateFieldsArray } from '../../../core/utils/date-formatter.utils';
 
 @Injectable()
 export class VacinacaoService {
-  constructor(private readonly supabase: SupabaseService) {}
+  constructor(
+    private readonly supabase: SupabaseService,
+    private readonly logger: LoggerService,
+  ) {}
 
   private readonly tableName = 'dadossanitarios'; // Usando tabela DadosSanitarios existente
 
@@ -15,7 +19,9 @@ export class VacinacaoService {
    * a partir do UUID de autenticação do Supabase (o 'sub' do JWT).
    */
   private async getInternalUserId(authUuid: string): Promise<number> {
-    console.log(`🔍 Buscando usuário com auth_id: ${authUuid}`);
+    const module = 'VacinacaoService';
+    const method = 'getInternalUserId';
+    this.logger.debug('Buscando usuário por auth_id', { module, method, authUuid });
 
     // 1. Tentar encontrar usuário por auth_id
     const { data, error } = await this.supabase
@@ -25,20 +31,20 @@ export class VacinacaoService {
       .eq('auth_id', authUuid)
       .single();
 
-    console.log(`📊 Resultado da busca por auth_id:`, { data, error });
+    this.logger.debug('Resultado da busca por auth_id', { module, method, found: !!data, error: error?.message });
 
     if (data) {
-      console.log(`✅ Usuário encontrado por auth_id: ${data.nome} (ID: ${data.id_usuario})`);
+      this.logger.log('Usuário encontrado por auth_id', { module, method, nome: data.nome, id_usuario: data.id_usuario });
       return data.id_usuario;
     }
 
     // 2. Se não encontrar, tentar buscar por email conhecido
-    console.log(`🔄 auth_id não encontrado, tentando buscar por email conhecido...`);
+    this.logger.warn('auth_id não encontrado, tentando buscar por email', { module, method });
 
     // Para este caso específico, sabemos o email
     const userEmail = 'joaobarretoprof@gmail.com';
 
-    console.log(`📧 Email extraído do JWT: ${userEmail}`);
+    this.logger.debug('Email extraído', { module, method, userEmail });
 
     if (userEmail) {
       const { data: emailUser, error: emailError } = await this.supabase
@@ -48,27 +54,23 @@ export class VacinacaoService {
         .eq('email', userEmail)
         .single();
 
-      console.log(`� Resultado da busca por email:`, { emailUser, emailError });
+      this.logger.debug('Resultado da busca por email', { module, method, found: !!emailUser, error: emailError?.message });
 
       if (emailUser) {
         // 3. Sincronizar auth_id automaticamente
-        console.log(`🔄 Sincronizando auth_id para usuário ${emailUser.nome}...`);
+        this.logger.log('Sincronizando auth_id', { module, method, nome: emailUser.nome });
 
         await this.supabase.getAdminClient().from('usuario').update({ auth_id: authUuid }).eq('id_usuario', emailUser.id_usuario);
 
-        console.log(`✅ Usuário encontrado por email e sincronizado: ${emailUser.nome} (ID: ${emailUser.id_usuario})`);
+        this.logger.log('Usuário sincronizado com sucesso', { module, method, nome: emailUser.nome, id_usuario: emailUser.id_usuario });
         return emailUser.id_usuario;
       }
     }
 
     // 4. Se não encontrar nada, mostrar todos usuários para debug
-    const { data: allUsers, error: allError } = await this.supabase
-      .getAdminClient()
-      .from('usuario')
-      .select('id_usuario, nome, email, auth_id')
-      .limit(5);
+    const { data: allUsers } = await this.supabase.getAdminClient().from('usuario').select('id_usuario, nome, email, auth_id').limit(5);
 
-    console.log(`📋 Todos os usuários no sistema:`, allUsers);
+    this.logger.error('Usuário não encontrado', '', { module, method, authUuid, userEmail, totalUsers: allUsers?.length });
 
     throw new UnauthorizedException(
       `Falha na sincronização do utilizador. Usuário com auth: ${authUuid} e email: ${userEmail || 'N/A'} não foi encontrado.`,

@@ -1,12 +1,16 @@
 import { Injectable, InternalServerErrorException, NotFoundException } from '@nestjs/common';
 import { SupabaseService } from '../../../core/supabase/supabase.service';
+import { LoggerService } from '../../../core/logger/logger.service';
 import { CreateMedicacaoDto } from './dto/create-medicacao.dto';
 import { UpdateMedicacaoDto } from './dto/update-medicacao.dto';
 import { formatDateFields, formatDateFieldsArray } from '../../../core/utils/date-formatter.utils';
 
 @Injectable()
 export class MedicamentosService {
-  constructor(private readonly supabase: SupabaseService) {}
+  constructor(
+    private readonly supabase: SupabaseService,
+    private readonly logger: LoggerService,
+  ) {}
 
   private readonly tableName = 'medicacoes';
 

@@ -1,10 +1,9 @@
 import { Controller, Get, Post, Body, Patch, Param, Delete, ParseUUIDPipe, UseGuards, Query } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiResponse, ApiTags, ApiParam, ApiQuery } from '@nestjs/swagger';
 import { SupabaseAuthGuard } from '../../auth/guards/auth.guard';
-import { User } from '../../auth/decorators/user.decorator'; // <-- Importe o decorator
+import { User } from '../../auth/decorators/user.decorator';
 import { DadosZootecnicosService } from './dados-zootecnicos.service';
-import { CreateDadoZootecnicoDto } from './dto/create-dado-zootecnico.dto';
-import { UpdateDadoZootecnicoDto } from './dto/update-dado-zootecnico.dto';
+import { CreateDadoZootecnicoDto, UpdateDadoZootecnicoDto } from './dto';
 import { PaginationDto } from '../../../core/dto/pagination.dto';
 
 @ApiBearerAuth('JWT-auth')
