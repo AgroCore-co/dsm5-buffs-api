@@ -1,37 +1,15 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsString, IsOptional, IsNotEmpty, IsUUID, MaxLength } from 'class-validator';
-import { Transform } from 'class-transformer';
+import { BaseUsuarioDto } from './base-usuario.dto';
 
-export class CreateUsuarioDto {
-  @ApiProperty({
-    description: 'Nome completo do proprietário.',
-    example: 'João Silva',
-    required: true,
-  })
-  @IsString()
-  @IsNotEmpty()
-  @MaxLength(100)
-  nome: string;
-
-  @ApiProperty({
-    description: 'Número de telefone para contato.',
-    example: '11999998888',
-    required: false,
-  })
-  @IsString()
-  @IsOptional()
-  @MaxLength(15)
-  telefone?: string;
-
-  @ApiProperty({
-    description: 'ID do endereço associado ao usuário (UUID).',
-    example: 'f47ac10b-58cc-4372-a567-0e02b2c3d479',
-    required: false,
-  })
-  @IsUUID()
-  @IsOptional()
-  @Transform(({ value }) => (value === '' ? undefined : value))
-  id_endereco?: string;
-
-  // NOTA: Campo 'cargo' removido - será sempre definido como PROPRIETARIO automaticamente
+/**
+ * DTO para criação de perfil de PROPRIETÁRIO
+ *
+ * Endpoint: POST /usuarios
+ *
+ * Este DTO é usado após o signup no Supabase Auth.
+ * O campo 'cargo' será automaticamente definido como PROPRIETARIO.
+ */
+export class CreateUsuarioDto extends BaseUsuarioDto {
+  // Herda: nome, telefone, id_endereco
+  // Nota: Campo 'cargo' será sempre PROPRIETARIO (definido automaticamente no service)
 }

@@ -1,6 +1,6 @@
 import { Controller, Get, Post, Body, Param, Delete, UseGuards, ParseUUIDPipe } from '@nestjs/common';
 import { FuncionarioService } from '../services/funcionario.service';
-import { CreateFuncionarioDto } from '../dto/create-funcionario.dto';
+import { CreateFuncionarioDto } from '../dto';
 import { SupabaseAuthGuard } from '../../auth/guards/auth.guard';
 import { RolesGuard } from '../../auth/guards/roles.guard';
 import { Roles } from '../../auth/decorators/roles.decorator';

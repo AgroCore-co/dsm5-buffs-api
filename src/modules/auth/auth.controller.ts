@@ -1,67 +1,7 @@
 import { Controller, Post, Body } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse, ApiProperty } from '@nestjs/swagger';
-import { IsEmail, IsString, IsOptional, MinLength } from 'class-validator';
+import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { AuthService } from './auth.service';
-
-export class SignUpDto {
-  @ApiProperty({
-    description: 'Email do usuário',
-    example: 'usuario@example.com',
-  })
-  @IsEmail()
-  email: string;
-
-  @ApiProperty({
-    description: 'Senha do usuário (mínimo 6 caracteres)',
-    example: 'minhasenha123',
-  })
-  @IsString()
-  @MinLength(6, { message: 'Senha deve ter pelo menos 6 caracteres' })
-  password: string;
-
-  @ApiProperty({
-    description: 'Nome completo do usuário',
-    example: 'João Silva',
-    required: false,
-  })
-  @IsOptional()
-  @IsString()
-  nome?: string;
-
-  @ApiProperty({
-    description: 'Telefone do usuário',
-    example: '11999999999',
-    required: false,
-  })
-  @IsOptional()
-  @IsString()
-  telefone?: string;
-}
-
-export class SignInDto {
-  @ApiProperty({
-    description: 'Email do usuário',
-    example: 'usuario@example.com',
-  })
-  @IsEmail()
-  email: string;
-
-  @ApiProperty({
-    description: 'Senha do usuário',
-    example: 'minhasenha123',
-  })
-  @IsString()
-  password: string;
-}
-
-export class RefreshDto {
-  @ApiProperty({
-    description: 'Token de refresh',
-    example: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...',
-  })
-  @IsString()
-  refresh_token: string;
-}
+import { SignUpDto, SignInDto, RefreshDto } from './dto';
 
 @ApiTags('Autenticação')
 @Controller('auth')

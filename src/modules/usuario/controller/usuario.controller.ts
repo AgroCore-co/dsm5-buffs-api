@@ -1,9 +1,7 @@
 import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, ParseUUIDPipe, UseInterceptors } from '@nestjs/common';
 import { CacheInterceptor, CacheTTL } from '@nestjs/cache-manager';
 import { UsuarioService } from '../services/usuario.service';
-import { CreateFuncionarioDto } from '../dto/create-funcionario.dto';
-import { CreateUsuarioDto } from '../dto/create-usuario.dto';
-import { UpdateUsuarioDto } from '../dto/update-usuario.dto';
+import { CreateFuncionarioDto, CreateUsuarioDto, UpdateUsuarioDto } from '../dto';
 import { SupabaseAuthGuard } from '../../auth/guards/auth.guard';
 import { RolesGuard } from '../../auth/guards/roles.guard';
 import { Roles } from '../../auth/decorators/roles.decorator';

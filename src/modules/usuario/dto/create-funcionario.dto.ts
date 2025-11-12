@@ -1,47 +1,37 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsString, IsOptional, IsNotEmpty, IsUUID, MaxLength, IsEmail, IsEnum } from 'class-validator';
+import { IsEmail, IsString, IsNotEmpty, IsUUID, IsEnum, IsOptional, MinLength } from 'class-validator';
 import { Transform } from 'class-transformer';
+import { BaseUsuarioDto } from './base-usuario.dto';
 import { Cargo } from '../enums/cargo.enum';
 
-export class CreateFuncionarioDto {
-  @ApiProperty({
-    description: 'Nome completo do funcionário.',
-    example: 'Carlos Pereira',
-    required: true,
-  })
-  @IsString()
-  @IsNotEmpty()
-  @MaxLength(100)
-  nome: string;
+/**
+ * DTO para criação de funcionários (GERENTE, FUNCIONARIO, VETERINARIO)
+ *
+ * Endpoint: POST /funcionarios
+ *
+ * Estende BaseUsuarioDto e adiciona campos específicos para funcionários.
+ */
+export class CreateFuncionarioDto extends BaseUsuarioDto {
+  // Herda: nome, telefone, id_endereco
 
   @ApiProperty({
-    description: 'Email do funcionário para login.',
+    description: 'Email do funcionário para login',
     example: 'carlos.pereira@buffs.com',
     required: true,
   })
-  @IsEmail()
-  @IsNotEmpty()
-  @MaxLength(100)
+  @IsEmail({}, { message: 'Email inválido' })
+  @IsNotEmpty({ message: 'Email é obrigatório' })
   email: string;
 
   @ApiProperty({
-    description: 'Senha temporária para o primeiro acesso do funcionário.',
+    description: 'Senha temporária para o primeiro acesso do funcionário (mínimo 6 caracteres)',
     example: 'senha123',
     required: true,
   })
   @IsString()
-  @IsNotEmpty()
+  @IsNotEmpty({ message: 'Senha é obrigatória' })
+  @MinLength(6, { message: 'Senha deve ter pelo menos 6 caracteres' })
   password: string;
-
-  @ApiProperty({
-    description: 'Número de telefone para contato.',
-    example: '(11) 99999-8888',
-    required: false,
-  })
-  @IsString()
-  @IsOptional()
-  @MaxLength(15)
-  telefone?: string;
 
   @ApiProperty({
     description: 'Cargo do funcionário no sistema',
@@ -60,32 +50,22 @@ export class CreateFuncionarioDto {
       },
       veterinario: {
         value: Cargo.VETERINARIO,
-        description: 'Acesso apenas às operações básicas',
+        description: 'Acesso especializado em área veterinária',
       },
     },
   })
   @IsEnum(Cargo, {
-    message: 'Cargo deve ser: GERENTE, FUNCIONARIO ou VETERINARIO (PROPRIETARIO não é permitido neste endpoint)',
+    message: 'Cargo deve ser: GERENTE, FUNCIONARIO ou VETERINARIO (PROPRIETARIO não é permitido)',
   })
-  @IsNotEmpty()
+  @IsNotEmpty({ message: 'Cargo é obrigatório' })
   cargo: Cargo;
 
   @ApiProperty({
-    description: 'ID do endereço associado ao funcionário (UUID). Deve corresponder a um endereço já cadastrado.',
-    example: 'f47ac10b-58cc-4372-a567-0e02b2c3d479',
-    required: false,
-  })
-  @IsUUID()
-  @IsOptional()
-  @Transform(({ value }) => (value === '' ? undefined : value))
-  id_endereco?: string;
-
-  @ApiProperty({
-    description: 'ID da propriedade onde o funcionário irá trabalhar (UUID). Se não fornecido, será vinculado às propriedades do proprietário.',
+    description: 'ID da propriedade onde o funcionário irá trabalhar (UUID). Se não fornecido, será vinculado às propriedades do proprietário',
     example: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890',
     required: false,
   })
-  @IsUUID()
+  @IsUUID('4', { message: 'ID da propriedade deve ser um UUID válido' })
   @IsOptional()
   @Transform(({ value }) => (value === '' ? undefined : value))
   id_propriedade?: string;

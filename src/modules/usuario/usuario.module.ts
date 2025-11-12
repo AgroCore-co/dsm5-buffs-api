@@ -3,10 +3,11 @@ import { UsuarioService } from './services/usuario.service';
 import { FuncionarioService } from './services/funcionario.service';
 import { UsuarioController } from './controller/usuario.controller';
 import { FuncionarioController } from './controller/funcionario.controller';
-import { CoreModule } from 'src/core/core.module';
+import { CoreModule } from '../../core/core.module';
+import { AuthModule } from '../auth/auth.module';
 
 @Module({
-  imports: [CoreModule],
+  imports: [CoreModule, AuthModule],
   controllers: [UsuarioController, FuncionarioController],
   providers: [UsuarioService, FuncionarioService],
   exports: [UsuarioService, FuncionarioService],

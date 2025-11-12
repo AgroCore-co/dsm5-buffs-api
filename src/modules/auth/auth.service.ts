@@ -1,9 +1,13 @@
 import { Injectable, UnauthorizedException, BadRequestException } from '@nestjs/common';
 import { SupabaseService } from '../../core/supabase/supabase.service';
+import { LoggerService } from '../../core/logger/logger.service';
 
 @Injectable()
 export class AuthService {
-  constructor(private readonly supabase: SupabaseService) {}
+  constructor(
+    private readonly supabase: SupabaseService,
+    private readonly logger: LoggerService,
+  ) {}
 
   async signUp(email: string, password: string, metadata?: any) {
     const { data, error } = await this.supabase.getClient().auth.signUp({
@@ -15,6 +19,7 @@ export class AuthService {
     });
 
     if (error) {
+      this.logger.logError(error, { module: 'Auth', method: 'signUp', email });
       if (error.message.includes('already registered')) {
         throw new BadRequestException('Email já está em uso');
       }
@@ -36,11 +41,20 @@ export class AuthService {
           });
 
         if (perfilError) {
-          console.error('[AuthService] Erro ao criar perfil:', perfilError);
+          this.logger.logError(perfilError, {
+            module: 'Auth',
+            method: 'signUp',
+            context: 'criar_perfil',
+            auth_id: data.user.id,
+          });
           // Não lançar erro, pois o usuário pode criar o perfil depois via POST /usuarios
         }
       } catch (err) {
-        console.error('[AuthService] Exceção ao criar perfil:', err);
+        this.logger.logError(err, {
+          module: 'Auth',
+          method: 'signUp',
+          context: 'exception_criar_perfil',
+        });
       }
     }
 
@@ -62,6 +76,7 @@ export class AuthService {
     });
 
     if (error) {
+      this.logger.logError(error, { module: 'Auth', method: 'signIn', email });
       throw new UnauthorizedException('Credenciais inválidas');
     }
 
@@ -83,6 +98,7 @@ export class AuthService {
     });
 
     if (error) {
+      this.logger.logError(error, { module: 'Auth', method: 'refresh' });
       throw new UnauthorizedException('Token de refresh inválido');
     }
 
@@ -102,6 +118,7 @@ export class AuthService {
     const { error } = await this.supabase.getClient().auth.signOut();
 
     if (error) {
+      this.logger.logError(error, { module: 'Auth', method: 'signOut' });
       throw new BadRequestException('Erro ao fazer logout');
     }
 

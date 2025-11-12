@@ -1,19 +1,58 @@
-import { Injectable, InternalServerErrorException, NotFoundException } from '@nestjs/common';
+import { Injectable, InternalServerErrorException, NotFoundException, BadRequestException } from '@nestjs/common';
 import { SupabaseService } from '../../../core/supabase/supabase.service';
+import { LoggerService } from '../../../core/logger/logger.service';
 import { CreateRegistroAlimentacaoDto } from './dto/create-registro.dto';
 import { UpdateRegistroAlimentacaoDto } from './dto/update-registro.dto';
 import { formatDateFields, formatDateFieldsArray } from '../../../core/utils/date-formatter.utils';
 
 @Injectable()
 export class RegistrosService {
-  constructor(private readonly supabase: SupabaseService) {}
+  constructor(
+    private readonly supabase: SupabaseService,
+    private readonly logger: LoggerService,
+  ) {}
 
   private readonly tableName = 'alimregistro';
 
   async create(dto: CreateRegistroAlimentacaoDto) {
+    // Validar se o grupo pertence à propriedade
+    const { data: grupo, error: grupoError } = await this.supabase
+      .getAdminClient()
+      .from('grupo')
+      .select('id_propriedade')
+      .eq('id_grupo', dto.id_grupo)
+      .single();
+
+    if (grupoError) {
+      this.logger.logError(grupoError, { module: 'RegistrosAlimentacao', method: 'create', step: 'validacao_grupo' });
+      throw new NotFoundException('Grupo não encontrado.');
+    }
+
+    if (grupo.id_propriedade !== dto.id_propriedade) {
+      throw new BadRequestException('O grupo informado não pertence à propriedade especificada.');
+    }
+
+    // Validar se a definição de alimentação pertence à propriedade
+    const { data: alimentDef, error: alimentError } = await this.supabase
+      .getAdminClient()
+      .from('alimentacaodef')
+      .select('id_propriedade')
+      .eq('id_aliment_def', dto.id_aliment_def)
+      .single();
+
+    if (alimentError) {
+      this.logger.logError(alimentError, { module: 'RegistrosAlimentacao', method: 'create', step: 'validacao_alimentacao_def' });
+      throw new NotFoundException('Definição de alimentação não encontrada.');
+    }
+
+    if (alimentDef.id_propriedade !== dto.id_propriedade) {
+      throw new BadRequestException('A definição de alimentação informada não pertence à propriedade especificada.');
+    }
+
+    // Criar o registro de alimentação
     const { data, error } = await this.supabase.getAdminClient().from(this.tableName).insert(dto).select().single();
     if (error) {
-      console.error('Erro ao criar registro de alimentação:', error);
+      this.logger.logError(error, { module: 'RegistrosAlimentacao', method: 'create' });
       throw new InternalServerErrorException(`Falha ao criar registro de alimentação: ${error.message}`);
     }
     return formatDateFields(data);
@@ -47,7 +86,7 @@ export class RegistrosService {
       .order('created_at', { ascending: false });
 
     if (error) {
-      console.error('Erro ao buscar registros de alimentação por propriedade:', error);
+      this.logger.logError(error, { module: 'RegistrosAlimentacao', method: 'findByPropriedade', idPropriedade });
       throw new InternalServerErrorException('Falha ao buscar registros de alimentação da propriedade.');
     }
 
