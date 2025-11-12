@@ -27,8 +27,14 @@ export class GeminiService {
    * @returns A prioridade do alerta.
    */
   async classificarPrioridadeOcorrencia(textoOcorrencia: string): Promise<PrioridadeAlerta> {
-    this.logger.log('Chamando a API da Gemini para classificar a ocorrência...');
-    this.logger.debug(`Texto da ocorrência: ${textoOcorrencia}`);
+    this.logger.log('Chamando a API da Gemini para classificar a ocorrência', {
+      module: 'GeminiService',
+      method: 'classificarPrioridadeOcorrencia',
+    });
+    this.logger.debug(`Texto da ocorrência: ${textoOcorrencia}`, {
+      module: 'GeminiService',
+      method: 'classificarPrioridadeOcorrencia',
+    });
 
     const systemInstruction = `
       Aja como um assistente de veterinária especialista em búfalos leiteiros.
@@ -60,26 +66,50 @@ export class GeminiService {
       const responseText = data.candidates?.[0]?.content?.parts?.[0]?.text?.trim().toUpperCase();
 
       // Log da resposta bruta para depuração
-      this.logger.debug(`Resposta bruta da IA: ${JSON.stringify(data)}`);
-      this.logger.debug(`Texto extraído da IA: ${responseText}`);
+      this.logger.debug(`Resposta bruta da IA: ${JSON.stringify(data)}`, {
+        module: 'GeminiService',
+        method: 'classificarPrioridadeOcorrencia',
+      });
+      this.logger.debug(`Texto extraído da IA: ${responseText}`, {
+        module: 'GeminiService',
+        method: 'classificarPrioridadeOcorrencia',
+      });
 
       if (responseText && ['BAIXA', 'MEDIA', 'ALTA'].includes(responseText)) {
-        this.logger.log(`Prioridade classificada pela IA: ${responseText}`);
+        this.logger.log(`Prioridade classificada pela IA: ${responseText}`, {
+          module: 'GeminiService',
+          method: 'classificarPrioridadeOcorrencia',
+        });
         return responseText as PrioridadeAlerta;
       }
 
-      this.logger.warn(`Resposta da IA inválida ou vazia. Resposta recebida: "${responseText}". Usando prioridade ALTA como padrão.`);
+      this.logger.warn(`Resposta da IA inválida ou vazia. Resposta recebida: "${responseText}". Usando prioridade ALTA como padrão.`, {
+        module: 'GeminiService',
+        method: 'classificarPrioridadeOcorrencia',
+      });
       return PrioridadeAlerta.ALTA;
     } catch (error) {
       // Log de erro MUITO mais detalhado
-      this.logger.error('Erro CRÍTICO ao chamar a API da Gemini. Verifique a chave e as configurações do projeto Google Cloud.');
+      this.logger.error('Erro CRÍTICO ao chamar a API da Gemini. Verifique a chave e as configurações do projeto Google Cloud.', error.stack, {
+        module: 'GeminiService',
+        method: 'classificarPrioridadeOcorrencia',
+      });
       if (error.response) {
-        this.logger.error('Detalhes do Erro da API:', JSON.stringify(error.response.data, null, 2));
+        this.logger.error('Detalhes do Erro da API: ' + JSON.stringify(error.response.data, null, 2), error.stack, {
+          module: 'GeminiService',
+          method: 'classificarPrioridadeOcorrencia',
+        });
       } else {
-        this.logger.error('Erro de Rede ou Configuração:', error.message);
+        this.logger.error('Erro de Rede ou Configuração: ' + error.message, error.stack, {
+          module: 'GeminiService',
+          method: 'classificarPrioridadeOcorrencia',
+        });
       }
 
-      this.logger.warn('Usando prioridade ALTA como padrão devido a erro na API.');
+      this.logger.warn('Usando prioridade ALTA como padrão devido a erro na API.', {
+        module: 'GeminiService',
+        method: 'classificarPrioridadeOcorrencia',
+      });
       return PrioridadeAlerta.ALTA;
     }
   }
