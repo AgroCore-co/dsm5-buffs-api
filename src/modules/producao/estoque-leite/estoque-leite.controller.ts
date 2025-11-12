@@ -37,14 +37,14 @@ export class EstoqueLeiteController {
   @ApiBody({ type: CreateEstoqueLeiteDto })
   @ApiResponse({ status: 201, description: 'Estoque consolidado com sucesso.' })
   @ApiResponse({ status: 400, description: 'Dados inválidos.' })
-  create(@Body() dto: CreateEstoqueLeiteDto, @User('sub') id_usuario: string) {
+  create(@Body() dto: CreateEstoqueLeiteDto) {
     this.logger.logApiRequest('POST', '/estoque-leite', undefined, {
       module: 'EstoqueLeiteController',
       method: 'create',
-      usuarioId: id_usuario,
+      usuarioId: dto.id_usuario,
       propriedadeId: dto.id_propriedade,
     });
-    return this.service.create(dto, id_usuario);
+    return this.service.create(dto);
   }
 
   @Get()

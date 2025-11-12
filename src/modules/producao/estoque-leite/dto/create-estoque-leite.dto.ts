@@ -7,6 +7,11 @@ export class CreateEstoqueLeiteDto {
   @IsNotEmpty()
   id_propriedade: string;
 
+  @ApiProperty({ example: 'f47ac10b-58cc-4372-a567-0e02b2c3d479', description: 'ID do usuário que registrou o estoque' })
+  @IsUUID()
+  @IsNotEmpty()
+  id_usuario: string;
+
   @ApiProperty({ example: 1200.75, description: 'Quantidade de leite em estoque (em litros)' })
   @IsNumber()
   @IsPositive()

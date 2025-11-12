@@ -17,11 +17,11 @@ export class EstoqueLeiteService {
 
   private readonly tableName = 'estoqueleite';
 
-  async create(dto: CreateEstoqueLeiteDto, id_usuario: string) {
+  async create(dto: CreateEstoqueLeiteDto) {
     this.logger.log('Iniciando criação de registro de estoque de leite', {
       module: 'EstoqueLeiteService',
       method: 'create',
-      usuarioId: id_usuario,
+      usuarioId: dto.id_usuario,
       propriedadeId: dto.id_propriedade,
     });
 
@@ -39,7 +39,7 @@ export class EstoqueLeiteService {
       this.logger.logError(error, {
         module: 'EstoqueLeiteService',
         method: 'create',
-        usuarioId: id_usuario,
+        usuarioId: dto.id_usuario,
       });
       throw new InternalServerErrorException(`Falha ao criar registro de estoque: ${error.message}`);
     }
@@ -48,7 +48,7 @@ export class EstoqueLeiteService {
       module: 'EstoqueLeiteService',
       method: 'create',
       estoqueId: data.id_estoque,
-      usuarioId: id_usuario,
+      usuarioId: dto.id_usuario,
     });
     return formatDateFields(data);
   }
