@@ -1,6 +1,7 @@
 import { Injectable, InternalServerErrorException, NotFoundException, BadRequestException } from '@nestjs/common';
 import { SupabaseClient } from '@supabase/supabase-js';
 import { SupabaseService } from '../../../core/supabase/supabase.service';
+import { LoggerService } from '../../../core/logger/logger.service';
 import { CreateLoteDto } from './dto/create-lote.dto';
 import { UpdateLoteDto } from './dto/update-lote.dto';
 import { formatDateFields, formatDateFieldsArray } from '../../../core/utils/date-formatter.utils';
@@ -9,7 +10,10 @@ import { formatDateFields, formatDateFieldsArray } from '../../../core/utils/dat
 export class LoteService {
   private supabase: SupabaseClient;
 
-  constructor(private readonly supabaseService: SupabaseService) {
+  constructor(
+    private readonly supabaseService: SupabaseService,
+    private readonly logger: LoggerService,
+  ) {
     this.supabase = this.supabaseService.getAdminClient();
   }
 

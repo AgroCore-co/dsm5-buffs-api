@@ -1,8 +1,7 @@
 import { Controller, Post, Body, UseGuards, Get, Param, ParseUUIDPipe, Patch, Delete, HttpCode, UseInterceptors } from '@nestjs/common';
 import { CacheInterceptor, CacheTTL } from '@nestjs/cache-manager';
 import { PropriedadeService } from './propriedade.service';
-import { CreatePropriedadeDto } from './dto/create-propiedade.dto';
-import { UpdatePropriedadeDto } from './dto/update-propriedade.dto';
+import { CreatePropriedadeDto, UpdatePropriedadeDto } from './dto';
 import { ApiTags, ApiBearerAuth, ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { SupabaseAuthGuard } from '../../auth/guards/auth.guard';
 import { RolesGuard } from '../../auth/guards/roles.guard';

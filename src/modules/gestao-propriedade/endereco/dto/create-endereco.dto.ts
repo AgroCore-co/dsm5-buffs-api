@@ -1,43 +1,80 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsString, IsNotEmpty, IsOptional } from 'class-validator';
+import { IsString, IsNotEmpty, IsOptional, Matches } from 'class-validator';
 
+/**
+ * DTO para criação de endereço
+ *
+ * Endpoint: POST /enderecos
+ */
 export class CreateEnderecoDto {
-  @ApiProperty({ example: 'Brasil' })
+  @ApiProperty({
+    description: 'Nome do país',
+    example: 'Brasil',
+  })
   @IsString()
-  @IsNotEmpty()
+  @IsNotEmpty({ message: 'País é obrigatório' })
   pais: string;
 
-  @ApiProperty({ example: 'São Paulo' })
+  @ApiProperty({
+    description: 'Nome do estado',
+    example: 'São Paulo',
+  })
   @IsString()
-  @IsNotEmpty()
+  @IsNotEmpty({ message: 'Estado é obrigatório' })
   estado: string;
 
-  @ApiProperty({ example: 'Presidente Prudente' })
+  @ApiProperty({
+    description: 'Nome da cidade',
+    example: 'Presidente Prudente',
+  })
   @IsString()
-  @IsNotEmpty()
+  @IsNotEmpty({ message: 'Cidade é obrigatória' })
   cidade: string;
 
-  @ApiProperty({ required: false, example: 'Centro' })
+  @ApiProperty({
+    description: 'Nome do bairro',
+    example: 'Centro',
+    required: false,
+  })
   @IsString()
   @IsOptional()
   bairro?: string;
 
-  @ApiProperty({ required: false, example: 'Rua Principal' })
+  @ApiProperty({
+    description: 'Nome da rua',
+    example: 'Rua Principal',
+    required: false,
+  })
   @IsString()
   @IsOptional()
   rua?: string;
 
-  @ApiProperty({ required: false, example: '19000-000' })
+  @ApiProperty({
+    description: 'CEP (formato: 00000-000)',
+    example: '19000-000',
+    required: false,
+  })
   @IsString()
   @IsOptional()
+  @Matches(/^\d{5}-\d{3}$/, {
+    message: 'CEP deve estar no formato: 00000-000',
+  })
   cep?: string;
 
-  @ApiProperty({ required: false, example: '123' })
+  @ApiProperty({
+    description: 'Número do imóvel',
+    example: '123',
+    required: false,
+  })
   @IsString()
   @IsOptional()
   numero?: string;
 
-  @ApiProperty({ required: false, example: 'Próximo à ponte' })
+  @ApiProperty({
+    description: 'Ponto de referência para localização',
+    example: 'Próximo à ponte',
+    required: false,
+  })
   @IsString()
   @IsOptional()
   ponto_referencia?: string;

@@ -1,6 +1,7 @@
 import { Injectable, InternalServerErrorException, NotFoundException } from '@nestjs/common';
 import { SupabaseClient } from '@supabase/supabase-js';
 import { SupabaseService } from '../../../core/supabase/supabase.service';
+import { LoggerService } from '../../../core/logger/logger.service';
 import { CreateEnderecoDto } from './dto/create-endereco.dto';
 import { UpdateEnderecoDto } from './dto/update-endereco.dto';
 import { formatDateFields, formatDateFieldsArray } from '../../../core/utils/date-formatter.utils';
@@ -9,7 +10,10 @@ import { formatDateFields, formatDateFieldsArray } from '../../../core/utils/dat
 export class EnderecoService {
   private supabase: SupabaseClient;
 
-  constructor(private readonly supabaseService: SupabaseService) {
+  constructor(
+    private readonly supabaseService: SupabaseService,
+    private readonly logger: LoggerService,
+  ) {
     this.supabase = this.supabaseService.getAdminClient();
   }
 
@@ -17,7 +21,7 @@ export class EnderecoService {
     const { data, error } = await this.supabase.from('endereco').insert(createEnderecoDto).select().single();
 
     if (error) {
-      console.error('Erro ao criar endereço:', error);
+      this.logger.logError(error, { module: 'Endereco', method: 'create' });
       throw new InternalServerErrorException('Falha ao criar o endereço.');
     }
 
@@ -28,7 +32,7 @@ export class EnderecoService {
     const { data, error } = await this.supabase.from('endereco').select('*').order('created_at', { ascending: false });
 
     if (error) {
-      console.error('Erro ao buscar endereços:', error);
+      this.logger.logError(error, { module: 'Endereco', method: 'findAll' });
       throw new InternalServerErrorException('Falha ao buscar os endereços.');
     }
 
@@ -42,7 +46,7 @@ export class EnderecoService {
       if (error.code === 'PGRST116') {
         throw new NotFoundException('Endereço não encontrado.');
       }
-      console.error('Erro ao buscar endereço:', error);
+      this.logger.logError(error, { module: 'Endereco', method: 'findOne', id });
       throw new InternalServerErrorException('Falha ao buscar o endereço.');
     }
 
@@ -64,7 +68,7 @@ export class EnderecoService {
       .single();
 
     if (error) {
-      console.error('Erro ao atualizar endereço:', error);
+      this.logger.logError(error, { module: 'Endereco', method: 'update', id });
       throw new InternalServerErrorException('Falha ao atualizar o endereço.');
     }
 
@@ -78,7 +82,7 @@ export class EnderecoService {
     const { error } = await this.supabase.from('endereco').delete().eq('id_endereco', id);
 
     if (error) {
-      console.error('Erro ao deletar endereço:', error);
+      this.logger.logError(error, { module: 'Endereco', method: 'remove', id });
       throw new InternalServerErrorException('Falha ao deletar o endereço.');
     }
 

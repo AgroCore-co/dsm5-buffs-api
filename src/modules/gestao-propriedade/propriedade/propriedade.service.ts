@@ -1,16 +1,19 @@
-import { Injectable, NotFoundException, InternalServerErrorException, BadRequestException, Logger } from '@nestjs/common';
+import { Injectable, NotFoundException, InternalServerErrorException, ForbiddenException, BadRequestException } from '@nestjs/common';
 import { SupabaseClient } from '@supabase/supabase-js';
 import { SupabaseService } from '../../../core/supabase/supabase.service';
-import { CreatePropriedadeDto } from './dto/create-propiedade.dto';
+import { LoggerService } from '../../../core/logger/logger.service';
+import { CreatePropriedadeDto } from './dto/create-propriedade.dto';
 import { UpdatePropriedadeDto } from './dto/update-propriedade.dto';
 import { formatDateFields, formatDateFieldsArray } from '../../../core/utils/date-formatter.utils';
 
 @Injectable()
 export class PropriedadeService {
-  private readonly logger = new Logger(PropriedadeService.name);
   private supabase: SupabaseClient;
 
-  constructor(private readonly supabaseService: SupabaseService) {
+  constructor(
+    private readonly supabaseService: SupabaseService,
+    private readonly logger: LoggerService,
+  ) {
     this.supabase = this.supabaseService.getAdminClient();
   }
 

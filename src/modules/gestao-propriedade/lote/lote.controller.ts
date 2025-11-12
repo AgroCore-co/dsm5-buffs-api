@@ -1,7 +1,6 @@
 import { Controller, Get, Post, Body, UseGuards, Param, Patch, Delete, ParseUUIDPipe, HttpCode } from '@nestjs/common';
 import { LoteService } from './lote.service';
-import { CreateLoteDto } from './dto/create-lote.dto';
-import { UpdateLoteDto } from './dto/update-lote.dto';
+import { CreateLoteDto, UpdateLoteDto } from './dto';
 import { ApiTags, ApiBearerAuth, ApiOperation, ApiResponse, ApiParam } from '@nestjs/swagger';
 import { SupabaseAuthGuard } from '../../auth/guards/auth.guard';
 import { RolesGuard } from '../../auth/guards/roles.guard';
