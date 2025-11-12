@@ -4,8 +4,7 @@ import { ApiBearerAuth, ApiBody, ApiOperation, ApiParam, ApiResponse, ApiTags, A
 import { SupabaseAuthGuard } from '../../auth/guards/auth.guard';
 import { LoggerService } from '../../../core/logger/logger.service';
 import { CicloLactacaoService } from './ciclo-lactacao.service';
-import { CreateCicloLactacaoDto } from './dto/create-ciclo-lactacao.dto';
-import { UpdateCicloLactacaoDto } from './dto/update-ciclo-lactacao.dto';
+import { CreateCicloLactacaoDto, UpdateCicloLactacaoDto } from './dto';
 import { PaginationDto } from '../../../core/dto/pagination.dto';
 
 @ApiBearerAuth('JWT-auth')

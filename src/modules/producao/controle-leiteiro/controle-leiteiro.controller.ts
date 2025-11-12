@@ -4,10 +4,7 @@ import { SupabaseAuthGuard } from '../../auth/guards/auth.guard';
 import { User } from '../../auth/decorators/user.decorator';
 import { LoggerService } from '../../../core/logger/logger.service';
 import { ControleLeiteiroService } from './controle-leiteiro.service';
-import { CreateDadosLactacaoDto } from './dto/create-dados-lactacao.dto';
-import { UpdateDadosLactacaoDto } from './dto/update-dados-lactacao.dto';
-import { FemeaEmLactacaoDto } from './dto/femea-em-lactacao.dto';
-import { ResumoProducaoBufalaDto } from './dto/resumo-producao-bufala.dto';
+import { CreateDadosLactacaoDto, UpdateDadosLactacaoDto, FemeaEmLactacaoDto, ResumoProducaoBufalaDto } from './dto';
 
 @ApiBearerAuth('JWT-auth')
 @UseGuards(SupabaseAuthGuard)

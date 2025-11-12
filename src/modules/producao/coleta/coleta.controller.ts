@@ -5,9 +5,7 @@ import { SupabaseAuthGuard } from '../../auth/guards/auth.guard';
 import { User } from '../../auth/decorators/user.decorator';
 import { LoggerService } from '../../../core/logger/logger.service';
 import { ColetaService } from './coleta.service';
-import { CreateColetaDto } from './dto/create-coleta.dto';
-import { UpdateColetaDto } from './dto/update-coleta.dto';
-import { ColetaPropriedadeResponseDto } from './dto/coleta-propriedade.dto';
+import { CreateColetaDto, UpdateColetaDto, ColetaPropriedadeResponseDto } from './dto';
 import { PaginationDto } from '../../../core/dto/pagination.dto';
 
 @ApiBearerAuth('JWT-auth')

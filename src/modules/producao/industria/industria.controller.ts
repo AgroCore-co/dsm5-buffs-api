@@ -3,12 +3,11 @@ import { ApiBearerAuth, ApiOperation, ApiResponse, ApiTags, ApiParam, ApiBody } 
 import { SupabaseAuthGuard } from '../../auth/guards/auth.guard';
 import { LoggerService } from '../../../core/logger/logger.service';
 import { IndustriaService } from './industria.service';
-import { CreateIndustriaDto } from './dto/create-industria.dto';
-import { UpdateIndustriaDto } from './dto/update-industria.dto';
+import { CreateIndustriaDto, UpdateIndustriaDto } from './dto';
 
 @ApiBearerAuth('JWT-auth')
 @UseGuards(SupabaseAuthGuard)
-@ApiTags('Produção - Indústrias')
+@ApiTags('Produção 5️⃣ - Indústrias/Laticínios')
 @Controller('industrias')
 export class IndustriaController {
   constructor(

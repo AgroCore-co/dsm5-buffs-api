@@ -8,30 +8,30 @@ export enum StatusCicloLactacao {
 
 export class CreateCicloLactacaoDto {
   @ApiProperty({ description: 'ID da búfala', example: 'f47ac10b-58cc-4372-a567-0e02b2c3d479' })
-  @IsUUID()
+  @IsUUID('4', { message: 'O id_bufala deve ser um UUID válido' })
   id_bufala: string;
 
   @ApiProperty({ description: 'ID da propriedade onde o ciclo está sendo registrado (UUID)', example: 'f47ac10b-58cc-4372-a567-0e02b2c3d479' })
-  @IsUUID()
+  @IsUUID('4', { message: 'O id_propriedade deve ser um UUID válido' })
   id_propriedade: string;
 
   @ApiProperty({ description: 'Data do parto', example: '2025-02-01' })
-  @IsDateString()
+  @IsDateString({}, { message: 'A data do parto deve estar no formato ISO 8601 válido' })
   dt_parto: string;
 
   @ApiProperty({ description: 'Padrão de dias do ciclo', example: 305 })
-  @IsInt()
-  @IsPositive()
+  @IsInt({ message: 'O padrão de dias deve ser um número inteiro' })
+  @IsPositive({ message: 'O padrão de dias deve ser um número positivo' })
   padrao_dias: number;
 
   @ApiProperty({ description: 'Data real de secagem', required: false, example: '2025-11-10' })
-  @IsDateString()
+  @IsDateString({}, { message: 'A data de secagem real deve estar no formato ISO 8601 válido' })
   @IsOptional()
   dt_secagem_real?: string;
 
   @ApiProperty({ description: 'Observação', required: false, example: 'Parto normal' })
-  @IsString()
-  @MaxLength(500)
+  @IsString({ message: 'A observação deve ser uma string' })
+  @MaxLength(500, { message: 'A observação deve ter no máximo 500 caracteres' })
   @IsOptional()
   observacao?: string;
 }
