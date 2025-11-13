@@ -1,5 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { IsDateString, IsUUID, IsNumber, IsPositive, IsOptional, IsString, MaxLength, IsEnum } from 'class-validator';
+import { IsNotFutureDate } from '../../../../core/validators';
 
 export enum PeriodoOrdenha {
   MANHA = 'M',
@@ -42,5 +43,6 @@ export class CreateDadosLactacaoDto {
 
   @ApiProperty({ description: 'Data/hora da ordenha', example: '2025-02-10T06:00:00.000Z' })
   @IsDateString({}, { message: 'A data da ordenha deve estar no formato ISO 8601 válido' })
+  @IsNotFutureDate({ message: 'A data da ordenha não pode ser no futuro' })
   dt_ordenha: string;
 }

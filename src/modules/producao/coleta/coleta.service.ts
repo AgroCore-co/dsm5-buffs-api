@@ -1,4 +1,4 @@
-import { Injectable, InternalServerErrorException, NotFoundException } from '@nestjs/common';
+import { Injectable, InternalServerErrorException, NotFoundException, BadRequestException } from '@nestjs/common';
 import { SupabaseService } from '../../../core/supabase/supabase.service';
 import { LoggerService } from '../../../core/logger/logger.service';
 import { formatDateFields, formatDateFieldsArray } from '../../../core/utils/date-formatter.utils';
@@ -7,9 +7,10 @@ import { UpdateColetaDto } from './dto/update-coleta.dto';
 import { PaginationDto } from '../../../core/dto/pagination.dto';
 import { PaginatedResponse } from '../../../core/dto/pagination.dto';
 import { createPaginatedResponse, calculatePaginationParams } from '../../../core/utils/pagination.utils';
+import { ISoftDelete } from '../../../core/interfaces/soft-delete.interface';
 
 @Injectable()
-export class ColetaService {
+export class ColetaService implements ISoftDelete {
   constructor(
     private readonly supabase: SupabaseService,
     private readonly logger: LoggerService,
@@ -54,8 +55,12 @@ export class ColetaService {
     const { page = 1, limit = 10 } = paginationDto;
     const { limit: limitValue, offset } = calculatePaginationParams(page, limit);
 
-    // Contar total de registros
-    const { count, error: countError } = await this.supabase.getAdminClient().from(this.tableName).select('*', { count: 'exact', head: true });
+    // Contar total de registros (excluindo deletados)
+    const { count, error: countError } = await this.supabase
+      .getAdminClient()
+      .from(this.tableName)
+      .select('*', { count: 'exact', head: true })
+      .is('deleted_at', null);
 
     if (countError) {
       this.logger.logError(countError, {
@@ -65,11 +70,12 @@ export class ColetaService {
       throw new InternalServerErrorException(`Falha ao contar coletas: ${countError.message}`);
     }
 
-    // Buscar registros com paginação
+    // Buscar registros com paginação (excluindo deletados)
     const { data, error } = await this.supabase
       .getAdminClient()
       .from(this.tableName)
       .select('*')
+      .is('deleted_at', null)
       .order('dt_coleta', { ascending: false })
       .range(offset, offset + limitValue - 1);
 
@@ -238,30 +244,114 @@ export class ColetaService {
   }
 
   async remove(id_coleta: string) {
-    this.logger.log('Iniciando remoção de coleta', {
+    return this.softDelete(id_coleta);
+  }
+
+  async softDelete(id: string) {
+    this.logger.log('Iniciando remoção de coleta (soft delete)', {
       module: 'ColetaService',
-      method: 'remove',
-      coletaId: id_coleta,
+      method: 'softDelete',
+      coletaId: id,
     });
 
-    await this.findOne(id_coleta);
+    await this.findOne(id);
 
-    const { error } = await this.supabase.getAdminClient().from(this.tableName).delete().eq('id_coleta', id_coleta);
+    const { data, error } = await this.supabase
+      .getAdminClient()
+      .from(this.tableName)
+      .update({ deleted_at: new Date().toISOString() })
+      .eq('id_coleta', id)
+      .select()
+      .single();
 
     if (error) {
       this.logger.logError(error, {
         module: 'ColetaService',
-        method: 'remove',
-        coletaId: id_coleta,
+        method: 'softDelete',
+        coletaId: id,
       });
       throw new InternalServerErrorException(`Falha ao remover coleta: ${error.message}`);
     }
 
-    this.logger.log('Coleta removida com sucesso', {
+    this.logger.log('Coleta removida com sucesso (soft delete)', {
       module: 'ColetaService',
-      method: 'remove',
-      coletaId: id_coleta,
+      method: 'softDelete',
+      coletaId: id,
     });
-    return { message: 'Coleta removida com sucesso' };
+
+    return {
+      message: 'Coleta removida com sucesso (soft delete)',
+      data: formatDateFields(data),
+    };
+  }
+
+  async restore(id: string) {
+    this.logger.log('Iniciando restauração de coleta', {
+      module: 'ColetaService',
+      method: 'restore',
+      coletaId: id,
+    });
+
+    const { data: coleta } = await this.supabase.getAdminClient().from(this.tableName).select('deleted_at').eq('id_coleta', id).single();
+
+    if (!coleta) {
+      throw new NotFoundException(`Coleta com ID ${id} não encontrada`);
+    }
+
+    if (!coleta.deleted_at) {
+      throw new BadRequestException('Esta coleta não está removida');
+    }
+
+    const { data, error } = await this.supabase
+      .getAdminClient()
+      .from(this.tableName)
+      .update({ deleted_at: null })
+      .eq('id_coleta', id)
+      .select()
+      .single();
+
+    if (error) {
+      this.logger.logError(error, {
+        module: 'ColetaService',
+        method: 'restore',
+        coletaId: id,
+      });
+      throw new InternalServerErrorException(`Falha ao restaurar coleta: ${error.message}`);
+    }
+
+    this.logger.log('Coleta restaurada com sucesso', {
+      module: 'ColetaService',
+      method: 'restore',
+      coletaId: id,
+    });
+
+    return {
+      message: 'Coleta restaurada com sucesso',
+      data: formatDateFields(data),
+    };
+  }
+
+  async findAllWithDeleted(): Promise<any[]> {
+    this.logger.log('Buscando todas as coletas incluindo deletadas', {
+      module: 'ColetaService',
+      method: 'findAllWithDeleted',
+    });
+
+    const { data, error } = await this.supabase
+      .getAdminClient()
+      .from(this.tableName)
+      .select('*')
+      .order('deleted_at', { ascending: false, nullsFirst: true })
+      .order('dt_coleta', { ascending: false });
+
+    if (error) {
+      this.logger.logError(error, {
+        module: 'ColetaService',
+        method: 'findAllWithDeleted',
+      });
+      throw new InternalServerErrorException('Erro ao buscar coletas (incluindo deletadas)');
+    }
+
+    return formatDateFieldsArray(data || []);
   }
 }

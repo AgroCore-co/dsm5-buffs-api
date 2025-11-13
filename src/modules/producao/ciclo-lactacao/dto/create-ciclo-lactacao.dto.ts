@@ -1,5 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { IsDateString, IsEnum, IsInt, IsOptional, IsPositive, IsString, MaxLength, IsUUID } from 'class-validator';
+import { IsNotFutureDate, IsAfterDate } from '../../../../core/validators/date.validators';
 
 export enum StatusCicloLactacao {
   EM_LACTACAO = 'Em Lactação',
@@ -17,6 +18,7 @@ export class CreateCicloLactacaoDto {
 
   @ApiProperty({ description: 'Data do parto', example: '2025-02-01' })
   @IsDateString({}, { message: 'A data do parto deve estar no formato ISO 8601 válido' })
+  @IsNotFutureDate({ message: 'A data do parto não pode estar no futuro' })
   dt_parto: string;
 
   @ApiProperty({ description: 'Padrão de dias do ciclo', example: 305 })
@@ -27,6 +29,7 @@ export class CreateCicloLactacaoDto {
   @ApiProperty({ description: 'Data real de secagem', required: false, example: '2025-11-10' })
   @IsDateString({}, { message: 'A data de secagem real deve estar no formato ISO 8601 válido' })
   @IsOptional()
+  @IsAfterDate('dt_parto', { message: 'A data de secagem deve ser posterior à data do parto' })
   dt_secagem_real?: string;
 
   @ApiProperty({ description: 'Observação', required: false, example: 'Parto normal' })

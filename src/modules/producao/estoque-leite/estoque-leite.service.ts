@@ -1,4 +1,4 @@
-import { Injectable, InternalServerErrorException, NotFoundException } from '@nestjs/common';
+import { Injectable, InternalServerErrorException, NotFoundException, BadRequestException } from '@nestjs/common';
 import { SupabaseService } from '../../../core/supabase/supabase.service';
 import { LoggerService } from '../../../core/logger/logger.service';
 import { CreateEstoqueLeiteDto } from './dto/create-estoque-leite.dto';
@@ -7,9 +7,10 @@ import { PaginationDto } from '../../../core/dto/pagination.dto';
 import { PaginatedResponse } from '../../../core/dto/pagination.dto';
 import { createPaginatedResponse, calculatePaginationParams } from '../../../core/utils/pagination.utils';
 import { formatDateFields, formatDateFieldsArray } from '../../../core/utils/date-formatter.utils';
+import { ISoftDelete } from '../../../core/interfaces/soft-delete.interface';
 
 @Injectable()
-export class EstoqueLeiteService {
+export class EstoqueLeiteService implements ISoftDelete {
   constructor(
     private readonly supabase: SupabaseService,
     private readonly logger: LoggerService,
@@ -62,8 +63,12 @@ export class EstoqueLeiteService {
     const { page = 1, limit = 10 } = paginationDto;
     const { limit: limitValue, offset } = calculatePaginationParams(page, limit);
 
-    // Contar total de registros
-    const { count, error: countError } = await this.supabase.getAdminClient().from(this.tableName).select('*', { count: 'exact', head: true });
+    // Contar total de registros (excluindo deletados)
+    const { count, error: countError } = await this.supabase
+      .getAdminClient()
+      .from(this.tableName)
+      .select('*', { count: 'exact', head: true })
+      .is('deleted_at', null);
 
     if (countError) {
       this.logger.logError(countError, {
@@ -73,11 +78,12 @@ export class EstoqueLeiteService {
       throw new InternalServerErrorException(`Falha ao contar estoque de leite: ${countError.message}`);
     }
 
-    // Buscar registros com paginação
+    // Buscar registros com paginação (excluindo deletados)
     const { data, error } = await this.supabase
       .getAdminClient()
       .from(this.tableName)
       .select('*')
+      .is('deleted_at', null)
       .order('dt_registro', { ascending: false })
       .range(offset, offset + limitValue - 1);
 
@@ -202,30 +208,114 @@ export class EstoqueLeiteService {
   }
 
   async remove(id_estoque: string) {
-    this.logger.log('Iniciando remoção de registro de estoque', {
+    return this.softDelete(id_estoque);
+  }
+
+  async softDelete(id: string) {
+    this.logger.log('Iniciando remoção de registro de estoque (soft delete)', {
       module: 'EstoqueLeiteService',
-      method: 'remove',
-      estoqueId: id_estoque,
+      method: 'softDelete',
+      estoqueId: id,
     });
 
-    await this.findOne(id_estoque);
+    await this.findOne(id);
 
-    const { error } = await this.supabase.getAdminClient().from(this.tableName).delete().eq('id_estoque', id_estoque);
+    const { data, error } = await this.supabase
+      .getAdminClient()
+      .from(this.tableName)
+      .update({ deleted_at: new Date().toISOString() })
+      .eq('id_estoque', id)
+      .select()
+      .single();
 
     if (error) {
       this.logger.logError(error, {
         module: 'EstoqueLeiteService',
-        method: 'remove',
-        estoqueId: id_estoque,
+        method: 'softDelete',
+        estoqueId: id,
       });
       throw new InternalServerErrorException(`Falha ao remover registro de estoque: ${error.message}`);
     }
 
-    this.logger.log('Registro de estoque removido com sucesso', {
+    this.logger.log('Registro de estoque removido com sucesso (soft delete)', {
       module: 'EstoqueLeiteService',
-      method: 'remove',
-      estoqueId: id_estoque,
+      method: 'softDelete',
+      estoqueId: id,
     });
-    return { message: 'Registro removido com sucesso' };
+
+    return {
+      message: 'Registro removido com sucesso (soft delete)',
+      data: formatDateFields(data),
+    };
+  }
+
+  async restore(id: string) {
+    this.logger.log('Iniciando restauração de registro de estoque', {
+      module: 'EstoqueLeiteService',
+      method: 'restore',
+      estoqueId: id,
+    });
+
+    const { data: estoque } = await this.supabase.getAdminClient().from(this.tableName).select('deleted_at').eq('id_estoque', id).single();
+
+    if (!estoque) {
+      throw new NotFoundException(`Registro de estoque com ID ${id} não encontrado`);
+    }
+
+    if (!estoque.deleted_at) {
+      throw new BadRequestException('Este registro não está removido');
+    }
+
+    const { data, error } = await this.supabase
+      .getAdminClient()
+      .from(this.tableName)
+      .update({ deleted_at: null })
+      .eq('id_estoque', id)
+      .select()
+      .single();
+
+    if (error) {
+      this.logger.logError(error, {
+        module: 'EstoqueLeiteService',
+        method: 'restore',
+        estoqueId: id,
+      });
+      throw new InternalServerErrorException(`Falha ao restaurar registro de estoque: ${error.message}`);
+    }
+
+    this.logger.log('Registro de estoque restaurado com sucesso', {
+      module: 'EstoqueLeiteService',
+      method: 'restore',
+      estoqueId: id,
+    });
+
+    return {
+      message: 'Registro restaurado com sucesso',
+      data: formatDateFields(data),
+    };
+  }
+
+  async findAllWithDeleted(): Promise<any[]> {
+    this.logger.log('Buscando todos os registros de estoque incluindo deletados', {
+      module: 'EstoqueLeiteService',
+      method: 'findAllWithDeleted',
+    });
+
+    const { data, error } = await this.supabase
+      .getAdminClient()
+      .from(this.tableName)
+      .select('*')
+      .order('deleted_at', { ascending: false, nullsFirst: true })
+      .order('dt_registro', { ascending: false });
+
+    if (error) {
+      this.logger.logError(error, {
+        module: 'EstoqueLeiteService',
+        method: 'findAllWithDeleted',
+      });
+      throw new InternalServerErrorException('Erro ao buscar registros de estoque (incluindo deletados)');
+    }
+
+    return formatDateFieldsArray(data || []);
   }
 }

@@ -94,15 +94,40 @@ export class GrupoController {
 
   @Delete(':id')
   @ApiOperation({
-    summary: 'Remove um grupo',
-    description: 'Remove um grupo específico do sistema pelo ID.',
+    summary: 'Remover grupo (soft delete)',
+    description: 'Remove logicamente um grupo. Use POST /:id/restore para restaurar.',
   })
   @ApiParam({ name: 'id', description: 'ID do grupo', type: 'string' })
-  @ApiResponse({ status: 200, description: 'Grupo removido com sucesso.' })
+  @ApiResponse({ status: 200, description: 'Grupo removido com sucesso (soft delete).' })
   @ApiResponse({ status: 401, description: 'Não autorizado.' })
   @ApiResponse({ status: 404, description: 'Grupo não encontrado.' })
   remove(@Param('id', ParseUUIDPipe) id: string) {
     this.logger.logApiRequest('DELETE', `/grupos/${id}`, undefined, { module: 'GrupoController', method: 'remove', grupoId: id });
     return this.grupoService.remove(id);
+  }
+
+  @Post(':id/restore')
+  @ApiOperation({
+    summary: 'Restaurar grupo removido',
+    description: 'Restaura um grupo que foi removido (soft delete).',
+  })
+  @ApiParam({ name: 'id', description: 'ID do grupo a ser restaurado', type: 'string' })
+  @ApiResponse({ status: 200, description: 'Grupo restaurado com sucesso.' })
+  @ApiResponse({ status: 404, description: 'Grupo não encontrado.' })
+  @ApiResponse({ status: 400, description: 'Grupo não está removido.' })
+  restore(@Param('id', ParseUUIDPipe) id: string) {
+    this.logger.logApiRequest('POST', `/grupos/${id}/restore`, undefined, { module: 'GrupoController', method: 'restore', grupoId: id });
+    return this.grupoService.restore(id);
+  }
+
+  @Get('deleted/all')
+  @ApiOperation({
+    summary: 'Listar todos os grupos incluindo removidos',
+    description: 'Retorna todos os grupos, incluindo os removidos (soft delete).',
+  })
+  @ApiResponse({ status: 200, description: 'Lista completa retornada com sucesso.' })
+  findAllWithDeleted() {
+    this.logger.logApiRequest('GET', '/grupos/deleted/all', undefined, { module: 'GrupoController', method: 'findAllWithDeleted' });
+    return this.grupoService.findAllWithDeleted();
   }
 }

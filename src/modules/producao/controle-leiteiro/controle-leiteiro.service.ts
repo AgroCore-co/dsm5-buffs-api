@@ -18,9 +18,10 @@ import { GeminiService } from '../../../core/gemini/gemini.service';
 import { FemeaEmLactacaoDto } from './dto/femea-em-lactacao.dto';
 import { ResumoProducaoBufalaDto } from './dto/resumo-producao-bufala.dto';
 import { formatDateFields, formatDateFieldsArray } from '../../../core/utils/date-formatter.utils';
+import { ISoftDelete } from '../../../core/interfaces/soft-delete.interface';
 
 @Injectable()
-export class ControleLeiteiroService {
+export class ControleLeiteiroService implements ISoftDelete {
   private readonly logger = new Logger(ControleLeiteiroService.name);
   private supabase: SupabaseClient;
 
@@ -419,7 +420,13 @@ export class ControleLeiteiroService {
 
     const idUsuario = await this.getUserId(user);
 
-    const { data, error } = await this.supabase.from('dadoslactacao').select('*').eq('id_lact', id).eq('id_usuario', idUsuario).single();
+    const { data, error } = await this.supabase
+      .from('dadoslactacao')
+      .select('*')
+      .eq('id_lact', id)
+      .eq('id_usuario', idUsuario)
+      .is('deleted_at', null)
+      .single();
 
     if (error || !data) {
       this.customLogger.warn('Registro de lactação não encontrado ou não pertence ao usuário', {
@@ -474,32 +481,110 @@ export class ControleLeiteiroService {
   /**
    * Remove um registro de lactação, verificando a posse antes de deletar.
    */
-  async remove(id: string, user: any) {
-    this.customLogger.log('Iniciando remoção de registro de lactação', {
+  async remove(id: string, user?: any) {
+    return this.softDelete(id, user);
+  }
+
+  async softDelete(id: string, user?: any) {
+    this.customLogger.log('Iniciando remoção de registro de lactação (soft delete)', {
       module: 'ControleLeiteiroService',
-      method: 'remove',
+      method: 'softDelete',
       lactacaoId: id,
     });
 
-    await this.findOne(id, user);
+    if (user) {
+      await this.findOne(id, user);
+    }
 
-    const { error } = await this.supabase.from('dadoslactacao').delete().eq('id_lact', id);
+    const { data, error } = await this.supabase
+      .from('dadoslactacao')
+      .update({ deleted_at: new Date().toISOString() })
+      .eq('id_lact', id)
+      .select()
+      .single();
 
     if (error) {
       this.customLogger.logError(error, {
         module: 'ControleLeiteiroService',
-        method: 'remove',
+        method: 'softDelete',
         lactacaoId: id,
       });
       throw new InternalServerErrorException('Falha ao remover o dado de lactação.');
     }
 
-    this.customLogger.log('Registro de lactação removido com sucesso', {
+    this.customLogger.log('Registro de lactação removido com sucesso (soft delete)', {
       module: 'ControleLeiteiroService',
-      method: 'remove',
+      method: 'softDelete',
       lactacaoId: id,
     });
-    return;
+
+    return {
+      message: 'Registro removido com sucesso (soft delete)',
+      data: formatDateFields(data),
+    };
+  }
+
+  async restore(id: string, user?: any) {
+    this.customLogger.log('Iniciando restauração de registro de lactação', {
+      module: 'ControleLeiteiroService',
+      method: 'restore',
+      lactacaoId: id,
+    });
+
+    const { data: registro } = await this.supabase.from('dadoslactacao').select('deleted_at').eq('id_lact', id).single();
+
+    if (!registro) {
+      throw new NotFoundException(`Registro de lactação com ID ${id} não encontrado`);
+    }
+
+    if (!registro.deleted_at) {
+      throw new BadRequestException('Este registro não está removido');
+    }
+
+    const { data, error } = await this.supabase.from('dadoslactacao').update({ deleted_at: null }).eq('id_lact', id).select().single();
+
+    if (error) {
+      this.customLogger.logError(error, {
+        module: 'ControleLeiteiroService',
+        method: 'restore',
+        lactacaoId: id,
+      });
+      throw new InternalServerErrorException('Falha ao restaurar o dado de lactação.');
+    }
+
+    this.customLogger.log('Registro de lactação restaurado com sucesso', {
+      module: 'ControleLeiteiroService',
+      method: 'restore',
+      lactacaoId: id,
+    });
+
+    return {
+      message: 'Registro restaurado com sucesso',
+      data: formatDateFields(data),
+    };
+  }
+
+  async findAllWithDeleted(user?: any): Promise<any[]> {
+    this.customLogger.log('Buscando todos os registros de lactação incluindo deletados', {
+      module: 'ControleLeiteiroService',
+      method: 'findAllWithDeleted',
+    });
+
+    const { data, error } = await this.supabase
+      .from('dadoslactacao')
+      .select('*')
+      .order('deleted_at', { ascending: false, nullsFirst: true })
+      .order('dt_ordenha', { ascending: false });
+
+    if (error) {
+      this.customLogger.logError(error, {
+        module: 'ControleLeiteiroService',
+        method: 'findAllWithDeleted',
+      });
+      throw new InternalServerErrorException('Erro ao buscar registros de lactação (incluindo deletados)');
+    }
+
+    return formatDateFieldsArray(data || []);
   }
 
   /**

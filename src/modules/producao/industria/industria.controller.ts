@@ -69,12 +69,40 @@ export class IndustriaController {
   }
 
   @Delete(':id')
-  @ApiOperation({ summary: 'Remove uma indústria' })
+  @ApiOperation({
+    summary: 'Remover indústria (soft delete)',
+    description: 'Remove logicamente uma indústria. Use POST /:id/restore para restaurar.',
+  })
   @ApiParam({ name: 'id', description: 'ID da indústria a ser removida', type: 'string' })
-  @ApiResponse({ status: 200, description: 'Indústria removida com sucesso.' })
+  @ApiResponse({ status: 200, description: 'Indústria removida com sucesso (soft delete).' })
   @ApiResponse({ status: 404, description: 'Indústria não encontrada.' })
   remove(@Param('id', ParseUUIDPipe) id: string) {
     this.logger.logApiRequest('DELETE', `/industrias/${id}`, undefined, { module: 'IndustriaController', method: 'remove', industriaId: id });
     return this.service.remove(id);
+  }
+
+  @Post(':id/restore')
+  @ApiOperation({
+    summary: 'Restaurar indústria removida',
+    description: 'Restaura uma indústria que foi removida (soft delete).',
+  })
+  @ApiParam({ name: 'id', description: 'ID da indústria a ser restaurada', type: 'string' })
+  @ApiResponse({ status: 200, description: 'Indústria restaurada com sucesso.' })
+  @ApiResponse({ status: 404, description: 'Indústria não encontrada.' })
+  @ApiResponse({ status: 400, description: 'Indústria não está removida.' })
+  restore(@Param('id', ParseUUIDPipe) id: string) {
+    this.logger.logApiRequest('POST', `/industrias/${id}/restore`, undefined, { module: 'IndustriaController', method: 'restore', industriaId: id });
+    return this.service.restore(id);
+  }
+
+  @Get('deleted/all')
+  @ApiOperation({
+    summary: 'Listar todas as indústrias incluindo removidas',
+    description: 'Retorna todas as indústrias, incluindo as removidas (soft delete).',
+  })
+  @ApiResponse({ status: 200, description: 'Lista completa retornada com sucesso.' })
+  findAllWithDeleted() {
+    this.logger.logApiRequest('GET', '/industrias/deleted/all', undefined, { module: 'IndustriaController', method: 'findAllWithDeleted' });
+    return this.service.findAllWithDeleted();
   }
 }

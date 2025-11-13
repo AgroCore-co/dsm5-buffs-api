@@ -111,14 +111,43 @@ export class EstoqueLeiteController {
 
   @Delete(':id')
   @ApiOperation({
-    summary: '🗑️ Remover estoque',
-    description: 'Remove um registro de estoque (cuidado: pode afetar coletas).',
+    summary: 'Remover estoque (soft delete)',
+    description: 'Remove logicamente um registro de estoque. Use POST /:id/restore para restaurar.',
   })
   @ApiParam({ name: 'id', description: 'ID do registro a ser removido', type: 'string' })
-  @ApiResponse({ status: 200, description: 'Registro removido com sucesso.' })
+  @ApiResponse({ status: 200, description: 'Registro removido com sucesso (soft delete).' })
   @ApiResponse({ status: 404, description: 'Registro não encontrado.' })
   remove(@Param('id', ParseUUIDPipe) id: string) {
     this.logger.logApiRequest('DELETE', `/estoque-leite/${id}`, undefined, { module: 'EstoqueLeiteController', method: 'remove', estoqueId: id });
     return this.service.remove(id);
+  }
+
+  @Post(':id/restore')
+  @ApiOperation({
+    summary: 'Restaurar estoque removido',
+    description: 'Restaura um registro de estoque que foi removido (soft delete).',
+  })
+  @ApiParam({ name: 'id', description: 'ID do registro a ser restaurado', type: 'string' })
+  @ApiResponse({ status: 200, description: 'Registro restaurado com sucesso.' })
+  @ApiResponse({ status: 404, description: 'Registro não encontrado.' })
+  @ApiResponse({ status: 400, description: 'Registro não está removido.' })
+  restore(@Param('id', ParseUUIDPipe) id: string) {
+    this.logger.logApiRequest('POST', `/estoque-leite/${id}/restore`, undefined, {
+      module: 'EstoqueLeiteController',
+      method: 'restore',
+      estoqueId: id,
+    });
+    return this.service.restore(id);
+  }
+
+  @Get('deleted/all')
+  @ApiOperation({
+    summary: 'Listar todos os registros incluindo removidos',
+    description: 'Retorna todos os registros de estoque, incluindo os removidos (soft delete).',
+  })
+  @ApiResponse({ status: 200, description: 'Lista completa retornada com sucesso.' })
+  findAllWithDeleted() {
+    this.logger.logApiRequest('GET', '/estoque-leite/deleted/all', undefined, { module: 'EstoqueLeiteController', method: 'findAllWithDeleted' });
+    return this.service.findAllWithDeleted();
   }
 }

@@ -133,8 +133,8 @@ export class CicloLactacaoController {
 
   @Delete(':id')
   @ApiOperation({
-    summary: '🗑️ Remover ciclo',
-    description: 'Remove um ciclo de lactação (cuidado: pode afetar ordenhas vinculadas).',
+    summary: 'Remover ciclo (soft delete)',
+    description: 'Remove logicamente um ciclo de lactação sem deletar do banco. Use POST /:id/restore para recuperar.',
   })
   @ApiParam({ name: 'id', description: 'ID do ciclo a ser removido', type: 'string' })
   @ApiResponse({ status: 200, description: 'Ciclo removido com sucesso.' })
@@ -142,5 +142,36 @@ export class CicloLactacaoController {
   remove(@Param('id', ParseUUIDPipe) id: string) {
     this.logger.logApiRequest('DELETE', `/ciclos-lactacao/${id}`, undefined, { module: 'CicloLactacaoController', method: 'remove', cicloId: id });
     return this.service.remove(id);
+  }
+
+  @Post(':id/restore')
+  @ApiOperation({
+    summary: 'Restaurar ciclo removido',
+    description: 'Restaura um ciclo de lactação que foi removido com soft delete.',
+  })
+  @ApiParam({ name: 'id', description: 'ID do ciclo a ser restaurado', type: 'string' })
+  @ApiResponse({ status: 200, description: 'Ciclo restaurado com sucesso.' })
+  @ApiResponse({ status: 404, description: 'Ciclo não encontrado ou não estava removido.' })
+  restore(@Param('id', ParseUUIDPipe) id: string) {
+    this.logger.logApiRequest('POST', `/ciclos-lactacao/${id}/restore`, undefined, {
+      module: 'CicloLactacaoController',
+      method: 'restore',
+      cicloId: id,
+    });
+    return this.service.restore(id);
+  }
+
+  @Get('deleted/all')
+  @ApiOperation({
+    summary: 'Listar ciclos removidos',
+    description: 'Lista todos os ciclos de lactação incluindo os removidos (soft delete).',
+  })
+  @ApiResponse({ status: 200, description: 'Lista de ciclos incluindo deletados retornada com sucesso.' })
+  findAllWithDeleted() {
+    this.logger.logApiRequest('GET', '/ciclos-lactacao/deleted/all', undefined, {
+      module: 'CicloLactacaoController',
+      method: 'findAllWithDeleted',
+    });
+    return this.service.findAllWithDeleted();
   }
 }

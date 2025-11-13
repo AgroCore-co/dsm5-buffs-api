@@ -11,6 +11,7 @@ import { AlertasService } from '../../alerta/alerta.service';
 import { NichoAlerta, PrioridadeAlerta } from '../../alerta/dto/create-alerta.dto';
 import { RecomendacaoFemeaDto, RecomendacaoMachoDto, MotivoScore } from './dto/recomendacao-acasalamento.dto';
 import { CoberturaValidator } from './validators/cobertura.validator';
+import { ISoftDelete } from '../../../core/interfaces/soft-delete.interface';
 import {
   calcularIAR,
   calcularFPProntidao,
@@ -31,7 +32,7 @@ import {
 import { calcularIdadeEmMeses, determinarStatusFemea } from './utils/reproducao-helpers.util';
 
 @Injectable()
-export class CoberturaService {
+export class CoberturaService implements ISoftDelete {
   constructor(
     private readonly supabase: SupabaseService,
     private readonly alertasService: AlertasService,
@@ -69,18 +70,23 @@ export class CoberturaService {
     const { page = 1, limit = 10 } = paginationDto;
     const { limit: limitValue, offset } = calculatePaginationParams(page, limit);
 
-    // Contar total de registros
-    const { count, error: countError } = await this.supabase.getAdminClient().from(this.tableName).select('*', { count: 'exact', head: true });
+    // Contar total de registros (excluindo deletados)
+    const { count, error: countError } = await this.supabase
+      .getAdminClient()
+      .from(this.tableName)
+      .select('*', { count: 'exact', head: true })
+      .is('deleted_at', null);
 
     if (countError) {
       throw new InternalServerErrorException(`Falha ao contar dados de reprodução: ${countError.message}`);
     }
 
-    // Buscar registros com paginação
+    // Buscar registros com paginação (excluindo deletados)
     const { data, error } = await this.supabase
       .getAdminClient()
       .from(this.tableName)
       .select('*')
+      .is('deleted_at', null)
       .order('dt_evento', { ascending: false })
       .range(offset, offset + limitValue - 1);
 
@@ -143,14 +149,72 @@ export class CoberturaService {
   }
 
   async remove(id_repro: string) {
-    await this.findOne(id_repro);
+    return this.softDelete(id_repro);
+  }
 
-    const { error } = await this.supabase.getAdminClient().from(this.tableName).delete().eq('id_reproducao', id_repro);
+  async softDelete(id: string) {
+    await this.findOne(id);
+
+    const { data, error } = await this.supabase
+      .getAdminClient()
+      .from(this.tableName)
+      .update({ deleted_at: new Date().toISOString() })
+      .eq('id_reproducao', id)
+      .select()
+      .single();
 
     if (error) {
       throw new InternalServerErrorException(`Falha ao remover dado de reprodução: ${error.message}`);
     }
-    return { message: 'Registro removido com sucesso' };
+
+    return {
+      message: 'Registro removido com sucesso (soft delete)',
+      data: formatDateFields(data),
+    };
+  }
+
+  async restore(id: string) {
+    const { data: cobertura } = await this.supabase.getAdminClient().from(this.tableName).select('deleted_at').eq('id_reproducao', id).single();
+
+    if (!cobertura) {
+      throw new NotFoundException(`Registro de reprodução com ID ${id} não encontrado`);
+    }
+
+    if (!cobertura.deleted_at) {
+      throw new BadRequestException('Este registro não está removido');
+    }
+
+    const { data, error } = await this.supabase
+      .getAdminClient()
+      .from(this.tableName)
+      .update({ deleted_at: null })
+      .eq('id_reproducao', id)
+      .select()
+      .single();
+
+    if (error) {
+      throw new InternalServerErrorException(`Falha ao restaurar dado de reprodução: ${error.message}`);
+    }
+
+    return {
+      message: 'Registro restaurado com sucesso',
+      data: formatDateFields(data),
+    };
+  }
+
+  async findAllWithDeleted(): Promise<any[]> {
+    const { data, error } = await this.supabase
+      .getAdminClient()
+      .from(this.tableName)
+      .select('*')
+      .order('deleted_at', { ascending: false, nullsFirst: true })
+      .order('dt_evento', { ascending: false });
+
+    if (error) {
+      throw new InternalServerErrorException('Erro ao buscar dados de reprodução (incluindo deletados)');
+    }
+
+    return formatDateFieldsArray(data || []);
   }
 
   /**

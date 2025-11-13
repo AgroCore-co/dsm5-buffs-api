@@ -1,12 +1,13 @@
-import { Injectable, InternalServerErrorException, NotFoundException, UnauthorizedException } from '@nestjs/common';
+import { Injectable, InternalServerErrorException, NotFoundException, UnauthorizedException, BadRequestException } from '@nestjs/common';
 import { SupabaseService } from '../../../core/supabase/supabase.service';
 import { LoggerService } from '../../../core/logger/logger.service';
 import { CreateVacinacaoDto } from './dto/create-vacinacao.dto';
 import { UpdateVacinacaoDto } from './dto/update-vacinacao.dto';
 import { formatDateFields, formatDateFieldsArray } from '../../../core/utils/date-formatter.utils';
+import { ISoftDelete } from '../../../core/interfaces';
 
 @Injectable()
-export class VacinacaoService {
+export class VacinacaoService implements ISoftDelete {
   constructor(
     private readonly supabase: SupabaseService,
     private readonly logger: LoggerService,
@@ -123,6 +124,7 @@ export class VacinacaoService {
       )
       .eq('id_bufalo', id_bufalo)
       .eq('Medicacoes.tipo_tratamento', 'Vacinação')
+      .is('deleted_at', null)
       .order('dt_aplicacao', { ascending: false });
 
     if (error) {
@@ -151,6 +153,7 @@ export class VacinacaoService {
       )
       .eq('id_sanit', id_sanit)
       .eq('Medicacoes.tipo_tratamento', 'Vacinação')
+      .is('deleted_at', null)
       .single();
 
     if (error || !data) {
@@ -186,14 +189,73 @@ export class VacinacaoService {
   }
 
   async remove(id_sanit: string) {
-    await this.findOne(id_sanit);
+    return this.softDelete(id_sanit);
+  }
 
-    const { error } = await this.supabase.getAdminClient().from(this.tableName).delete().eq('id_sanit', id_sanit);
+  async softDelete(id: string) {
+    await this.findOne(id);
+
+    const { data, error } = await this.supabase
+      .getAdminClient()
+      .from(this.tableName)
+      .update({ deleted_at: new Date().toISOString() })
+      .eq('id_sanit', id)
+      .select()
+      .single();
 
     if (error) {
       throw new InternalServerErrorException(`Falha ao remover registo de vacinação: ${error.message}`);
     }
-    return { message: 'Registo de vacinação removido com sucesso' };
+
+    return {
+      message: 'Registo de vacinação removido com sucesso (soft delete)',
+      data: formatDateFields(data),
+    };
+  }
+
+  async restore(id: string) {
+    const { data: registro } = await this.supabase.getAdminClient().from(this.tableName).select('deleted_at').eq('id_sanit', id).single();
+
+    if (!registro) {
+      throw new NotFoundException(`Registo de vacinação com ID ${id} não encontrado`);
+    }
+
+    if (!registro.deleted_at) {
+      throw new BadRequestException('Este registo não está removido');
+    }
+
+    const { data, error } = await this.supabase
+      .getAdminClient()
+      .from(this.tableName)
+      .update({ deleted_at: null })
+      .eq('id_sanit', id)
+      .select()
+      .single();
+
+    if (error) {
+      throw new InternalServerErrorException(`Falha ao restaurar registo de vacinação: ${error.message}`);
+    }
+
+    return {
+      message: 'Registo de vacinação restaurado com sucesso',
+      data: formatDateFields(data),
+    };
+  }
+
+  async findAllWithDeleted(): Promise<any[]> {
+    const { data, error } = await this.supabase
+      .getAdminClient()
+      .from(this.tableName)
+      .select('*')
+      .eq('Medicacoes.tipo_tratamento', 'Vacinação')
+      .order('deleted_at', { ascending: false, nullsFirst: true })
+      .order('dt_aplicacao', { ascending: false });
+
+    if (error) {
+      throw new InternalServerErrorException('Erro ao buscar registos de vacinação (incluindo deletados)');
+    }
+
+    return formatDateFieldsArray(data || []);
   }
 
   /**
@@ -219,6 +281,7 @@ export class VacinacaoService {
       )
       .eq('id_bufalo', id_bufalo)
       .in('id_medicacao', [3, 4, 5, 6, 12, 14]) // IDs das vacinas do seu banco
+      .is('deleted_at', null)
       .order('dt_aplicacao', { ascending: false });
 
     if (error) {

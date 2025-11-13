@@ -1,6 +1,7 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { IsString, IsNotEmpty, IsOptional, IsDateString, IsInt, IsIn, IsPositive, MaxLength, IsUUID } from 'class-validator';
 import { Transform } from 'class-transformer';
+import { IsNotFutureDate } from '../../../../core/validators';
 
 const tiposValidos = ['Sêmen', 'Embrião', 'Óvulo'];
 const origensValidas = ['Coleta Própria', 'Compra'];
@@ -49,6 +50,7 @@ export class CreateMaterialGeneticoDto {
     description: 'Data e hora em que o material foi coletado ou adquirido (formato ISO 8601)',
   })
   @IsDateString()
+  @IsNotFutureDate({ message: 'A data de coleta não pode ser no futuro' })
   @IsNotEmpty()
   data_coleta: string;
 }

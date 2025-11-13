@@ -68,12 +68,37 @@ export class CoberturaController {
   }
 
   @Delete(':id')
-  @ApiOperation({ summary: 'Remover cobertura' })
+  @ApiOperation({
+    summary: 'Remover cobertura (soft delete)',
+    description: 'Remove logicamente um registro de cobertura sem deletar do banco. Use POST /:id/restore para recuperar.',
+  })
   @ApiParam({ name: 'id', description: 'ID da cobertura' })
   @ApiResponse({ status: 200, description: 'Cobertura removida com sucesso.' })
   @ApiResponse({ status: 404, description: 'Cobertura não encontrada.' })
   remove(@Param('id', ParseUUIDPipe) id: string) {
     return this.service.remove(id);
+  }
+
+  @Post(':id/restore')
+  @ApiOperation({
+    summary: 'Restaurar cobertura removida',
+    description: 'Restaura um registro de cobertura que foi removido com soft delete.',
+  })
+  @ApiParam({ name: 'id', description: 'ID da cobertura a ser restaurada' })
+  @ApiResponse({ status: 200, description: 'Cobertura restaurada com sucesso.' })
+  @ApiResponse({ status: 404, description: 'Cobertura não encontrada ou não estava removida.' })
+  restore(@Param('id', ParseUUIDPipe) id: string) {
+    return this.service.restore(id);
+  }
+
+  @Get('deleted/all')
+  @ApiOperation({
+    summary: 'Listar coberturas removidas',
+    description: 'Lista todos os registros de cobertura incluindo os removidos (soft delete).',
+  })
+  @ApiResponse({ status: 200, description: 'Lista de coberturas incluindo deletadas retornada com sucesso.' })
+  findAllWithDeleted() {
+    return this.service.findAllWithDeleted();
   }
 
   @Get('femeas/disponiveis-reproducao/:id_propriedade')

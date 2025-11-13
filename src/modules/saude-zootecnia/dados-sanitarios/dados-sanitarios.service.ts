@@ -11,9 +11,10 @@ import { StringSimilarityUtil } from '../../../core/utils/string-similarity.util
 import { DoencaNormalizerUtil } from './utils/doenca-normalizer.utils';
 import { AlertasService } from '../../alerta/alerta.service';
 import { NichoAlerta, PrioridadeAlerta } from '../../alerta/dto/create-alerta.dto';
+import { ISoftDelete } from '../../../core/interfaces';
 
 @Injectable()
-export class DadosSanitariosService {
+export class DadosSanitariosService implements ISoftDelete {
   constructor(
     private readonly supabase: SupabaseService,
     private readonly alertasService: AlertasService,
@@ -172,7 +173,11 @@ export class DadosSanitariosService {
     const { offset } = calculatePaginationParams(page, limit);
 
     // Primeiro, busca o total de registros
-    const { count, error: countError } = await this.supabase.getAdminClient().from(this.tableName).select('*', { count: 'exact', head: true });
+    const { count, error: countError } = await this.supabase
+      .getAdminClient()
+      .from(this.tableName)
+      .select('*', { count: 'exact', head: true })
+      .is('deleted_at', null);
 
     if (countError) {
       throw new InternalServerErrorException(`Falha ao contar registros sanitários: ${countError.message}`);
@@ -187,6 +192,7 @@ export class DadosSanitariosService {
         bufalo:id_bufalo(id_bufalo, nome, brinco, id_propriedade)
       `,
       )
+      .is('deleted_at', null)
       .order('dt_aplicacao', { ascending: false })
       .range(offset, offset + limit - 1);
 
@@ -207,7 +213,8 @@ export class DadosSanitariosService {
       .getAdminClient()
       .from(this.tableName)
       .select('*', { count: 'exact', head: true })
-      .eq('id_bufalo', id_bufalo);
+      .eq('id_bufalo', id_bufalo)
+      .is('deleted_at', null);
 
     if (countError) {
       throw new InternalServerErrorException(`Falha ao contar registros sanitários do búfalo: ${countError.message}`);
@@ -218,6 +225,7 @@ export class DadosSanitariosService {
       .from(this.tableName)
       .select('*')
       .eq('id_bufalo', id_bufalo)
+      .is('deleted_at', null)
       .order('dt_aplicacao', { ascending: false })
       .range(offset, offset + limit - 1);
 
@@ -267,7 +275,13 @@ export class DadosSanitariosService {
   }
 
   async findOne(id_sanit: string) {
-    const { data, error } = await this.supabase.getAdminClient().from(this.tableName).select('*').eq('id_sanit', id_sanit).single();
+    const { data, error } = await this.supabase
+      .getAdminClient()
+      .from(this.tableName)
+      .select('*')
+      .eq('id_sanit', id_sanit)
+      .is('deleted_at', null)
+      .single();
 
     if (error || !data) {
       throw new NotFoundException(`Dado sanitário com ID ${id_sanit} não encontrado.`);
@@ -306,14 +320,72 @@ export class DadosSanitariosService {
   }
 
   async remove(id_sanit: string) {
-    await this.findOne(id_sanit);
+    return this.softDelete(id_sanit);
+  }
 
-    const { error } = await this.supabase.getAdminClient().from(this.tableName).delete().eq('id_sanit', id_sanit);
+  async softDelete(id: string) {
+    await this.findOne(id);
+
+    const { data, error } = await this.supabase
+      .getAdminClient()
+      .from(this.tableName)
+      .update({ deleted_at: new Date().toISOString() })
+      .eq('id_sanit', id)
+      .select()
+      .single();
 
     if (error) {
       throw new InternalServerErrorException(`Falha ao remover dado sanitário: ${error.message}`);
     }
-    return { message: 'Registro removido com sucesso' };
+
+    return {
+      message: 'Registro removido com sucesso (soft delete)',
+      data: formatDateFields(data),
+    };
+  }
+
+  async restore(id: string) {
+    const { data: registro } = await this.supabase.getAdminClient().from(this.tableName).select('deleted_at').eq('id_sanit', id).single();
+
+    if (!registro) {
+      throw new NotFoundException(`Dado sanitário com ID ${id} não encontrado`);
+    }
+
+    if (!registro.deleted_at) {
+      throw new BadRequestException('Este registro não está removido');
+    }
+
+    const { data, error } = await this.supabase
+      .getAdminClient()
+      .from(this.tableName)
+      .update({ deleted_at: null })
+      .eq('id_sanit', id)
+      .select()
+      .single();
+
+    if (error) {
+      throw new InternalServerErrorException(`Falha ao restaurar dado sanitário: ${error.message}`);
+    }
+
+    return {
+      message: 'Registro restaurado com sucesso',
+      data: formatDateFields(data),
+    };
+  }
+
+  async findAllWithDeleted(): Promise<any[]> {
+    const { data, error } = await this.supabase
+      .getAdminClient()
+      .from(this.tableName)
+      .select('*')
+      .order('deleted_at', { ascending: false, nullsFirst: true })
+      .order('dt_aplicacao', { ascending: false });
+
+    if (error) {
+      throw new InternalServerErrorException('Erro ao buscar dados sanitários (incluindo deletados)');
+    }
+
+    return formatDateFieldsArray(data || []);
   }
 
   /**

@@ -130,16 +130,44 @@ export class ControleLeiteiroController {
   }
 
   @Delete(':id')
-  @HttpCode(204)
   @ApiOperation({
-    summary: '🗑️ Remover ordenha',
-    description: 'Remove um registro de ordenha (cuidado: afeta estatísticas).',
+    summary: 'Remover ordenha (soft delete)',
+    description: 'Remove logicamente um registro de ordenha. Use POST /:id/restore para restaurar.',
   })
-  @ApiResponse({ status: 204, description: 'Registro deletado com sucesso.' })
+  @ApiResponse({ status: 200, description: 'Registro removido com sucesso (soft delete).' })
   @ApiResponse({ status: 404, description: 'Registro não encontrado.' })
   remove(@Param('id', ParseUUIDPipe) id: string, @User() user: any) {
     this.logger.logApiRequest('DELETE', `/lactacao/${id}`, undefined, { module: 'ControleLeiteiroController', method: 'remove', lactacaoId: id });
     return this.service.remove(id, user);
+  }
+
+  @Post(':id/restore')
+  @ApiOperation({
+    summary: 'Restaurar ordenha removida',
+    description: 'Restaura um registro de ordenha que foi removido (soft delete).',
+  })
+  @ApiParam({ name: 'id', description: 'ID do registro a ser restaurado', type: 'string' })
+  @ApiResponse({ status: 200, description: 'Registro restaurado com sucesso.' })
+  @ApiResponse({ status: 404, description: 'Registro não encontrado.' })
+  @ApiResponse({ status: 400, description: 'Registro não está removido.' })
+  restore(@Param('id', ParseUUIDPipe) id: string, @User() user: any) {
+    this.logger.logApiRequest('POST', `/lactacao/${id}/restore`, undefined, {
+      module: 'ControleLeiteiroController',
+      method: 'restore',
+      lactacaoId: id,
+    });
+    return this.service.restore(id, user);
+  }
+
+  @Get('deleted/all')
+  @ApiOperation({
+    summary: 'Listar todas as ordenhas incluindo removidas',
+    description: 'Retorna todos os registros de ordenha, incluindo os removidos (soft delete).',
+  })
+  @ApiResponse({ status: 200, description: 'Lista completa retornada com sucesso.' })
+  findAllWithDeleted(@User() user: any) {
+    this.logger.logApiRequest('GET', '/lactacao/deleted/all', undefined, { module: 'ControleLeiteiroController', method: 'findAllWithDeleted' });
+    return this.service.findAllWithDeleted(user);
   }
 
   @Get('femeas/em-lactacao/:id_propriedade')

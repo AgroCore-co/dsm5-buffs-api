@@ -1,12 +1,13 @@
-import { Injectable, InternalServerErrorException, NotFoundException } from '@nestjs/common';
+import { Injectable, InternalServerErrorException, NotFoundException, BadRequestException } from '@nestjs/common';
 import { SupabaseService } from '../../../core/supabase/supabase.service';
 import { LoggerService } from '../../../core/logger/logger.service';
 import { CreateMedicacaoDto } from './dto/create-medicacao.dto';
 import { UpdateMedicacaoDto } from './dto/update-medicacao.dto';
 import { formatDateFields, formatDateFieldsArray } from '../../../core/utils/date-formatter.utils';
+import { ISoftDelete } from '../../../core/interfaces';
 
 @Injectable()
-export class MedicamentosService {
+export class MedicamentosService implements ISoftDelete {
   constructor(
     private readonly supabase: SupabaseService,
     private readonly logger: LoggerService,
@@ -24,7 +25,12 @@ export class MedicamentosService {
   }
 
   async findAll() {
-    const { data, error } = await this.supabase.getAdminClient().from(this.tableName).select('*').order('created_at', { ascending: false });
+    const { data, error } = await this.supabase
+      .getAdminClient()
+      .from(this.tableName)
+      .select('*')
+      .is('deleted_at', null)
+      .order('created_at', { ascending: false });
 
     if (error) {
       throw new InternalServerErrorException(`Falha ao buscar medicações: ${error.message}`);
@@ -38,6 +44,7 @@ export class MedicamentosService {
       .from(this.tableName)
       .select('*')
       .eq('id_propriedade', id_propriedade)
+      .is('deleted_at', null)
       .order('created_at', { ascending: false });
 
     if (error) {
@@ -47,7 +54,13 @@ export class MedicamentosService {
   }
 
   async findOne(id_medicacao: string) {
-    const { data, error } = await this.supabase.getAdminClient().from(this.tableName).select('*').eq('id_medicacao', id_medicacao).single();
+    const { data, error } = await this.supabase
+      .getAdminClient()
+      .from(this.tableName)
+      .select('*')
+      .eq('id_medicacao', id_medicacao)
+      .is('deleted_at', null)
+      .single();
 
     if (error || !data) {
       throw new NotFoundException(`Medicação com ID ${id_medicacao} não encontrada.`);
@@ -67,13 +80,71 @@ export class MedicamentosService {
   }
 
   async remove(id_medicacao: string) {
-    await this.findOne(id_medicacao); // Garante que existe
+    return this.softDelete(id_medicacao);
+  }
 
-    const { error } = await this.supabase.getAdminClient().from(this.tableName).delete().eq('id_medicacao', id_medicacao);
+  async softDelete(id: string) {
+    await this.findOne(id);
+
+    const { data, error } = await this.supabase
+      .getAdminClient()
+      .from(this.tableName)
+      .update({ deleted_at: new Date().toISOString() })
+      .eq('id_medicacao', id)
+      .select()
+      .single();
 
     if (error) {
       throw new InternalServerErrorException(`Falha ao remover medicação: ${error.message}`);
     }
-    return { message: 'Medicação removida com sucesso' };
+
+    return {
+      message: 'Medicação removida com sucesso (soft delete)',
+      data: formatDateFields(data),
+    };
+  }
+
+  async restore(id: string) {
+    const { data: medicacao } = await this.supabase.getAdminClient().from(this.tableName).select('deleted_at').eq('id_medicacao', id).single();
+
+    if (!medicacao) {
+      throw new NotFoundException(`Medicação com ID ${id} não encontrada`);
+    }
+
+    if (!medicacao.deleted_at) {
+      throw new BadRequestException('Esta medicação não está removida');
+    }
+
+    const { data, error } = await this.supabase
+      .getAdminClient()
+      .from(this.tableName)
+      .update({ deleted_at: null })
+      .eq('id_medicacao', id)
+      .select()
+      .single();
+
+    if (error) {
+      throw new InternalServerErrorException(`Falha ao restaurar medicação: ${error.message}`);
+    }
+
+    return {
+      message: 'Medicação restaurada com sucesso',
+      data: formatDateFields(data),
+    };
+  }
+
+  async findAllWithDeleted(): Promise<any[]> {
+    const { data, error } = await this.supabase
+      .getAdminClient()
+      .from(this.tableName)
+      .select('*')
+      .order('deleted_at', { ascending: false, nullsFirst: true })
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      throw new InternalServerErrorException('Erro ao buscar medicações (incluindo deletadas)');
+    }
+
+    return formatDateFieldsArray(data || []);
   }
 }

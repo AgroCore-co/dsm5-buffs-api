@@ -52,11 +52,37 @@ export class MedicamentosController {
   }
 
   @Delete(':id')
-  @ApiOperation({ summary: 'Remove uma medicação' })
+  @ApiOperation({
+    summary: 'Remover medicação (soft delete)',
+    description: 'Remove logicamente uma medicação. Use POST /:id/restore para restaurar.',
+  })
   @ApiParam({ name: 'id', description: 'ID da medicação a ser removida', type: 'string' })
-  @ApiResponse({ status: 200, description: 'Medicação removida com sucesso.' })
+  @ApiResponse({ status: 200, description: 'Medicação removida com sucesso (soft delete).' })
   @ApiResponse({ status: 404, description: 'Medicação não encontrada.' })
   remove(@Param('id', ParseUUIDPipe) id: string) {
     return this.service.remove(id);
+  }
+
+  @Post(':id/restore')
+  @ApiOperation({
+    summary: 'Restaurar medicação removida',
+    description: 'Restaura uma medicação que foi removida (soft delete).',
+  })
+  @ApiParam({ name: 'id', description: 'ID da medicação a ser restaurada', type: 'string' })
+  @ApiResponse({ status: 200, description: 'Medicação restaurada com sucesso.' })
+  @ApiResponse({ status: 404, description: 'Medicação não encontrada.' })
+  @ApiResponse({ status: 400, description: 'Medicação não está removida.' })
+  restore(@Param('id', ParseUUIDPipe) id: string) {
+    return this.service.restore(id);
+  }
+
+  @Get('deleted/all')
+  @ApiOperation({
+    summary: 'Listar todas as medicações incluindo removidas',
+    description: 'Retorna todas as medicações, incluindo as removidas (soft delete).',
+  })
+  @ApiResponse({ status: 200, description: 'Lista completa retornada com sucesso.' })
+  findAllWithDeleted() {
+    return this.service.findAllWithDeleted();
   }
 }

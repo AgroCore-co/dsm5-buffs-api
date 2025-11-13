@@ -128,8 +128,8 @@ export class ColetaController {
 
   @Delete(':id')
   @ApiOperation({
-    summary: '🗑️ Remover coleta',
-    description: 'Cancela uma coleta (atenção: restitui estoque).',
+    summary: 'Remover coleta (soft delete)',
+    description: 'Remove logicamente uma coleta sem deletar do banco. Use POST /:id/restore para recuperar.',
   })
   @ApiParam({ name: 'id', description: 'ID da coleta a ser removida', type: 'string' })
   @ApiResponse({ status: 200, description: 'Coleta removida com sucesso.' })
@@ -137,5 +137,36 @@ export class ColetaController {
   remove(@Param('id', ParseUUIDPipe) id: string) {
     this.logger.logApiRequest('DELETE', `/coletas/${id}`, undefined, { module: 'ColetaController', method: 'remove', coletaId: id });
     return this.service.remove(id);
+  }
+
+  @Post(':id/restore')
+  @ApiOperation({
+    summary: 'Restaurar coleta removida',
+    description: 'Restaura uma coleta que foi removida com soft delete.',
+  })
+  @ApiParam({ name: 'id', description: 'ID da coleta a ser restaurada', type: 'string' })
+  @ApiResponse({ status: 200, description: 'Coleta restaurada com sucesso.' })
+  @ApiResponse({ status: 404, description: 'Coleta não encontrada ou não estava removida.' })
+  restore(@Param('id', ParseUUIDPipe) id: string) {
+    this.logger.logApiRequest('POST', `/coletas/${id}/restore`, undefined, {
+      module: 'ColetaController',
+      method: 'restore',
+      coletaId: id,
+    });
+    return this.service.restore(id);
+  }
+
+  @Get('deleted/all')
+  @ApiOperation({
+    summary: 'Listar coletas removidas',
+    description: 'Lista todas as coletas incluindo as removidas (soft delete).',
+  })
+  @ApiResponse({ status: 200, description: 'Lista de coletas incluindo deletadas retornada com sucesso.' })
+  findAllWithDeleted() {
+    this.logger.logApiRequest('GET', '/coletas/deleted/all', undefined, {
+      module: 'ColetaController',
+      method: 'findAllWithDeleted',
+    });
+    return this.service.findAllWithDeleted();
   }
 }

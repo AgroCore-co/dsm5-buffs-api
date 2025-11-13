@@ -84,11 +84,37 @@ export class DadosZootecnicosController {
   }
 
   @Delete(':id_zootec')
-  @ApiOperation({ summary: 'Remove um registro zootécnico' })
+  @ApiOperation({
+    summary: 'Remover registro zootécnico (soft delete)',
+    description: 'Remove logicamente um registro zootécnico. Use POST /:id/restore para restaurar.',
+  })
   @ApiParam({ name: 'id_zootec', description: 'ID do registro zootécnico a ser removido', type: 'string' })
-  @ApiResponse({ status: 200, description: 'Registro removido com sucesso.' })
+  @ApiResponse({ status: 200, description: 'Registro removido com sucesso (soft delete).' })
   @ApiResponse({ status: 404, description: 'Registro não encontrado.' })
   remove(@Param('id_zootec', ParseUUIDPipe) id_zootec: string) {
     return this.service.remove(id_zootec);
+  }
+
+  @Post(':id_zootec/restore')
+  @ApiOperation({
+    summary: 'Restaurar registro zootécnico removido',
+    description: 'Restaura um registro zootécnico que foi removido (soft delete).',
+  })
+  @ApiParam({ name: 'id_zootec', description: 'ID do registro a ser restaurado', type: 'string' })
+  @ApiResponse({ status: 200, description: 'Registro restaurado com sucesso.' })
+  @ApiResponse({ status: 404, description: 'Registro não encontrado.' })
+  @ApiResponse({ status: 400, description: 'Registro não está removido.' })
+  restore(@Param('id_zootec', ParseUUIDPipe) id_zootec: string) {
+    return this.service.restore(id_zootec);
+  }
+
+  @Get('deleted/all')
+  @ApiOperation({
+    summary: 'Listar todos os registros zootécnicos incluindo removidos',
+    description: 'Retorna todos os registros zootécnicos, incluindo os removidos (soft delete).',
+  })
+  @ApiResponse({ status: 200, description: 'Lista completa retornada com sucesso.' })
+  findAllWithDeleted() {
+    return this.service.findAllWithDeleted();
   }
 }

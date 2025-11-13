@@ -210,11 +210,37 @@ export class DadosSanitariosController {
   }
 
   @Delete(':id')
-  @ApiOperation({ summary: 'Remove um registro sanitário' })
+  @ApiOperation({
+    summary: 'Remover registro sanitário (soft delete)',
+    description: 'Remove logicamente um registro sanitário. Use POST /:id/restore para restaurar.',
+  })
   @ApiParam({ name: 'id', description: 'ID do registro sanitário a ser removido', type: 'string' })
-  @ApiResponse({ status: 200, description: 'Registro removido com sucesso.' })
+  @ApiResponse({ status: 200, description: 'Registro removido com sucesso (soft delete).' })
   @ApiResponse({ status: 404, description: 'Registro não encontrado.' })
   remove(@Param('id', ParseUUIDPipe) id: string) {
     return this.service.remove(id);
+  }
+
+  @Post(':id/restore')
+  @ApiOperation({
+    summary: 'Restaurar registro sanitário removido',
+    description: 'Restaura um registro sanitário que foi removido (soft delete).',
+  })
+  @ApiParam({ name: 'id', description: 'ID do registro a ser restaurado', type: 'string' })
+  @ApiResponse({ status: 200, description: 'Registro restaurado com sucesso.' })
+  @ApiResponse({ status: 404, description: 'Registro não encontrado.' })
+  @ApiResponse({ status: 400, description: 'Registro não está removido.' })
+  restore(@Param('id', ParseUUIDPipe) id: string) {
+    return this.service.restore(id);
+  }
+
+  @Get('deleted/all')
+  @ApiOperation({
+    summary: 'Listar todos os registros sanitários incluindo removidos',
+    description: 'Retorna todos os registros sanitários, incluindo os removidos (soft delete).',
+  })
+  @ApiResponse({ status: 200, description: 'Lista completa retornada com sucesso.' })
+  findAllWithDeleted() {
+    return this.service.findAllWithDeleted();
   }
 }

@@ -1,5 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { IsUUID, IsNotEmpty, IsOptional, IsDateString, IsNumber, IsPositive, MaxLength, IsString } from 'class-validator';
+import { IsNotFutureDate } from '../../../../core/validators';
 
 export class CreateEstoqueLeiteDto {
   @ApiProperty({ example: 'f47ac10b-58cc-4372-a567-0e02b2c3d479', description: 'ID da propriedade onde o estoque está localizado' })
@@ -20,6 +21,7 @@ export class CreateEstoqueLeiteDto {
 
   @ApiProperty({ example: '2025-08-18T18:00:00.000Z', description: 'Data e hora do registro de estoque', required: false })
   @IsDateString({}, { message: 'A data de registro deve estar no formato ISO 8601 válido' })
+  @IsNotFutureDate({ message: 'A data de registro não pode ser no futuro' })
   @IsOptional()
   dt_registro?: string;
 

@@ -1,5 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { IsUUID, IsNotEmpty, IsOptional, IsDateString, IsBoolean, IsString, IsNumber, MaxLength, IsPositive } from 'class-validator';
+import { IsNotFutureDate } from '../../../../core/validators/date.validators';
 
 export class CreateColetaDto {
   @ApiProperty({ example: 'f47ac10b-58cc-4372-a567-0e02b2c3d479', description: 'ID da indústria que realizou a coleta' })
@@ -32,5 +33,6 @@ export class CreateColetaDto {
   @ApiProperty({ example: '2025-08-18T08:30:00.000Z', description: 'Data e hora da coleta' })
   @IsDateString({}, { message: 'A data da coleta deve estar no formato ISO 8601 válido' })
   @IsNotEmpty({ message: 'A data da coleta é obrigatória' })
+  @IsNotFutureDate({ message: 'A data da coleta não pode estar no futuro' })
   dt_coleta: string;
 }

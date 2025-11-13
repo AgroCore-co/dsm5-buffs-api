@@ -1,4 +1,4 @@
-import { Injectable, InternalServerErrorException, NotFoundException } from '@nestjs/common';
+import { Injectable, InternalServerErrorException, NotFoundException, BadRequestException } from '@nestjs/common';
 import { SupabaseService } from '../../../core/supabase/supabase.service';
 import { LoggerService } from '../../../core/logger/logger.service';
 import { AlertasService } from '../../alerta/alerta.service';
@@ -8,9 +8,10 @@ import { UpdateCicloLactacaoDto } from './dto/update-ciclo-lactacao.dto';
 import { PaginationDto, PaginatedResponse } from '../../../core/dto/pagination.dto';
 import { createPaginatedResponse, calculatePaginationParams } from '../../../core/utils/pagination.utils';
 import { formatDateFields, formatDateFieldsArray } from '../../../core/utils/date-formatter.utils';
+import { ISoftDelete } from '../../../core/interfaces/soft-delete.interface';
 
 @Injectable()
-export class CicloLactacaoService {
+export class CicloLactacaoService implements ISoftDelete {
   constructor(
     private readonly supabase: SupabaseService,
     private readonly logger: LoggerService,
@@ -257,8 +258,12 @@ export class CicloLactacaoService {
     const { page = 1, limit = 10 } = paginationDto;
     const { limit: limitValue, offset } = calculatePaginationParams(page, limit);
 
-    // Contar total de registros
-    const { count, error: countError } = await this.supabase.getAdminClient().from(this.tableName).select('*', { count: 'exact', head: true });
+    // Contar total de registros (excluindo deletados)
+    const { count, error: countError } = await this.supabase
+      .getAdminClient()
+      .from(this.tableName)
+      .select('*', { count: 'exact', head: true })
+      .is('deleted_at', null);
 
     if (countError) {
       this.logger.logError(countError, {
@@ -268,11 +273,12 @@ export class CicloLactacaoService {
       throw new InternalServerErrorException(`Falha ao contar ciclos de lactação: ${countError.message}`);
     }
 
-    // Buscar registros com paginação
+    // Buscar registros com paginação (excluindo deletados)
     const { data, error } = await this.supabase
       .getAdminClient()
       .from(this.tableName)
       .select('*')
+      .is('deleted_at', null)
       .order('dt_parto', { ascending: false })
       .range(offset, offset + limitValue - 1);
 
@@ -445,31 +451,115 @@ export class CicloLactacaoService {
   }
 
   async remove(id_ciclo_lactacao: string) {
-    this.logger.log('Iniciando remoção de ciclo de lactação', {
+    return this.softDelete(id_ciclo_lactacao);
+  }
+
+  async softDelete(id: string) {
+    this.logger.log('Iniciando remoção de ciclo de lactação (soft delete)', {
       module: 'CicloLactacaoService',
-      method: 'remove',
-      cicloId: id_ciclo_lactacao,
+      method: 'softDelete',
+      cicloId: id,
     });
 
-    await this.findOne(id_ciclo_lactacao);
+    await this.findOne(id);
 
-    const { error } = await this.supabase.getAdminClient().from(this.tableName).delete().eq('id_ciclo_lactacao', id_ciclo_lactacao);
+    const { data, error } = await this.supabase
+      .getAdminClient()
+      .from(this.tableName)
+      .update({ deleted_at: new Date().toISOString() })
+      .eq('id_ciclo_lactacao', id)
+      .select()
+      .single();
 
     if (error) {
       this.logger.logError(error, {
         module: 'CicloLactacaoService',
-        method: 'remove',
-        cicloId: id_ciclo_lactacao,
+        method: 'softDelete',
+        cicloId: id,
       });
       throw new InternalServerErrorException(`Falha ao remover ciclo de lactação: ${error.message}`);
     }
 
-    this.logger.log('Ciclo de lactação removido com sucesso', {
+    this.logger.log('Ciclo de lactação removido com sucesso (soft delete)', {
       module: 'CicloLactacaoService',
-      method: 'remove',
-      cicloId: id_ciclo_lactacao,
+      method: 'softDelete',
+      cicloId: id,
     });
-    return { message: 'Ciclo removido com sucesso' };
+
+    return {
+      message: 'Ciclo de lactação removido com sucesso (soft delete)',
+      data: formatDateFields(data),
+    };
+  }
+
+  async restore(id: string) {
+    this.logger.log('Iniciando restauração de ciclo de lactação', {
+      module: 'CicloLactacaoService',
+      method: 'restore',
+      cicloId: id,
+    });
+
+    const { data: ciclo } = await this.supabase.getAdminClient().from(this.tableName).select('deleted_at').eq('id_ciclo_lactacao', id).single();
+
+    if (!ciclo) {
+      throw new NotFoundException(`Ciclo de lactação com ID ${id} não encontrado`);
+    }
+
+    if (!ciclo.deleted_at) {
+      throw new BadRequestException('Este ciclo de lactação não está removido');
+    }
+
+    const { data, error } = await this.supabase
+      .getAdminClient()
+      .from(this.tableName)
+      .update({ deleted_at: null })
+      .eq('id_ciclo_lactacao', id)
+      .select()
+      .single();
+
+    if (error) {
+      this.logger.logError(error, {
+        module: 'CicloLactacaoService',
+        method: 'restore',
+        cicloId: id,
+      });
+      throw new InternalServerErrorException(`Falha ao restaurar ciclo de lactação: ${error.message}`);
+    }
+
+    this.logger.log('Ciclo de lactação restaurado com sucesso', {
+      module: 'CicloLactacaoService',
+      method: 'restore',
+      cicloId: id,
+    });
+
+    return {
+      message: 'Ciclo de lactação restaurado com sucesso',
+      data: formatDateFields(data),
+    };
+  }
+
+  async findAllWithDeleted(): Promise<any[]> {
+    this.logger.log('Buscando todos os ciclos de lactação incluindo deletados', {
+      module: 'CicloLactacaoService',
+      method: 'findAllWithDeleted',
+    });
+
+    const { data, error } = await this.supabase
+      .getAdminClient()
+      .from(this.tableName)
+      .select('*')
+      .order('deleted_at', { ascending: false, nullsFirst: true })
+      .order('dt_parto', { ascending: false });
+
+    if (error) {
+      this.logger.logError(error, {
+        module: 'CicloLactacaoService',
+        method: 'findAllWithDeleted',
+      });
+      throw new InternalServerErrorException('Erro ao buscar ciclos de lactação (incluindo deletados)');
+    }
+
+    return formatDateFieldsArray(data || []);
   }
 
   /**

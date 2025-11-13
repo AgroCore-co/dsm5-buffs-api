@@ -60,11 +60,37 @@ export class MaterialGeneticoController {
   }
 
   @Delete(':id')
-  @ApiOperation({ summary: 'Remover material genético' })
+  @ApiOperation({
+    summary: 'Remover material genético (soft delete)',
+    description: 'Remove logicamente um material genético. Use POST /:id/restore para restaurar.',
+  })
   @ApiParam({ name: 'id', description: 'ID do material genético' })
-  @ApiResponse({ status: 200, description: 'Material genético removido com sucesso.' })
+  @ApiResponse({ status: 200, description: 'Material genético removido com sucesso (soft delete).' })
   @ApiResponse({ status: 404, description: 'Material genético não encontrado.' })
   remove(@Param('id', ParseUUIDPipe) id: string) {
     return this.service.remove(id);
+  }
+
+  @Post(':id/restore')
+  @ApiOperation({
+    summary: 'Restaurar material genético removido',
+    description: 'Restaura um material genético que foi removido (soft delete).',
+  })
+  @ApiParam({ name: 'id', description: 'ID do material genético a ser restaurado' })
+  @ApiResponse({ status: 200, description: 'Material genético restaurado com sucesso.' })
+  @ApiResponse({ status: 404, description: 'Material genético não encontrado.' })
+  @ApiResponse({ status: 400, description: 'Material genético não está removido.' })
+  restore(@Param('id', ParseUUIDPipe) id: string) {
+    return this.service.restore(id);
+  }
+
+  @Get('deleted/all')
+  @ApiOperation({
+    summary: 'Listar todos os materiais genéticos incluindo removidos',
+    description: 'Retorna todos os materiais genéticos, incluindo os removidos (soft delete).',
+  })
+  @ApiResponse({ status: 200, description: 'Lista completa retornada com sucesso.' })
+  findAllWithDeleted() {
+    return this.service.findAllWithDeleted();
   }
 }

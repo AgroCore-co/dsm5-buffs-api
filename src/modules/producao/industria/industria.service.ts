@@ -1,12 +1,13 @@
-import { Injectable, InternalServerErrorException, NotFoundException } from '@nestjs/common';
+import { Injectable, InternalServerErrorException, NotFoundException, BadRequestException } from '@nestjs/common';
 import { SupabaseService } from '../../../core/supabase/supabase.service';
 import { LoggerService } from '../../../core/logger/logger.service';
 import { CreateIndustriaDto } from './dto/create-industria.dto';
 import { UpdateIndustriaDto } from './dto/update-industria.dto';
 import { formatDateFields, formatDateFieldsArray } from '../../../core/utils/date-formatter.utils';
+import { ISoftDelete } from '../../../core/interfaces';
 
 @Injectable()
-export class IndustriaService {
+export class IndustriaService implements ISoftDelete {
   constructor(
     private readonly supabase: SupabaseService,
     private readonly logger: LoggerService,
@@ -46,7 +47,13 @@ export class IndustriaService {
       method: 'findAll',
     });
 
-    const { data, error } = await this.supabase.getAdminClient().from(this.tableName).select('*').order('nome', { ascending: true });
+    const { data, error } = await this.supabase
+      .getAdminClient()
+      .from(this.tableName)
+      .select('*')
+      .is('deleted_at', null)
+      .order('nome', { ascending: true });
+
     if (error) {
       this.logger.logError(error, {
         module: 'IndustriaService',
@@ -74,6 +81,7 @@ export class IndustriaService {
       .from(this.tableName)
       .select('*')
       .eq('id_propriedade', id_propriedade)
+      .is('deleted_at', null)
       .order('nome', { ascending: true });
 
     if (error) {
@@ -100,7 +108,14 @@ export class IndustriaService {
       industriaId: id_industria,
     });
 
-    const { data, error } = await this.supabase.getAdminClient().from(this.tableName).select('*').eq('id_industria', id_industria).single();
+    const { data, error } = await this.supabase
+      .getAdminClient()
+      .from(this.tableName)
+      .select('*')
+      .eq('id_industria', id_industria)
+      .is('deleted_at', null)
+      .single();
+
     if (error || !data) {
       this.logger.warn('Indústria não encontrada', {
         module: 'IndustriaService',
@@ -145,28 +160,114 @@ export class IndustriaService {
   }
 
   async remove(id_industria: string) {
-    this.logger.log('Iniciando remoção de indústria', {
+    return this.softDelete(id_industria);
+  }
+
+  async softDelete(id: string) {
+    this.logger.log('Iniciando remoção de indústria (soft delete)', {
       module: 'IndustriaService',
-      method: 'remove',
-      industriaId: id_industria,
+      method: 'softDelete',
+      industriaId: id,
     });
 
-    await this.findOne(id_industria);
-    const { error } = await this.supabase.getAdminClient().from(this.tableName).delete().eq('id_industria', id_industria);
+    await this.findOne(id);
+
+    const { data, error } = await this.supabase
+      .getAdminClient()
+      .from(this.tableName)
+      .update({ deleted_at: new Date().toISOString() })
+      .eq('id_industria', id)
+      .select()
+      .single();
+
     if (error) {
       this.logger.logError(error, {
         module: 'IndustriaService',
-        method: 'remove',
-        industriaId: id_industria,
+        method: 'softDelete',
+        industriaId: id,
       });
       throw new InternalServerErrorException(`Falha ao remover indústria: ${error.message}`);
     }
 
-    this.logger.log('Indústria removida com sucesso', {
+    this.logger.log('Indústria removida com sucesso (soft delete)', {
       module: 'IndustriaService',
-      method: 'remove',
-      industriaId: id_industria,
+      method: 'softDelete',
+      industriaId: id,
     });
-    return { message: 'Indústria removida com sucesso' };
+
+    return {
+      message: 'Indústria removida com sucesso (soft delete)',
+      data: formatDateFields(data),
+    };
+  }
+
+  async restore(id: string) {
+    this.logger.log('Iniciando restauração de indústria', {
+      module: 'IndustriaService',
+      method: 'restore',
+      industriaId: id,
+    });
+
+    const { data: industria } = await this.supabase.getAdminClient().from(this.tableName).select('deleted_at').eq('id_industria', id).single();
+
+    if (!industria) {
+      throw new NotFoundException(`Indústria com ID ${id} não encontrada`);
+    }
+
+    if (!industria.deleted_at) {
+      throw new BadRequestException('Esta indústria não está removida');
+    }
+
+    const { data, error } = await this.supabase
+      .getAdminClient()
+      .from(this.tableName)
+      .update({ deleted_at: null })
+      .eq('id_industria', id)
+      .select()
+      .single();
+
+    if (error) {
+      this.logger.logError(error, {
+        module: 'IndustriaService',
+        method: 'restore',
+        industriaId: id,
+      });
+      throw new InternalServerErrorException(`Falha ao restaurar indústria: ${error.message}`);
+    }
+
+    this.logger.log('Indústria restaurada com sucesso', {
+      module: 'IndustriaService',
+      method: 'restore',
+      industriaId: id,
+    });
+
+    return {
+      message: 'Indústria restaurada com sucesso',
+      data: formatDateFields(data),
+    };
+  }
+
+  async findAllWithDeleted(): Promise<any[]> {
+    this.logger.log('Buscando todas as indústrias incluindo deletadas', {
+      module: 'IndustriaService',
+      method: 'findAllWithDeleted',
+    });
+
+    const { data, error } = await this.supabase
+      .getAdminClient()
+      .from(this.tableName)
+      .select('*')
+      .order('deleted_at', { ascending: false, nullsFirst: true })
+      .order('nome', { ascending: true });
+
+    if (error) {
+      this.logger.logError(error, {
+        module: 'IndustriaService',
+        method: 'findAllWithDeleted',
+      });
+      throw new InternalServerErrorException('Erro ao buscar indústrias (incluindo deletadas)');
+    }
+
+    return formatDateFieldsArray(data || []);
   }
 }

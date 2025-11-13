@@ -59,11 +59,37 @@ export class VacinacaoController {
   }
 
   @Delete(':id')
-  @ApiOperation({ summary: 'Remove um registo de vacinação' })
+  @ApiOperation({
+    summary: 'Remover registo de vacinação (soft delete)',
+    description: 'Remove logicamente um registo de vacinação. Use POST /:id/restore para restaurar.',
+  })
   @ApiParam({ name: 'id', description: 'ID do registo a ser removido', type: 'string' })
-  @ApiResponse({ status: 200, description: 'Registo removido com sucesso.' })
+  @ApiResponse({ status: 200, description: 'Registo removido com sucesso (soft delete).' })
   @ApiResponse({ status: 404, description: 'Registo não encontrado.' })
   remove(@Param('id', ParseUUIDPipe) id: string) {
     return this.service.remove(id);
+  }
+
+  @Post(':id/restore')
+  @ApiOperation({
+    summary: 'Restaurar registo de vacinação removido',
+    description: 'Restaura um registo de vacinação que foi removido (soft delete).',
+  })
+  @ApiParam({ name: 'id', description: 'ID do registo a ser restaurado', type: 'string' })
+  @ApiResponse({ status: 200, description: 'Registo restaurado com sucesso.' })
+  @ApiResponse({ status: 404, description: 'Registo não encontrado.' })
+  @ApiResponse({ status: 400, description: 'Registo não está removido.' })
+  restore(@Param('id', ParseUUIDPipe) id: string) {
+    return this.service.restore(id);
+  }
+
+  @Get('deleted/all')
+  @ApiOperation({
+    summary: 'Listar todos os registos de vacinação incluindo removidos',
+    description: 'Retorna todos os registos de vacinação, incluindo os removidos (soft delete).',
+  })
+  @ApiResponse({ status: 200, description: 'Lista completa retornada com sucesso.' })
+  findAllWithDeleted() {
+    return this.service.findAllWithDeleted();
   }
 }
