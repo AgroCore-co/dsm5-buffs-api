@@ -416,23 +416,6 @@ Antes de fazer deploy, verifique:
 - Health checks respondendo corretamente
 - Logs configurados para produção
 
-### Deploy no AWS App Runner (Recomendado)
-
-A API está otimizada para rodar no **AWS App Runner Free Tier**:
-
-- **1 vCPU, 2GB RAM** (adequado para a aplicação)
-- **720 horas/mês grátis** (~24 dias de execução contínua)
-- **Auto-scaling** e **health checks** inclusos
-- **HTTPS automático** com certificado gerenciado
-
-#### Configuração Rápida
-
-**1. Pré-requisitos:**
-
-- Conta AWS criada
-- Código no GitHub/GitLab
-- Credenciais Supabase e Gemini válidas
-
 **2. Variáveis de Ambiente no AWS Console:**
 
 ```env
