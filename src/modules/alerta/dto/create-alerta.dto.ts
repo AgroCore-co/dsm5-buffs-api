@@ -51,10 +51,20 @@ export class CreateAlertaDto {
   @IsNotEmpty()
   data_alerta: string;
 
-  @ApiProperty({ description: 'Prioridade do alerta', enum: PrioridadeAlerta, example: PrioridadeAlerta.MEDIA })
+  @ApiProperty({ description: 'Prioridade do alerta', enum: PrioridadeAlerta, example: PrioridadeAlerta.MEDIA, required: false })
   @IsEnum(PrioridadeAlerta)
-  @IsNotEmpty()
-  prioridade: PrioridadeAlerta;
+  @IsOptional()
+  prioridade?: PrioridadeAlerta;
+
+  @ApiProperty({
+    description:
+      'Descrição clínica detalhada para classificação automática de prioridade pela IA. Se fornecida e prioridade não for especificada, a IA analisará e definirá automaticamente.',
+    required: false,
+    example: 'Animal apresentando febre alta de 40°C, dificuldade respiratória moderada, perda de apetite há 3 dias, e secreção nasal purulenta.',
+  })
+  @IsString()
+  @IsOptional()
+  texto_ocorrencia_clinica?: string;
 
   @ApiProperty({ description: 'Observações adicionais', required: false, example: 'Animal de primeira cria.' })
   @IsString()

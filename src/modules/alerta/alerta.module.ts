@@ -3,6 +3,7 @@ import { AlertasService } from './alerta.service';
 import { AlertasController } from './alerta.controller';
 import { AlertasScheduler } from './alerta.scheduler';
 import { SupabaseModule } from 'src/core/supabase/supabase.module';
+import { GeminiModule } from 'src/core/gemini/gemini.module';
 
 import { BufaloRepository } from './repositories/bufalo.repository';
 import { ReproducaoRepository } from './repositories/reproducao.repository';
@@ -16,7 +17,7 @@ import { AlertaManejoService } from './services/alerta-manejo.service';
 import { AlertaClinicoService } from './services/alerta-clinico.service';
 
 @Module({
-  imports: [SupabaseModule],
+  imports: [SupabaseModule, GeminiModule],
   controllers: [AlertasController],
   providers: [
     // Core service

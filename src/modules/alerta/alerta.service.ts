@@ -1,5 +1,6 @@
-import { Injectable, InternalServerErrorException, NotFoundException } from '@nestjs/common';
+import { Injectable, InternalServerErrorException, NotFoundException, Logger } from '@nestjs/common';
 import { SupabaseService } from 'src/core/supabase/supabase.service';
+import { GeminiService } from 'src/core/gemini/gemini.service';
 import { CreateAlertaDto } from './dto/create-alerta.dto';
 import { SupabaseClient } from '@supabase/supabase-js';
 import { PaginationDto } from '../../core/dto/pagination.dto';
@@ -45,28 +46,54 @@ import { formatDateFields, formatDateFieldsArray } from '../../core/utils/date-f
  */
 @Injectable()
 export class AlertasService {
+  private readonly logger = new Logger(AlertasService.name);
   private supabase: SupabaseClient;
-  constructor(private readonly supabaseService: SupabaseService) {
+
+  constructor(
+    private readonly supabaseService: SupabaseService,
+    private readonly geminiService: GeminiService,
+  ) {
     this.supabase = this.supabaseService.getAdminClient();
   }
 
   /**
    * Cria um novo alerta no banco de dados.
+   * Se prioridade NÃO estiver definida, usa IA do Gemini para classificar
+   * automaticamente baseado no motivo + observacao do alerta.
+   *
    * @param createAlertaDto - Os dados para a criação do novo alerta.
    * @returns O objeto do alerta recém-criado.
    */
   async create(createAlertaDto: CreateAlertaDto) {
     try {
-      const { data, error } = await this.supabase.from('alertas').insert(createAlertaDto).select().single();
+      // Se NÃO tem prioridade definida, usa IA para classificar
+      if (!createAlertaDto.prioridade) {
+        this.logger.log(`Classificando prioridade com IA para alerta do animal ${createAlertaDto.animal_id}`);
+
+        // Monta texto para IA analisar usando motivo + observacao
+        const textoParaIA = createAlertaDto.texto_ocorrencia_clinica || `${createAlertaDto.motivo}. ${createAlertaDto.observacao || ''}`.trim();
+
+        try {
+          createAlertaDto.prioridade = await this.geminiService.classificarPrioridadeOcorrencia(textoParaIA);
+          this.logger.log(`Prioridade classificada pela IA: ${createAlertaDto.prioridade}`);
+        } catch (iaError) {
+          // Se IA falhar, usa prioridade MEDIA como fallback
+          this.logger.error(`Erro ao classificar com IA, usando MEDIA como fallback: ${iaError.message}`);
+          createAlertaDto.prioridade = 'MEDIA' as any;
+        }
+      }
+
+      // Remove texto_ocorrencia_clinica antes de inserir (campo não existe no banco)
+      const { texto_ocorrencia_clinica, ...alertaParaInserir } = createAlertaDto;
+
+      const { data, error } = await this.supabase.from('alertas').insert(alertaParaInserir).select().single();
 
       if (error) {
         console.error('Erro ao criar alerta:', error.message);
-        // Lançar um erro genérico do servidor em caso de falha na inserção.
         throw new InternalServerErrorException(`Falha ao criar o alerta: ${error.message}`);
       }
       return formatDateFields(data, ['data_alerta']);
     } catch (error) {
-      // Repassar a exceção se já for uma exceção NestJS ou lançar uma nova.
       throw error instanceof InternalServerErrorException ? error : new InternalServerErrorException('Ocorreu um erro inesperado ao criar o alerta.');
     }
   }

@@ -5,6 +5,8 @@ import { AlertaSanitarioService } from './services/alerta-sanitario.service';
 import { AlertaProducaoService } from './services/alerta-producao.service';
 import { AlertaManejoService } from './services/alerta-manejo.service';
 import { AlertaClinicoService } from './services/alerta-clinico.service';
+import { SupabaseService } from 'src/core/supabase/supabase.service';
+import { SupabaseClient } from '@supabase/supabase-js';
 
 /**
  * ═══════════════════════════════════════════════════════════════════════════
@@ -27,6 +29,7 @@ import { AlertaClinicoService } from './services/alerta-clinico.service';
 @Injectable()
 export class AlertasScheduler {
   private readonly logger = new Logger(AlertasScheduler.name);
+  private supabase: SupabaseClient;
 
   constructor(
     private readonly reproducaoService: AlertaReproducaoService,
@@ -34,7 +37,10 @@ export class AlertasScheduler {
     private readonly producaoService: AlertaProducaoService,
     private readonly manejoService: AlertaManejoService,
     private readonly clinicoService: AlertaClinicoService,
-  ) {}
+    private readonly supabaseService: SupabaseService,
+  ) {
+    this.supabase = this.supabaseService.getAdminClient();
+  }
 
   // ═══════════════════════════════════════════════════════════════════════
   // SANITÁRIO
@@ -135,14 +141,37 @@ export class AlertasScheduler {
 
   /**
    * Verifica sinais clínicos precoces (múltiplos tratamentos, ganho de peso insuficiente).
+   * Executa para TODAS as propriedades do sistema.
    * @cron "0 6 * * *" (todo dia às 06:00)
    */
   @Cron('0 6 * * *')
   async verificarSinaisClinicosPrecoces() {
     this.logger.log('🩹 [SCHEDULER] Iniciando verificação de sinais clínicos precoces...');
-    // Por performance, não executa sem propriedade específica
-    // Pode ser chamado manualmente via controller passando id_propriedade
-    this.logger.log('⏭️  [SCHEDULER] Pulando verificação automática de sinais clínicos (requer id_propriedade).');
-    this.logger.log('✅ [SCHEDULER] Verificação de sinais clínicos concluída.');
+
+    try {
+      // Buscar todas as propriedades ativas do sistema
+      const { data: propriedades, error } = await this.supabase.from('propriedade').select('id_propriedade').is('deleted_at', null);
+
+      if (error || !propriedades || propriedades.length === 0) {
+        this.logger.warn('⚠️  [SCHEDULER] Nenhuma propriedade encontrada para verificação clínica.');
+        return;
+      }
+
+      this.logger.log(`📋 [SCHEDULER] Verificando ${propriedades.length} propriedade(s)...`);
+
+      let totalAlertas = 0;
+      for (const prop of propriedades) {
+        try {
+          const alertas = await this.clinicoService.verificarSinaisClinicosPrecoces(prop.id_propriedade);
+          totalAlertas += alertas;
+        } catch (error) {
+          this.logger.error(`❌ [SCHEDULER] Erro ao verificar propriedade ${prop.id_propriedade}:`, error.message);
+        }
+      }
+
+      this.logger.log(`✅ [SCHEDULER] Verificação de sinais clínicos concluída. Total: ${totalAlertas} alertas criados.`);
+    } catch (error) {
+      this.logger.error('❌ [SCHEDULER] Erro crítico na verificação de sinais clínicos:', error);
+    }
   }
 }

@@ -113,7 +113,7 @@ export class AlertaManejoService {
         motivo: `Búfala ${bufalaData.nome} gestante precisa ser seca. Parto previsto em ${diasAteParto} dias (${formatarDataBR(dataPrevistaParto)}).`,
         nicho: NichoAlerta.MANEJO,
         data_alerta: new Date().toISOString().split('T')[0],
-        prioridade: prioridade,
+        texto_ocorrencia_clinica: `Búfala ${bufalaData.nome} está gestante com parto previsto para ${formatarDataBR(dataPrevistaParto)} (daqui a ${diasAteParto} dias) mas continua em ordenha. Necessário realizar secagem para permitir recuperação da glândula mamária e preparação adequada para próxima lactação. Recomenda-se secar entre 45-60 dias antes do parto através da suspensão gradual da ordenha, evitando mastite e garantindo saúde da vaca e do bezerro.`,
         observacao: `Recomenda-se secar 60 dias antes do parto. Suspender ordenha gradualmente para preparação do animal.`,
         id_evento_origem: reproducao.id_reproducao,
         tipo_evento_origem: 'SECAGEM_PENDENTE',

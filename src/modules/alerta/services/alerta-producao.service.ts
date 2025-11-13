@@ -184,7 +184,7 @@ export class AlertaProducaoService {
         motivo: `Queda de ${analise.percentualQueda}% na produção de leite de ${bufalaData.nome}.`,
         nicho: NichoAlerta.PRODUCAO,
         data_alerta: hoje.toISOString().split('T')[0],
-        prioridade: prioridade,
+        texto_ocorrencia_clinica: `Búfala ${bufalaData.nome} apresentou queda significativa de ${analise.percentualQueda}% na produção de leite. Média dos últimos 7 dias: ${analise.mediaRecente}L/dia. Média dos 30 dias anteriores: ${analise.mediaHistorica}L/dia. Redução pode indicar problemas de saúde (mastite, infecções), deficiência nutricional, estresse, problemas no manejo de ordenha ou início de gestação. Necessário investigar causa e implementar ações corretivas.`,
         observacao: `Média últimos 7 dias: ${analise.mediaRecente}L. Média 30 dias anteriores: ${analise.mediaHistorica}L. Investigar saúde, alimentação e condições de manejo.`,
         id_evento_origem: id_bufala,
         tipo_evento_origem: 'QUEDA_PRODUCAO',

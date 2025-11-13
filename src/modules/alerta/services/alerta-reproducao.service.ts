@@ -102,7 +102,7 @@ export class AlertaReproducaoService {
         motivo: `Previsão de parto para ${formatarDataBR(dataPrevistaParto)}.`,
         nicho: NichoAlerta.REPRODUCAO,
         data_alerta: dataPrevistaParto.toISOString().split('T')[0],
-        prioridade: PrioridadeAlerta.ALTA,
+        texto_ocorrencia_clinica: `Búfala ${bufalaData.nome} com parto previsto para ${formatarDataBR(dataPrevistaParto)}. Gestação confirmada em ${formatarDataBR(dataEvento)}. Necessário preparar área de maternidade e monitorar sinais de proximidade do parto.`,
         observacao: `Preparar área de maternidade. Gestação confirmada em ${formatarDataBR(dataEvento)}.`,
         id_evento_origem: reproducao.id_reproducao,
         tipo_evento_origem: 'DADOS_REPRODUCAO',
@@ -188,7 +188,7 @@ export class AlertaReproducaoService {
         motivo: `Cobertura de ${bufalaData.nome} em ${formatarDataBR(cobertura.dt_evento)} ainda sem diagnóstico (${diasDesdeCobertura} dias).`,
         nicho: NichoAlerta.REPRODUCAO,
         data_alerta: hoje.toISOString().split('T')[0],
-        prioridade: PrioridadeAlerta.MEDIA,
+        texto_ocorrencia_clinica: `Búfala ${bufalaData.nome} foi coberta há ${diasDesdeCobertura} dias (em ${formatarDataBR(cobertura.dt_evento)}) mas ainda não foi realizado diagnóstico de gestação. Tipo de cobertura: ${cobertura.tipo_inseminacao || 'Não informado'}. Diagnóstico recomendado entre 45-60 dias após cobertura.`,
         observacao: `Recomenda-se diagnóstico entre 45-60 dias. Tipo: ${cobertura.tipo_inseminacao || 'Não informado'}. Realizar ultrassonografia.`,
         id_evento_origem: cobertura.id_reproducao,
         tipo_evento_origem: 'COBERTURA_SEM_DIAGNOSTICO',
@@ -287,6 +287,11 @@ export class AlertaReproducaoService {
           ? `Fêmea ${femea.nome} apta para reprodução mas nunca foi coberta.`
           : `Fêmea ${femea.nome} sem cobertura há ${diasSemCobertura} dias.`;
 
+      const descricaoClinica =
+        diasSemCobertura === Infinity
+          ? `Fêmea ${femea.nome} com ${calcularIdadeEmMeses(femea.dt_nascimento)} meses de idade, apta para reprodução, porém nunca foi submetida a cobertura ou inseminação. Animal em idade reprodutiva ideal necessitando avaliação de aptidão e planejamento reprodutivo.`
+          : `Fêmea ${femea.nome} com ${calcularIdadeEmMeses(femea.dt_nascimento)} meses está sem cobertura há ${diasSemCobertura} dias. Animal em idade reprodutiva necessitando avaliação de aptidão e planejamento de nova cobertura/inseminação.`;
+
       const alertaDto: CreateAlertaDto = {
         animal_id: femea.id_bufalo,
         grupo: grupoNome,
@@ -295,7 +300,7 @@ export class AlertaReproducaoService {
         motivo: mensagem,
         nicho: NichoAlerta.REPRODUCAO,
         data_alerta: hoje.toISOString().split('T')[0],
-        prioridade: PrioridadeAlerta.BAIXA,
+        texto_ocorrencia_clinica: descricaoClinica,
         observacao: `Avaliar aptidão reprodutiva e planejar cobertura/inseminação. Idade: ${calcularIdadeEmMeses(femea.dt_nascimento)} meses.`,
         id_evento_origem: femea.id_bufalo,
         tipo_evento_origem: 'FEMEA_VAZIA',

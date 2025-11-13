@@ -131,11 +131,24 @@ export class AlertaClinicoService {
 
       let motivo = `Sinais clínicos precoces em ${bufaloData.nome}: `;
       const sinais: string[] = [];
+      const descricaoClinicaDetalhes: string[] = [];
 
-      if (multiplos) sinais.push('múltiplos tratamentos recentes');
-      if (pesoInsuficiente) sinais.push('ganho de peso insuficiente');
+      if (multiplos) {
+        sinais.push('múltiplos tratamentos recentes');
+        descricaoClinicaDetalhes.push(
+          'apresentou múltiplos tratamentos em curto período, sugerindo baixa resposta imunológica ou condições crônicas',
+        );
+      }
+      if (pesoInsuficiente) {
+        sinais.push('ganho de peso insuficiente');
+        descricaoClinicaDetalhes.push(
+          `teve ganho de peso abaixo do esperado (menos de ${AlertaConstants.GANHO_PESO_MINIMO_60_DIAS}kg nos últimos ${AlertaConstants.PERIODO_ANALISE_PESO_DIAS} dias), indicando possível deficiência nutricional ou problemas de saúde`,
+        );
+      }
 
       motivo += sinais.join(', ') + '.';
+
+      const descricaoClinica = `Búfalo ${bufaloData.nome} com ${calcularIdadeEmMeses(bufaloData.dt_nascimento)} meses de idade ${descricaoClinicaDetalhes.join(' e ')}. Estes sinais clínicos precoces requerem atenção veterinária para avaliação de condição corporal, carga parasitária, qualidade da alimentação, absorção de nutrientes e manejo geral do animal. Intervenção precoce pode prevenir quadros clínicos mais graves.`;
 
       const alertaDto: CreateAlertaDto = {
         animal_id: bufaloData.id_bufalo,
@@ -145,7 +158,7 @@ export class AlertaClinicoService {
         motivo: motivo,
         nicho: NichoAlerta.CLINICO,
         data_alerta: hoje.toISOString().split('T')[0],
-        prioridade: PrioridadeAlerta.MEDIA,
+        texto_ocorrencia_clinica: descricaoClinica,
         observacao: `Idade: ${calcularIdadeEmMeses(bufaloData.dt_nascimento)} meses. Avaliar condição corporal, parasitas, qualidade da alimentação e manejo geral. Considerar avaliação veterinária detalhada.`,
         id_evento_origem: id_bufalo,
         tipo_evento_origem: 'SINAIS_CLINICOS',
