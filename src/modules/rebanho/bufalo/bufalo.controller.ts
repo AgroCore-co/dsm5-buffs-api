@@ -465,15 +465,52 @@ export class BufaloController {
 
   @Delete(':id')
   @HttpCode(204)
-  @ApiOperation({ summary: 'Remove um búfalo do rebanho' })
+  @ApiOperation({
+    summary: 'Remove um búfalo do rebanho (soft delete)',
+    description: 'Marca o búfalo como removido sem deletar do banco. Use POST /:id/restore para recuperar.',
+  })
   @ApiParam({ name: 'id', description: 'ID do búfalo a ser removido', type: String })
   @ApiResponse({ status: 204, description: 'Búfalo removido com sucesso.' })
   @ApiResponse({ status: 404, description: 'Búfalo não encontrado ou não pertence a este usuário.' })
   remove(@Param('id', ParseUUIDPipe) id: string, @User() user: any) {
-    console.log('🗑️ Controller DELETE /bufalos/:id chamado');
-    console.log('👤 User:', user?.email || user?.sub);
+    console.log('Controller DELETE /bufalos/:id chamado');
+    console.log('User:', user?.email || user?.sub);
 
     return this.bufaloService.remove(id, user);
+  }
+
+  @Post(':id/restore')
+  @ApiOperation({
+    summary: 'Restaura búfalo removido',
+    description: 'Restaura um búfalo que foi removido com soft delete.',
+  })
+  @ApiParam({ name: 'id', description: 'ID do búfalo a ser restaurado', type: String })
+  @ApiResponse({ status: 200, description: 'Búfalo restaurado com sucesso.' })
+  @ApiResponse({ status: 404, description: 'Búfalo não encontrado ou não estava removido.' })
+  async restore(@Param('id', ParseUUIDPipe) id: string, @User() user: any) {
+    this.logger.logApiRequest('POST', `/bufalos/${id}/restore`, undefined, {
+      module: 'BufaloController',
+      method: 'restore',
+      userEmail: user?.email || user?.sub,
+    });
+
+    return this.bufaloService.restore(id, user);
+  }
+
+  @Get('deleted/all')
+  @ApiOperation({
+    summary: 'Lista búfalos removidos',
+    description: 'Lista todos os búfalos incluindo os removidos (soft delete).',
+  })
+  @ApiResponse({ status: 200, description: 'Lista de búfalos incluindo deletados retornada com sucesso.' })
+  async findAllWithDeleted(@User() user: any) {
+    this.logger.logApiRequest('GET', '/bufalos/deleted/all', undefined, {
+      module: 'BufaloController',
+      method: 'findAllWithDeleted',
+      userEmail: user?.email || user?.sub,
+    });
+
+    return this.bufaloService.findAllWithDeleted(user);
   }
 
   @Post('processar-categoria/:id')

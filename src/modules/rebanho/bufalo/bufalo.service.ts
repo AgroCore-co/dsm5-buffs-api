@@ -8,6 +8,7 @@ import { GenealogiaService } from '../../reproducao/genealogia/genealogia.servic
 import { PaginationDto, PaginatedResponse } from '../../../core/dto/pagination.dto';
 import { createPaginatedResponse, calculatePaginationParams } from '../../../core/utils/pagination.utils';
 import { formatDateFields, formatDateFieldsArray } from '../../../core/utils/date-formatter.utils';
+import { ISoftDelete } from '../../../core/interfaces/soft-delete.interface';
 
 import { BufaloRepository } from './repositories/bufalo.repository';
 import { BufaloMaturidadeService } from './services/bufalo-maturidade.service';
@@ -15,7 +16,7 @@ import { BufaloCategoriaService } from './services/bufalo-categoria.service';
 import { BufaloFiltrosService } from './services/bufalo-filtros.service';
 
 @Injectable()
-export class BufaloService {
+export class BufaloService implements ISoftDelete {
   private readonly logger = new Logger(BufaloService.name);
   private readonly tableName = 'bufalo';
 
@@ -172,6 +173,7 @@ export class BufaloService {
 
   /**
    * Lista todos os búfalos das propriedades do usuário com paginação.
+   * Exclui búfalos removidos logicamente (deleted_at não nulo).
    */
   async findAll(user: any, paginationDto: PaginationDto = {}): Promise<PaginatedResponse<any>> {
     const { page = 1, limit = 10 } = paginationDto;
@@ -206,11 +208,14 @@ export class BufaloService {
       totalFiltrado = todosBufalos.length;
     }
 
-    // Atualiza maturidade automaticamente
-    await this.maturidadeService.atualizarMaturidadeSeNecessario(dadosFiltrados);
+    // Filtra búfalos não deletados
+    const bufalosAtivos = dadosFiltrados.filter((b) => !b.deleted_at);
 
-    const formattedData = formatDateFieldsArray(resultado.data);
-    return createPaginatedResponse(formattedData, resultado.total, page, limit);
+    // Atualiza maturidade automaticamente
+    await this.maturidadeService.atualizarMaturidadeSeNecessario(bufalosAtivos);
+
+    const formattedData = formatDateFieldsArray(bufalosAtivos);
+    return createPaginatedResponse(formattedData, bufalosAtivos.length, page, limit);
   }
 
   /**
@@ -421,8 +426,16 @@ export class BufaloService {
 
   /**
    * Remove búfalo (soft delete).
+   * Define deleted_at para a data/hora atual.
    */
   async remove(id: string, user: any) {
+    return this.softDelete(id, user);
+  }
+
+  /**
+   * Soft delete: marca búfalo como removido sem deletar do banco.
+   */
+  async softDelete(id: string, user: any) {
     const userId = await this.getUserId(user);
 
     // Valida acesso
@@ -435,15 +448,77 @@ export class BufaloService {
       throw new BadRequestException('Não é possível excluir este búfalo pois ele possui descendentes registrados.');
     }
 
-    // Remove
-    const response = await this.bufaloRepo.delete(id);
+    // Marca como deletado (soft delete)
+    const supabase = this.supabaseService.getAdminClient();
+    const { data, error } = await supabase
+      .from(this.tableName)
+      .update({ deleted_at: new Date().toISOString() })
+      .eq('id_bufalo', id)
+      .select()
+      .single();
 
-    if (response.error) {
-      throw new InternalServerErrorException(`Falha ao excluir búfalo: ${response.error.message}`);
+    if (error) {
+      throw new InternalServerErrorException(`Falha ao remover búfalo: ${error.message}`);
     }
 
-    this.logger.log(`✅ Búfalo removido: ${id}`);
-    return { message: 'Búfalo removido com sucesso.' };
+    this.logger.log(`Búfalo removido (soft delete): ${id}`);
+    return {
+      message: 'Búfalo removido com sucesso (soft delete).',
+      data: formatDateFields(data),
+    };
+  }
+
+  /**
+   * Restaura búfalo removido logicamente.
+   */
+  async restore(id: string, user: any) {
+    const userId = await this.getUserId(user);
+
+    // Valida acesso
+    await this.validateBufaloAccess(id, userId);
+
+    // Verifica se está deletado
+    const supabase = this.supabaseService.getAdminClient();
+    const { data: bufalo } = await supabase.from(this.tableName).select('deleted_at').eq('id_bufalo', id).single();
+
+    if (!bufalo?.deleted_at) {
+      throw new BadRequestException('Este búfalo não está removido.');
+    }
+
+    // Restaura (remove deleted_at)
+    const { data, error } = await supabase.from(this.tableName).update({ deleted_at: null }).eq('id_bufalo', id).select().single();
+
+    if (error) {
+      throw new InternalServerErrorException(`Falha ao restaurar búfalo: ${error.message}`);
+    }
+
+    this.logger.log(`Búfalo restaurado: ${id}`);
+    return {
+      message: 'Búfalo restaurado com sucesso.',
+      data: formatDateFields(data),
+    };
+  }
+
+  /**
+   * Lista todos os búfalos incluindo os removidos logicamente.
+   */
+  async findAllWithDeleted(user: any): Promise<any[]> {
+    const userId = await this.getUserId(user);
+    const propriedadesUsuario = await this.getUserPropriedades(userId);
+
+    const supabase = this.supabaseService.getAdminClient();
+    const { data, error } = await supabase
+      .from(this.tableName)
+      .select('*, raca:id_raca(nome, descricao), grupo:id_grupo(nome_grupo)')
+      .in('id_propriedade', propriedadesUsuario)
+      .order('deleted_at', { ascending: false, nullsFirst: true })
+      .order('dt_nascimento', { ascending: false });
+
+    if (error) {
+      throw new InternalServerErrorException('Erro ao buscar búfalos (incluindo deletados).');
+    }
+
+    return formatDateFieldsArray(data || []);
   }
 
   /**

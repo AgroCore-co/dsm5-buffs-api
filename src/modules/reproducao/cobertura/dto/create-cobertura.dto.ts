@@ -1,6 +1,7 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { IsUUID, IsNotEmpty, IsOptional, IsDateString, IsString, IsIn } from 'class-validator';
 import { Transform } from 'class-transformer';
+import { IsNotFutureDate } from '../../../../core/validators/date.validators';
 
 const tiposInseminacao = ['IA', 'Monta Natural', 'TE'];
 const statusValidos = ['Em andamento', 'Confirmada', 'Falhou', 'Concluída'];
@@ -45,6 +46,7 @@ export class CreateCoberturaDto {
   @ApiProperty({ example: '2025-08-18', description: 'Data do evento (inseminação ou monta)' })
   @IsDateString()
   @IsNotEmpty()
+  @IsNotFutureDate({ message: 'A data do evento não pode estar no futuro' })
   dt_evento: string;
 
   @ApiProperty({

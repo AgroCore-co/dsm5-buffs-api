@@ -10,6 +10,7 @@ import { RegistrarPartoDto } from './dto/registrar-parto.dto';
 import { AlertasService } from '../../alerta/alerta.service';
 import { NichoAlerta, PrioridadeAlerta } from '../../alerta/dto/create-alerta.dto';
 import { RecomendacaoFemeaDto, RecomendacaoMachoDto, MotivoScore } from './dto/recomendacao-acasalamento.dto';
+import { CoberturaValidator } from './validators/cobertura.validator';
 import {
   calcularIAR,
   calcularFPProntidao,
@@ -34,11 +35,22 @@ export class CoberturaService {
   constructor(
     private readonly supabase: SupabaseService,
     private readonly alertasService: AlertasService,
+    private readonly validator: CoberturaValidator,
   ) {}
 
   private readonly tableName = 'dadosreproducao';
 
   async create(dto: CreateCoberturaDto, auth_uuid: string) {
+    // Validações de regras de negócio
+    if (dto.id_bufala && dto.dt_evento) {
+      // Validar fêmea
+      await this.validator.validarAnimalAtivo(dto.id_bufala);
+      await this.validator.validarGestacaoDuplicada(dto.id_bufala, dto.dt_evento);
+      await this.validator.validarIdadeMinimaReproducao(dto.id_bufala, 'F');
+      await this.validator.validarIdadeMaximaReproducao(dto.id_bufala, 'F');
+      await this.validator.validarIntervaloEntrePartos(dto.id_bufala, dto.dt_evento);
+    }
+
     // Don't include id_usuario - it doesn't exist in dadosreproducao table
     const dtoComStatus = {
       ...dto,

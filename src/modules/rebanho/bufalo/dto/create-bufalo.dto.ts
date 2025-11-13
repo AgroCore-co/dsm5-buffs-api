@@ -19,6 +19,7 @@ import {
 import { Type, Transform } from 'class-transformer';
 import { BufaloValidationUtils } from '../utils/validation.utils';
 import { CategoriaABCB } from './categoria-abcb.dto';
+import { IsNotFutureDate, MaxAge } from '../../../../core/validators/date.validators';
 
 // Isso melhora a validação, evita erros de digitação e documenta a API no Swagger.
 export enum NivelMaturidade {
@@ -82,7 +83,8 @@ export class CreateBufaloDto {
   @Type(() => Date)
   @IsDate()
   @IsOptional()
-  @Validate(MaxAgeValidator)
+  @IsNotFutureDate({ message: 'A data de nascimento não pode estar no futuro' })
+  @MaxAge(50, { message: 'O búfalo não pode ter mais de 50 anos de idade' })
   dt_nascimento?: Date;
 
   @ApiProperty({
