@@ -30,17 +30,4 @@ export class CreateGrupoDto {
   @IsOptional()
   @MaxLength(7, { message: 'A cor deve ter no máximo 7 caracteres (formato hexadecimal)' })
   color?: string;
-
-  @ApiProperty({
-    description: 'Nível de maturidade do grupo (B-Bezerro, N-Novilho, V-Vaca, T-Touro).',
-    example: 'N',
-    required: false,
-    maxLength: 1,
-    enum: ['B', 'N', 'V', 'T'],
-  })
-  @IsString({ message: 'O nível de maturidade deve ser uma string' })
-  @IsOptional()
-  @MaxLength(1, { message: 'O nível de maturidade deve ter 1 caractere' })
-  @IsIn(['B', 'N', 'V', 'T'], { message: 'O nível de maturidade deve ser B, N, V ou T' })
-  nivel_maturidade?: string;
 }
