@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
+import { ScheduleModule } from '@nestjs/schedule';
 import { SupabaseModule } from './core/supabase/supabase.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { UsuarioModule } from './modules/usuario/usuario.module';
@@ -11,10 +12,12 @@ import { ReproducaoModule } from './modules/reproducao/reproducao.module';
 import { ProducaoModule } from './modules/producao/producao.module';
 import { HealthModule } from './health/health.module';
 import { DashboardModule } from './modules/dashboard/dashboard.module';
+import { AlertasModule } from './modules/alerta/alerta.module';
 
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
+    ScheduleModule.forRoot(),
     SupabaseModule,
     AuthModule,
     UsuarioModule,
@@ -26,6 +29,7 @@ import { DashboardModule } from './modules/dashboard/dashboard.module';
     ProducaoModule,
     HealthModule,
     DashboardModule,
+    AlertasModule,
   ],
   controllers: [],
   providers: [],

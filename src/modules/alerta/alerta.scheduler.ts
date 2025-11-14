@@ -5,7 +5,7 @@ import { AlertaSanitarioService } from './services/alerta-sanitario.service';
 import { AlertaProducaoService } from './services/alerta-producao.service';
 import { AlertaManejoService } from './services/alerta-manejo.service';
 import { AlertaClinicoService } from './services/alerta-clinico.service';
-import { SupabaseService } from 'src/core/supabase/supabase.service';
+import { SupabaseService } from '../../core/supabase/supabase.service';
 import { SupabaseClient } from '@supabase/supabase-js';
 
 /**
@@ -40,6 +40,19 @@ export class AlertasScheduler {
     private readonly supabaseService: SupabaseService,
   ) {
     this.supabase = this.supabaseService.getAdminClient();
+    this.logger.log(' ═══════════════════════════════════════════════════════');
+    this.logger.log(' AlertasScheduler INICIALIZADO COM SUCESSO!');
+    this.logger.log(' ═══════════════════════════════════════════════════════');
+    this.logger.log(' Schedulers configurados:');
+    this.logger.log('    00:00 - Tratamentos sanitários');
+    this.logger.log('    00:05 - Nascimentos previstos');
+    this.logger.log('    01:00 - Coberturas sem diagnóstico');
+    this.logger.log('    02:00 - Fêmeas vazias');
+    this.logger.log('    03:00 - Vacinações programadas');
+    this.logger.log('    04:00 - Queda de produção');
+    this.logger.log('    05:00 - Secagem pendente');
+    this.logger.log('    06:00 - Sinais clínicos precoces');
+    this.logger.log(' ═══════════════════════════════════════════════════════');
   }
 
   // ═══════════════════════════════════════════════════════════════════════
@@ -52,9 +65,33 @@ export class AlertasScheduler {
    */
   @Cron(CronExpression.EVERY_DAY_AT_MIDNIGHT)
   async verificarTratamentos() {
-    this.logger.log('🩺 [SCHEDULER] Iniciando verificação de tratamentos...');
-    await this.sanitarioService.verificarTratamentos();
-    this.logger.log('✅ [SCHEDULER] Verificação de tratamentos concluída.');
+    const inicio = Date.now();
+    this.logger.log(' [00:00] ═══════════════════════════════════════════════');
+    this.logger.log('🩺 [SCHEDULER] Iniciando verificação de tratamentos sanitários...');
+
+    try {
+      const propriedades = await this.getPropriedadesAtivas();
+      this.logger.log(`📍 ${propriedades.length} propriedades ativas encontradas`);
+
+      let totalAlertas = 0;
+      for (const prop of propriedades) {
+        try {
+          const alertas = await this.sanitarioService.verificarTratamentos(prop.id_propriedade);
+          totalAlertas += alertas;
+          if (alertas > 0) {
+            this.logger.log(`   ✅ ${prop.nome}: ${alertas} alertas criados`);
+          }
+        } catch (error) {
+          this.logger.error(`   ❌ Erro na propriedade ${prop.nome}: ${error.message}`);
+        }
+      }
+
+      const duracao = ((Date.now() - inicio) / 1000).toFixed(2);
+      this.logger.log(`✅ [SCHEDULER] Verificação concluída em ${duracao}s - ${totalAlertas} alertas criados`);
+      this.logger.log('═══════════════════════════════════════════════════════');
+    } catch (error) {
+      this.logger.error(`❌ [SCHEDULER] Erro crítico: ${error.message}`, error.stack);
+    }
   }
 
   /**
@@ -63,9 +100,33 @@ export class AlertasScheduler {
    */
   @Cron('0 3 * * *')
   async verificarVacinacoes() {
-    this.logger.log('💉 [SCHEDULER] Iniciando verificação de vacinações...');
-    await this.sanitarioService.verificarVacinacoes();
-    this.logger.log('✅ [SCHEDULER] Verificação de vacinações concluída.');
+    const inicio = Date.now();
+    this.logger.log('� [03:00] ═══════════════════════════════════════════════');
+    this.logger.log('�💉 [SCHEDULER] Iniciando verificação de vacinações programadas...');
+
+    try {
+      const propriedades = await this.getPropriedadesAtivas();
+      this.logger.log(`📍 ${propriedades.length} propriedades ativas encontradas`);
+
+      let totalAlertas = 0;
+      for (const prop of propriedades) {
+        try {
+          const alertas = await this.sanitarioService.verificarVacinacoes(prop.id_propriedade);
+          totalAlertas += alertas;
+          if (alertas > 0) {
+            this.logger.log(`   ✅ ${prop.nome}: ${alertas} alertas criados`);
+          }
+        } catch (error) {
+          this.logger.error(`   ❌ Erro na propriedade ${prop.nome}: ${error.message}`);
+        }
+      }
+
+      const duracao = ((Date.now() - inicio) / 1000).toFixed(2);
+      this.logger.log(`✅ [SCHEDULER] Verificação concluída em ${duracao}s - ${totalAlertas} alertas criados`);
+      this.logger.log('═══════════════════════════════════════════════════════');
+    } catch (error) {
+      this.logger.error(`❌ [SCHEDULER] Erro crítico: ${error.message}`, error.stack);
+    }
   }
 
   // ═══════════════════════════════════════════════════════════════════════
@@ -78,9 +139,33 @@ export class AlertasScheduler {
    */
   @Cron('5 0 * * *')
   async verificarNascimentos() {
-    this.logger.log('🐃 [SCHEDULER] Iniciando verificação de nascimentos...');
-    await this.reproducaoService.verificarNascimentos();
-    this.logger.log('✅ [SCHEDULER] Verificação de nascimentos concluída.');
+    const inicio = Date.now();
+    this.logger.log('� [00:05] ═══════════════════════════════════════════════');
+    this.logger.log('�🐃 [SCHEDULER] Iniciando verificação de nascimentos previstos...');
+
+    try {
+      const propriedades = await this.getPropriedadesAtivas();
+      this.logger.log(`📍 ${propriedades.length} propriedades ativas encontradas`);
+
+      let totalAlertas = 0;
+      for (const prop of propriedades) {
+        try {
+          const alertas = await this.reproducaoService.verificarNascimentos(prop.id_propriedade);
+          totalAlertas += alertas;
+          if (alertas > 0) {
+            this.logger.log(`   ✅ ${prop.nome}: ${alertas} alertas criados`);
+          }
+        } catch (error) {
+          this.logger.error(`   ❌ Erro na propriedade ${prop.nome}: ${error.message}`);
+        }
+      }
+
+      const duracao = ((Date.now() - inicio) / 1000).toFixed(2);
+      this.logger.log(`✅ [SCHEDULER] Verificação concluída em ${duracao}s - ${totalAlertas} alertas criados`);
+      this.logger.log('═══════════════════════════════════════════════════════');
+    } catch (error) {
+      this.logger.error(`❌ [SCHEDULER] Erro crítico: ${error.message}`, error.stack);
+    }
   }
 
   /**
@@ -89,9 +174,33 @@ export class AlertasScheduler {
    */
   @Cron('0 1 * * *')
   async verificarCoberturaSemDiagnostico() {
-    this.logger.log('🔬 [SCHEDULER] Iniciando verificação de coberturas...');
-    await this.reproducaoService.verificarCoberturaSemDiagnostico();
-    this.logger.log('✅ [SCHEDULER] Verificação de coberturas concluída.');
+    const inicio = Date.now();
+    this.logger.log('🕐 [01:00] ═══════════════════════════════════════════════');
+    this.logger.log('🔬 [SCHEDULER] Iniciando verificação de coberturas sem diagnóstico...');
+
+    try {
+      const propriedades = await this.getPropriedadesAtivas();
+      this.logger.log(`📍 ${propriedades.length} propriedades ativas encontradas`);
+
+      let totalAlertas = 0;
+      for (const prop of propriedades) {
+        try {
+          const alertas = await this.reproducaoService.verificarCoberturaSemDiagnostico(prop.id_propriedade);
+          totalAlertas += alertas;
+          if (alertas > 0) {
+            this.logger.log(`   ✅ ${prop.nome}: ${alertas} alertas criados`);
+          }
+        } catch (error) {
+          this.logger.error(`   ❌ Erro na propriedade ${prop.nome}: ${error.message}`);
+        }
+      }
+
+      const duracao = ((Date.now() - inicio) / 1000).toFixed(2);
+      this.logger.log(`✅ [SCHEDULER] Verificação concluída em ${duracao}s - ${totalAlertas} alertas criados`);
+      this.logger.log('═══════════════════════════════════════════════════════');
+    } catch (error) {
+      this.logger.error(`❌ [SCHEDULER] Erro crítico: ${error.message}`, error.stack);
+    }
   }
 
   /**
@@ -100,9 +209,33 @@ export class AlertasScheduler {
    */
   @Cron('0 2 * * *')
   async verificarFemeasVazias() {
+    const inicio = Date.now();
+    this.logger.log('🕐 [02:00] ═══════════════════════════════════════════════');
     this.logger.log('🚺 [SCHEDULER] Iniciando verificação de fêmeas vazias...');
-    await this.reproducaoService.verificarFemeasVazias();
-    this.logger.log('✅ [SCHEDULER] Verificação de fêmeas vazias concluída.');
+
+    try {
+      const propriedades = await this.getPropriedadesAtivas();
+      this.logger.log(`📍 ${propriedades.length} propriedades ativas encontradas`);
+
+      let totalAlertas = 0;
+      for (const prop of propriedades) {
+        try {
+          const alertas = await this.reproducaoService.verificarFemeasVazias(prop.id_propriedade);
+          totalAlertas += alertas;
+          if (alertas > 0) {
+            this.logger.log(`   ✅ ${prop.nome}: ${alertas} alertas criados`);
+          }
+        } catch (error) {
+          this.logger.error(`   ❌ Erro na propriedade ${prop.nome}: ${error.message}`);
+        }
+      }
+
+      const duracao = ((Date.now() - inicio) / 1000).toFixed(2);
+      this.logger.log(`✅ [SCHEDULER] Verificação concluída em ${duracao}s - ${totalAlertas} alertas criados`);
+      this.logger.log('═══════════════════════════════════════════════════════');
+    } catch (error) {
+      this.logger.error(`❌ [SCHEDULER] Erro crítico: ${error.message}`, error.stack);
+    }
   }
 
   // ═══════════════════════════════════════════════════════════════════════
@@ -115,9 +248,33 @@ export class AlertasScheduler {
    */
   @Cron('0 4 * * *')
   async verificarQuedaProducao() {
+    const inicio = Date.now();
+    this.logger.log('🕐 [04:00] ═══════════════════════════════════════════════');
     this.logger.log('🥛 [SCHEDULER] Iniciando verificação de queda de produção...');
-    await this.producaoService.verificarQuedaProducao();
-    this.logger.log('✅ [SCHEDULER] Verificação de queda de produção concluída.');
+
+    try {
+      const propriedades = await this.getPropriedadesAtivas();
+      this.logger.log(`📍 ${propriedades.length} propriedades ativas encontradas`);
+
+      let totalAlertas = 0;
+      for (const prop of propriedades) {
+        try {
+          const alertas = await this.producaoService.verificarQuedaProducao(prop.id_propriedade);
+          totalAlertas += alertas;
+          if (alertas > 0) {
+            this.logger.log(`   ✅ ${prop.nome}: ${alertas} alertas criados`);
+          }
+        } catch (error) {
+          this.logger.error(`   ❌ Erro na propriedade ${prop.nome}: ${error.message}`);
+        }
+      }
+
+      const duracao = ((Date.now() - inicio) / 1000).toFixed(2);
+      this.logger.log(`✅ [SCHEDULER] Verificação concluída em ${duracao}s - ${totalAlertas} alertas criados`);
+      this.logger.log('═══════════════════════════════════════════════════════');
+    } catch (error) {
+      this.logger.error(`❌ [SCHEDULER] Erro crítico: ${error.message}`, error.stack);
+    }
   }
 
   // ═══════════════════════════════════════════════════════════════════════
@@ -130,9 +287,33 @@ export class AlertasScheduler {
    */
   @Cron('0 5 * * *')
   async verificarSecagemPendente() {
+    const inicio = Date.now();
+    this.logger.log('🕐 [05:00] ═══════════════════════════════════════════════');
     this.logger.log('🛑 [SCHEDULER] Iniciando verificação de secagem pendente...');
-    await this.manejoService.verificarSecagemPendente();
-    this.logger.log('✅ [SCHEDULER] Verificação de secagem pendente concluída.');
+
+    try {
+      const propriedades = await this.getPropriedadesAtivas();
+      this.logger.log(`📍 ${propriedades.length} propriedades ativas encontradas`);
+
+      let totalAlertas = 0;
+      for (const prop of propriedades) {
+        try {
+          const alertas = await this.manejoService.verificarSecagemPendente(prop.id_propriedade);
+          totalAlertas += alertas;
+          if (alertas > 0) {
+            this.logger.log(`   ✅ ${prop.nome}: ${alertas} alertas criados`);
+          }
+        } catch (error) {
+          this.logger.error(`   ❌ Erro na propriedade ${prop.nome}: ${error.message}`);
+        }
+      }
+
+      const duracao = ((Date.now() - inicio) / 1000).toFixed(2);
+      this.logger.log(`✅ [SCHEDULER] Verificação concluída em ${duracao}s - ${totalAlertas} alertas criados`);
+      this.logger.log('═══════════════════════════════════════════════════════');
+    } catch (error) {
+      this.logger.error(`❌ [SCHEDULER] Erro crítico: ${error.message}`, error.stack);
+    }
   }
 
   // ═══════════════════════════════════════════════════════════════════════
@@ -146,32 +327,56 @@ export class AlertasScheduler {
    */
   @Cron('0 6 * * *')
   async verificarSinaisClinicosPrecoces() {
+    const inicio = Date.now();
+    this.logger.log('🕐 [06:00] ═══════════════════════════════════════════════');
     this.logger.log('🩹 [SCHEDULER] Iniciando verificação de sinais clínicos precoces...');
 
     try {
-      // Buscar todas as propriedades ativas do sistema
-      const { data: propriedades, error } = await this.supabase.from('propriedade').select('id_propriedade').is('deleted_at', null);
-
-      if (error || !propriedades || propriedades.length === 0) {
-        this.logger.warn('⚠️  [SCHEDULER] Nenhuma propriedade encontrada para verificação clínica.');
-        return;
-      }
-
-      this.logger.log(`📋 [SCHEDULER] Verificando ${propriedades.length} propriedade(s)...`);
+      const propriedades = await this.getPropriedadesAtivas();
+      this.logger.log(`� ${propriedades.length} propriedades ativas encontradas`);
 
       let totalAlertas = 0;
       for (const prop of propriedades) {
         try {
           const alertas = await this.clinicoService.verificarSinaisClinicosPrecoces(prop.id_propriedade);
           totalAlertas += alertas;
+          if (alertas > 0) {
+            this.logger.log(`   ✅ ${prop.nome}: ${alertas} alertas criados`);
+          }
         } catch (error) {
-          this.logger.error(`❌ [SCHEDULER] Erro ao verificar propriedade ${prop.id_propriedade}:`, error.message);
+          this.logger.error(`   ❌ Erro na propriedade ${prop.nome}: ${error.message}`);
         }
       }
 
-      this.logger.log(`✅ [SCHEDULER] Verificação de sinais clínicos concluída. Total: ${totalAlertas} alertas criados.`);
+      const duracao = ((Date.now() - inicio) / 1000).toFixed(2);
+      this.logger.log(`✅ [SCHEDULER] Verificação concluída em ${duracao}s - ${totalAlertas} alertas criados`);
+      this.logger.log('═══════════════════════════════════════════════════════');
     } catch (error) {
-      this.logger.error('❌ [SCHEDULER] Erro crítico na verificação de sinais clínicos:', error);
+      this.logger.error(`❌ [SCHEDULER] Erro crítico: ${error.message}`, error.stack);
+    }
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════
+  // MÉTODOS AUXILIARES
+  // ═══════════════════════════════════════════════════════════════════════
+
+  /**
+   * Busca todas as propriedades ativas do sistema.
+   * @returns Array de propriedades com id_propriedade e nome
+   */
+  private async getPropriedadesAtivas(): Promise<Array<{ id_propriedade: string; nome: string }>> {
+    try {
+      const { data, error } = await this.supabase.from('propriedade').select('id_propriedade, nome').is('deleted_at', null);
+
+      if (error) {
+        this.logger.error('❌ Erro ao buscar propriedades ativas:', error);
+        return [];
+      }
+
+      return data || [];
+    } catch (error) {
+      this.logger.error('❌ Erro crítico ao buscar propriedades:', error);
+      return [];
     }
   }
 }
