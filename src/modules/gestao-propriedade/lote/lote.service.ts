@@ -110,7 +110,7 @@ export class LoteService {
       .select(
         `
         *,
-        grupo:id_grupo(id_grupo, nome_grupo, color, nivel_maturidade)
+        grupo:id_grupo(id_grupo, nome_grupo, color)
       `,
       )
       .eq('id_propriedade', id_propriedade)
@@ -132,7 +132,7 @@ export class LoteService {
         `
         *,
         propriedade:id_propriedade(id_dono),
-        grupo:id_grupo(id_grupo, nome_grupo, color, nivel_maturidade)
+        grupo:id_grupo(id_grupo, nome_grupo, color)
       `,
       )
       .eq('id_lote', id)
