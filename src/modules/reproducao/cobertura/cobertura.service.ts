@@ -52,17 +52,27 @@ export class CoberturaService implements ISoftDelete {
       if (dto.id_semen) {
         throw new BadRequestException('Monta Natural não deve ter id_semen');
       }
+      if (dto.id_doadora) {
+        throw new BadRequestException('Monta Natural não deve ter id_doadora');
+      }
     }
 
-    if (dto.tipo_inseminacao === 'IA') {
+    if (dto.tipo_inseminacao === 'IA' || dto.tipo_inseminacao === 'IATF') {
       if (!dto.id_semen) {
-        throw new BadRequestException('IA (Inseminação Artificial) requer id_semen (material genético)');
+        const tipoNome = dto.tipo_inseminacao === 'IA' ? 'IA (Inseminação Artificial)' : 'IATF (Inseminação Artificial em Tempo Fixo)';
+        throw new BadRequestException(`${tipoNome} requer id_semen (material genético)`);
+      }
+      if (dto.id_doadora) {
+        throw new BadRequestException('IA e IATF não devem ter id_doadora (apenas TE usa doadora)');
       }
     }
 
     if (dto.tipo_inseminacao === 'TE') {
-      if (!dto.id_semen || !dto.id_doadora) {
-        throw new BadRequestException('TE (Transferência de Embrião) requer id_semen e id_doadora');
+      if (!dto.id_semen) {
+        throw new BadRequestException('TE (Transferência de Embrião) requer id_semen (embrião)');
+      }
+      if (!dto.id_doadora) {
+        throw new BadRequestException('TE (Transferência de Embrião) requer id_doadora (búfala doadora do óvulo)');
       }
     }
 
@@ -104,7 +114,7 @@ export class CoberturaService implements ISoftDelete {
     }
 
     // ============================================================
-    // 4. VALIDAR DOADORA (se TE)
+    // 4. VALIDAR BÚFALA DOADORA (se TE - Transferência de Embrião)
     // ============================================================
     if (dto.id_doadora) {
       await this.validator.validarAnimalAtivo(dto.id_doadora);
@@ -124,12 +134,12 @@ export class CoberturaService implements ISoftDelete {
       }
 
       if (doadora.sexo !== 'F') {
-        throw new BadRequestException(`Animal "${doadora.nome}" não é fêmea. id_doadora deve ser uma búfala.`);
+        throw new BadRequestException(`Animal "${doadora.nome}" não é fêmea. Para TE, id_doadora deve ser uma búfala fêmea.`);
       }
     }
 
     // ============================================================
-    // 5. VALIDAR MATERIAL GENÉTICO (se IA ou TE)
+    // 5. VALIDAR MATERIAL GENÉTICO (se IA, IATF ou TE)
     // ============================================================
     if (dto.id_semen) {
       const { data: semen, error: erroSemen } = await this.supabase
@@ -147,11 +157,12 @@ export class CoberturaService implements ISoftDelete {
         throw new BadRequestException(`Material genético está inativo e não pode ser utilizado`);
       }
 
-      // Validar tipo de material conforme técnica
-      if (dto.tipo_inseminacao === 'IA' && semen.tipo !== 'Sêmen') {
-        throw new BadRequestException('IA (Inseminação Artificial) requer material genético do tipo "Sêmen"');
+      // Validar tipo de material conforme técnica (IA e IATF usam Sêmen)
+      if ((dto.tipo_inseminacao === 'IA' || dto.tipo_inseminacao === 'IATF') && semen.tipo !== 'Sêmen') {
+        throw new BadRequestException('IA e IATF requerem material genético do tipo "Sêmen"');
       }
 
+      // TE usa Embrião
       if (dto.tipo_inseminacao === 'TE' && semen.tipo !== 'Embrião') {
         throw new BadRequestException('TE (Transferência de Embrião) requer material genético do tipo "Embrião"');
       }
