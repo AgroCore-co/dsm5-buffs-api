@@ -32,10 +32,23 @@ export class CreateCoberturaDto {
   @Transform(({ value }) => (value === '' ? undefined : value))
   id_doadora?: string;
 
-  @ApiProperty({ example: 'f47ac10b-58cc-4372-a567-0e02b2c3d479', description: 'ID da fêmea receptora (quem está sendo coberta)' })
+  @ApiProperty({
+    example: 'f47ac10b-58cc-4372-a567-0e02b2c3d479',
+    description: 'ID da fêmea receptora (quem está sendo inseminada/coberta)',
+  })
   @IsUUID()
   @IsNotEmpty()
   id_bufala: string;
+
+  @ApiProperty({
+    example: 'f47ac10b-58cc-4372-a567-0e02b2c3d479',
+    description: 'ID do macho reprodutor (obrigatório apenas para Monta Natural)',
+    required: false,
+  })
+  @IsUUID()
+  @IsOptional()
+  @Transform(({ value }) => (value === '' ? undefined : value))
+  id_bufalo?: string;
 
   @ApiProperty({ example: 'IA', description: 'Tipo de inseminação', enum: tiposInseminacao })
   @IsString()

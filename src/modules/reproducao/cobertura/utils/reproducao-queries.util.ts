@@ -81,15 +81,19 @@ export async function calcularIEPMedio(supabase: SupabaseClient, id_bufala: stri
  * Busca histórico de coberturas de um touro/reprodutor
  * Usa tipo_parto como indicador de sucesso (Normal/Cesárea = prenhez confirmada)
  *
+ * IMPORTANTE: Diferencia entre:
+ * - Monta Natural: usa id_bufalo (o próprio touro cobriu)
+ * - IA/TE: usa id_semen (material genético do touro)
+ *
  * @param supabase - Cliente Supabase
  * @param id_reprodutor - ID do búfalo reprodutor
  * @returns Estatísticas de cobertura do reprodutor
  */
 export async function buscarHistoricoCoberturasTouro(supabase: SupabaseClient, id_reprodutor: string) {
-  // Buscar coberturas onde o touro foi usado (monta natural ou sêmen)
+  // Buscar coberturas onde o touro foi usado (monta natural OU sêmen)
   const { data: coberturas, error } = await supabase
     .from('dadosreproducao')
-    .select('tipo_parto, dt_evento, id_bufalo, id_semen')
+    .select('tipo_parto, dt_evento, tipo_inseminacao, id_bufalo, id_semen')
     .or(`id_bufalo.eq.${id_reprodutor},id_semen.eq.${id_reprodutor}`)
     .not('tipo_parto', 'is', null); // Apenas coberturas com resultado definido
 
@@ -103,13 +107,25 @@ export async function buscarHistoricoCoberturasTouro(supabase: SupabaseClient, i
     };
   }
 
-  const total_coberturas = coberturas?.length || 0;
+  // Filtrar corretamente baseado no tipo de inseminação:
+  // - Monta Natural: o touro é identificado por id_bufalo
+  // - IA/TE: o touro é identificado por id_semen (material genético)
+  const coberturasValidas =
+    coberturas?.filter((c) => {
+      if (c.tipo_inseminacao === 'Monta Natural') {
+        return c.id_bufalo === id_reprodutor;
+      }
+      // IA ou TE: verifica id_semen
+      return c.id_semen === id_reprodutor;
+    }) || [];
+
+  const total_coberturas = coberturasValidas.length;
 
   // Contar prenhezes: tipo_parto = 'Normal' ou 'Cesárea' (Aborto não conta como sucesso)
-  const total_prenhezes = coberturas?.filter((c) => c.tipo_parto === 'Normal' || c.tipo_parto === 'Cesárea').length || 0;
+  const total_prenhezes = coberturasValidas.filter((c) => c.tipo_parto === 'Normal' || c.tipo_parto === 'Cesárea').length;
 
   // Última cobertura (mais recente com resultado)
-  const ultima_cobertura = coberturas && coberturas.length > 0 ? coberturas[coberturas.length - 1].dt_evento : null;
+  const ultima_cobertura = coberturasValidas.length > 0 ? coberturasValidas[coberturasValidas.length - 1].dt_evento : null;
 
   const dias_desde_ultima = ultima_cobertura ? Math.floor((Date.now() - new Date(ultima_cobertura).getTime()) / (1000 * 60 * 60 * 24)) : null;
 

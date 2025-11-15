@@ -141,6 +141,40 @@ export class CoberturaValidator {
   }
 
   /**
+   * Valida se o macho não está sendo usado excessivamente.
+   * Recomendação: Mínimo 3 dias de intervalo entre coberturas naturais.
+   */
+  async validarIntervaloUsoMacho(id_macho: string, dt_evento: string): Promise<void> {
+    const { data: ultimaCobertura, error } = await this.supabase
+      .getAdminClient()
+      .from('dadosreproducao')
+      .select('dt_evento')
+      .eq('id_bufalo', id_macho)
+      .eq('tipo_inseminacao', 'Monta Natural')
+      .order('dt_evento', { ascending: false })
+      .limit(1)
+      .single();
+
+    if (error && error.code !== 'PGRST116') {
+      throw new BadRequestException('Erro ao verificar histórico do reprodutor');
+    }
+
+    if (ultimaCobertura && ultimaCobertura.dt_evento) {
+      const dataUltimaCobertura = new Date(ultimaCobertura.dt_evento);
+      const dataNovaCobertura = new Date(dt_evento);
+
+      const diffTime = dataNovaCobertura.getTime() - dataUltimaCobertura.getTime();
+      const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+
+      if (diffDays < 3) {
+        throw new BadRequestException(
+          `Intervalo mínimo entre coberturas do mesmo reprodutor é de 3 dias. Última cobertura: ${dataUltimaCobertura.toLocaleDateString('pt-BR')}. Intervalo atual: ${diffDays} dia(s)`,
+        );
+      }
+    }
+  }
+
+  /**
    * Valida se o animal está ativo (status = true) e não foi deletado.
    */
   async validarAnimalAtivo(id_animal: string): Promise<void> {
