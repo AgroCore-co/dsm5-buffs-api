@@ -42,9 +42,44 @@ export class CoberturaService implements ISoftDelete {
   private readonly tableName = 'dadosreproducao';
 
   async create(dto: CreateCoberturaDto, auth_uuid: string) {
-    // Validações de regras de negócio
+    // ============================================================
+    // 1. VALIDAR CONSISTÊNCIA DOS CAMPOS POR TIPO DE INSEMINAÇÃO
+    // ============================================================
+    if (dto.tipo_inseminacao === 'Monta Natural') {
+      if (!dto.id_bufalo) {
+        throw new BadRequestException('Monta Natural requer id_bufalo (macho reprodutor)');
+      }
+      if (dto.id_semen) {
+        throw new BadRequestException('Monta Natural não deve ter id_semen');
+      }
+      if (dto.id_doadora) {
+        throw new BadRequestException('Monta Natural não deve ter id_doadora');
+      }
+    }
+
+    if (dto.tipo_inseminacao === 'IA' || dto.tipo_inseminacao === 'IATF') {
+      if (!dto.id_semen) {
+        const tipoNome = dto.tipo_inseminacao === 'IA' ? 'IA (Inseminação Artificial)' : 'IATF (Inseminação Artificial em Tempo Fixo)';
+        throw new BadRequestException(`${tipoNome} requer id_semen (material genético)`);
+      }
+      if (dto.id_doadora) {
+        throw new BadRequestException('IA e IATF não devem ter id_doadora (apenas TE usa doadora)');
+      }
+    }
+
+    if (dto.tipo_inseminacao === 'TE') {
+      if (!dto.id_semen) {
+        throw new BadRequestException('TE (Transferência de Embrião) requer id_semen (embrião)');
+      }
+      if (!dto.id_doadora) {
+        throw new BadRequestException('TE (Transferência de Embrião) requer id_doadora (búfala doadora do óvulo)');
+      }
+    }
+
+    // ============================================================
+    // 2. VALIDAR FÊMEA RECEPTORA
+    // ============================================================
     if (dto.id_bufala && dto.dt_evento) {
-      // Validar fêmea
       await this.validator.validarAnimalAtivo(dto.id_bufala);
       await this.validator.validarGestacaoDuplicada(dto.id_bufala, dto.dt_evento);
       await this.validator.validarIdadeMinimaReproducao(dto.id_bufala, 'F');
@@ -52,7 +87,90 @@ export class CoberturaService implements ISoftDelete {
       await this.validator.validarIntervaloEntrePartos(dto.id_bufala, dto.dt_evento);
     }
 
-    // Don't include id_usuario - it doesn't exist in dadosreproducao table
+    // ============================================================
+    // 3. VALIDAR MACHO REPRODUTOR (se Monta Natural)
+    // ============================================================
+    if (dto.id_bufalo) {
+      await this.validator.validarAnimalAtivo(dto.id_bufalo);
+      await this.validator.validarIdadeMinimaReproducao(dto.id_bufalo, 'M');
+      await this.validator.validarIdadeMaximaReproducao(dto.id_bufalo, 'M');
+      await this.validator.validarIntervaloUsoMacho(dto.id_bufalo, dto.dt_evento);
+
+      // Verificar que é realmente macho
+      const { data: macho, error: erroMacho } = await this.supabase
+        .getAdminClient()
+        .from('bufalo')
+        .select('sexo, nome')
+        .eq('id_bufalo', dto.id_bufalo)
+        .single();
+
+      if (erroMacho || !macho) {
+        throw new BadRequestException(`Reprodutor não encontrado: ${dto.id_bufalo}`);
+      }
+
+      if (macho.sexo !== 'M') {
+        throw new BadRequestException(`Animal "${macho.nome}" não é macho. Para Monta Natural, id_bufalo deve ser um búfalo macho.`);
+      }
+    }
+
+    // ============================================================
+    // 4. VALIDAR BÚFALA DOADORA (se TE - Transferência de Embrião)
+    // ============================================================
+    if (dto.id_doadora) {
+      await this.validator.validarAnimalAtivo(dto.id_doadora);
+      await this.validator.validarIdadeMinimaReproducao(dto.id_doadora, 'F');
+      await this.validator.validarIdadeMaximaReproducao(dto.id_doadora, 'F');
+
+      // Verificar que é realmente fêmea
+      const { data: doadora, error: erroDoadora } = await this.supabase
+        .getAdminClient()
+        .from('bufalo')
+        .select('sexo, nome')
+        .eq('id_bufalo', dto.id_doadora)
+        .single();
+
+      if (erroDoadora || !doadora) {
+        throw new BadRequestException(`Doadora não encontrada: ${dto.id_doadora}`);
+      }
+
+      if (doadora.sexo !== 'F') {
+        throw new BadRequestException(`Animal "${doadora.nome}" não é fêmea. Para TE, id_doadora deve ser uma búfala fêmea.`);
+      }
+    }
+
+    // ============================================================
+    // 5. VALIDAR MATERIAL GENÉTICO (se IA, IATF ou TE)
+    // ============================================================
+    if (dto.id_semen) {
+      const { data: semen, error: erroSemen } = await this.supabase
+        .getAdminClient()
+        .from('materialgenetico')
+        .select('id_material, tipo, ativo')
+        .eq('id_material', dto.id_semen)
+        .single();
+
+      if (erroSemen || !semen) {
+        throw new BadRequestException(`Material genético não encontrado: ${dto.id_semen}`);
+      }
+
+      if (!semen.ativo) {
+        throw new BadRequestException(`Material genético está inativo e não pode ser utilizado`);
+      }
+
+      // Validar tipo de material conforme técnica (IA e IATF usam Sêmen)
+      if ((dto.tipo_inseminacao === 'IA' || dto.tipo_inseminacao === 'IATF') && semen.tipo !== 'Sêmen') {
+        throw new BadRequestException('IA e IATF requerem material genético do tipo "Sêmen"');
+      }
+
+      // TE usa Embrião
+      if (dto.tipo_inseminacao === 'TE' && semen.tipo !== 'Embrião') {
+        throw new BadRequestException('TE (Transferência de Embrião) requer material genético do tipo "Embrião"');
+      }
+    }
+
+    // ============================================================
+    // 6. INSERIR NO BANCO
+    // ============================================================
     const dtoComStatus = {
       ...dto,
       status: dto.status || 'Em andamento',
@@ -138,7 +256,14 @@ export class CoberturaService implements ISoftDelete {
   }
 
   async update(id_repro: string, dto: UpdateCoberturaDto) {
-    await this.findOne(id_repro);
+    const cobertura = await this.findOne(id_repro);
+
+    // Validar se pode atualizar tipo_parto
+    if (dto.tipo_parto && cobertura.status !== 'Confirmada') {
+      throw new BadRequestException(
+        'Apenas coberturas com status "Confirmada" podem ter tipo_parto atualizado. Use o endpoint de registrar parto para finalizar o processo.',
+      );
+    }
 
     const { data, error } = await this.supabase.getAdminClient().from(this.tableName).update(dto).eq('id_reproducao', id_repro).select().single();
 

@@ -180,7 +180,6 @@ async function bootstrap() {
     .addTag('Produção 2️⃣ - Controle Leiteiro (Ordenhas)', '🥛 Registra cada ordenha individual por búfala')
     .addTag('Produção 3️⃣ - Estoque de Leite', '📦 Consolida produção diária da propriedade')
     .addTag('Produção 4️⃣ - Coletas de Leite', '🚚 Registra coletas realizadas pelo laticínio')
-    .addTag('Produção - Laticínios/Indústrias', '🏭 Cadastro de empresas que coletam leite')
     .addBearerAuth(
       {
         type: 'http',

@@ -3,7 +3,12 @@ import { IsUUID, IsNotEmpty, IsOptional, IsDateString, IsString, IsIn } from 'cl
 import { Transform } from 'class-transformer';
 import { IsNotFutureDate } from '../../../../core/validators/date.validators';
 
-const tiposInseminacao = ['IA', 'Monta Natural', 'TE'];
+// Tipos de Inseminação:
+// - IA (Inseminação Artificial): Uso de sêmen congelado aplicado manualmente
+// - IATF (Inseminação Artificial em Tempo Fixo): IA com protocolo hormonal para sincronizar o cio
+// - TE (Transferência de Embrião): Implantação de embrião em receptora
+// - Monta Natural: Acasalamento natural entre macho e fêmea
+const tiposInseminacao = ['IA', 'IATF', 'TE', 'Monta Natural'];
 const statusValidos = ['Em andamento', 'Confirmada', 'Falhou', 'Concluída'];
 
 export class CreateCoberturaDto {
@@ -14,7 +19,7 @@ export class CreateCoberturaDto {
 
   @ApiProperty({
     example: 'f47ac10b-58cc-4372-a567-0e02b2c3d479',
-    description: 'ID do material genético do sêmen (para IA ou TE)',
+    description: 'ID do material genético (sêmen para IA/IATF ou embrião para TE)',
     required: false,
   })
   @IsUUID()
@@ -24,7 +29,7 @@ export class CreateCoberturaDto {
 
   @ApiProperty({
     example: 'f47ac10b-58cc-4372-a567-0e02b2c3d479',
-    description: 'ID do material genético da doadora (óvulo/embrião para TE)',
+    description: 'ID da búfala doadora do óvulo (obrigatório apenas para TE - Transferência de Embrião)',
     required: false,
   })
   @IsUUID()
@@ -32,12 +37,37 @@ export class CreateCoberturaDto {
   @Transform(({ value }) => (value === '' ? undefined : value))
   id_doadora?: string;
 
-  @ApiProperty({ example: 'f47ac10b-58cc-4372-a567-0e02b2c3d479', description: 'ID da fêmea receptora (quem está sendo coberta)' })
+  @ApiProperty({
+    example: 'f47ac10b-58cc-4372-a567-0e02b2c3d479',
+    description: 'ID da fêmea receptora (quem está sendo inseminada/coberta)',
+  })
   @IsUUID()
   @IsNotEmpty()
   id_bufala: string;
 
-  @ApiProperty({ example: 'IA', description: 'Tipo de inseminação', enum: tiposInseminacao })
+  @ApiProperty({
+    example: 'f47ac10b-58cc-4372-a567-0e02b2c3d479',
+    description: 'ID do macho reprodutor (obrigatório apenas para Monta Natural)',
+    required: false,
+  })
+  @IsUUID()
+  @IsOptional()
+  @Transform(({ value }) => (value === '' ? undefined : value))
+  id_bufalo?: string;
+
+  @ApiProperty({
+    example: 'IA',
+    description: `Tipo de técnica reprodutiva utilizada:
+    
+• IA (Inseminação Artificial): Aplicação manual de sêmen congelado no útero da fêmea. Requer id_semen (material genético tipo "Sêmen").
+
+• IATF (Inseminação Artificial em Tempo Fixo): Similar à IA, porém utiliza protocolo hormonal para sincronizar o cio e permitir inseminação programada. Requer id_semen (material genético tipo "Sêmen").
+
+• TE (Transferência de Embrião): Técnica avançada onde um embrião (resultado da fecundação in vitro) é implantado em uma fêmea receptora. Requer id_semen (material genético tipo "Embrião") e id_doadora (búfala que forneceu o óvulo).
+
+• Monta Natural: Acasalamento natural entre o macho reprodutor e a fêmea. Requer id_bufalo (macho reprodutor).`,
+    enum: tiposInseminacao,
+  })
   @IsString()
   @IsNotEmpty()
   @IsIn(tiposInseminacao)
