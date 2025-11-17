@@ -112,6 +112,25 @@ export class BufaloService implements ISoftDelete {
     }
   }
 
+  /**
+   * Valida se o grupo existe e se o usuário tem acesso através das propriedades vinculadas.
+   */
+  private async validateGrupoAccess(id_grupo: string, userId: number): Promise<void> {
+    const propriedadesUsuario = await this.getUserPropriedades(userId);
+    const supabase = this.supabaseService.getAdminClient();
+
+    const { data: grupo, error } = await supabase
+      .from('grupo')
+      .select('id_grupo, id_propriedade')
+      .eq('id_grupo', id_grupo)
+      .in('id_propriedade', propriedadesUsuario)
+      .single();
+
+    if (error || !grupo) {
+      throw new NotFoundException(`Grupo com ID ${id_grupo} não encontrado ou você não tem acesso a ele.`);
+    }
+  }
+
   // ==================== CRUD BÁSICO ====================
 
   /**
@@ -325,6 +344,29 @@ export class BufaloService implements ISoftDelete {
 
     // Delega para service de filtros
     const resultado = await this.filtrosService.buscarPorPropriedadeEMaturidade(id_propriedade, nivel_maturidade as any, { offset, limit });
+
+    // Atualiza maturidade
+    await this.maturidadeService.atualizarMaturidadeSeNecessario(resultado.data);
+
+    const formattedData = formatDateFieldsArray(resultado.data);
+    return createPaginatedResponse(formattedData, resultado.total, page, limit);
+  }
+
+  /**
+   * Busca búfalos por grupo de manejo.
+   * Retorna todos os búfalos ativos associados ao grupo específico.
+   */
+  async findByGrupo(id_grupo: string, user: any, paginationDto: PaginationDto = {}): Promise<PaginatedResponse<any>> {
+    const { page = 1, limit = 10 } = paginationDto;
+    const { offset } = calculatePaginationParams(page, limit);
+
+    const userId = await this.getUserId(user);
+
+    // Valida se o grupo existe e se o usuário tem acesso
+    await this.validateGrupoAccess(id_grupo, userId);
+
+    // Delega para service de filtros
+    const resultado = await this.filtrosService.buscarPorGrupo(id_grupo, { offset, limit });
 
     // Atualiza maturidade
     await this.maturidadeService.atualizarMaturidadeSeNecessario(resultado.data);

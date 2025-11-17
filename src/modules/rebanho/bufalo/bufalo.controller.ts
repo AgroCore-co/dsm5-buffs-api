@@ -87,6 +87,26 @@ export class BufaloController {
     return this.bufaloService.findByMicrochip(microchip, user);
   }
 
+  @Get('grupo/:id_grupo')
+  @ApiOperation({
+    summary: 'Lista todos os búfalos de um grupo de manejo específico com paginação',
+    description:
+      'Retorna búfalos ativos associados ao grupo ordenados por data de nascimento (mais antigos primeiro). Facilita a exibição de búfalos por grupo na interface sem necessidade de filtros manuais.',
+  })
+  @ApiParam({ name: 'id_grupo', description: 'ID do grupo de manejo (UUID)', type: String })
+  @ApiQuery({ name: 'page', required: false, type: Number, description: 'Número da página (começa em 1)' })
+  @ApiQuery({ name: 'limit', required: false, type: Number, description: 'Número de itens por página (máximo 100)' })
+  @ApiResponse({ status: 200, description: 'Lista paginada de búfalos do grupo retornada com sucesso.' })
+  @ApiResponse({ status: 404, description: 'Grupo não encontrado ou você não tem acesso a ele.' })
+  findByGrupo(@Param('id_grupo', ParseUUIDPipe) id_grupo: string, @User() user: any, @Query() paginationDto: PaginationDto) {
+    this.logger.logApiRequest('GET', `/bufalos/grupo/${id_grupo}`, undefined, {
+      module: 'BufaloController',
+      method: 'findByGrupo',
+      userEmail: user?.email || user?.sub,
+    });
+    return this.bufaloService.findByGrupo(id_grupo, user, paginationDto);
+  }
+
   // ========== ROTAS DE FILTRAGEM ==========
 
   @Get('filtro/raca/:id_raca/propriedade/:id_propriedade')

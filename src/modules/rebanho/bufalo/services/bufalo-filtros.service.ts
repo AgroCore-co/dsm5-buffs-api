@@ -14,6 +14,7 @@ export interface BufaloFiltros {
   brinco?: string;
   nome?: string;
   microchip?: string;
+  id_grupo?: string;
 }
 
 /**
@@ -195,6 +196,15 @@ export class BufaloFiltrosService {
    */
   async buscarPorRacaESexo(id_raca: string, sexo: SexoBufalo, paginacao?: PaginacaoOpcoes): Promise<ResultadoPaginado<any>> {
     return this.filtrarBufalos({ id_raca, sexo, status: true }, paginacao);
+  }
+
+  /**
+   * Busca búfalos por grupo de manejo.
+   * Retorna todos os búfalos ativos associados ao grupo.
+   */
+  async buscarPorGrupo(id_grupo: string, paginacao?: PaginacaoOpcoes): Promise<ResultadoPaginado<any>> {
+    this.logger.debug(`Buscando búfalos do grupo: ${id_grupo}`);
+    return this.filtrarBufalos({ id_grupo, status: true }, paginacao);
   }
 
   /**
