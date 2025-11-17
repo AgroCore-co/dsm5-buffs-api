@@ -930,6 +930,7 @@ export class ControleLeiteiroService implements ISoftDelete {
           .lte('dt_parto', ciclo.dt_parto);
 
         comparativoCiclos.push({
+          id_ciclo_lactacao: ciclo.id_ciclo_lactacao,
           numero_ciclo: count || 0,
           dt_parto: ciclo.dt_parto,
           dt_secagem: ciclo.dt_secagem_real,

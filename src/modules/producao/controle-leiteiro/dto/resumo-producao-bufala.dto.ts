@@ -25,8 +25,18 @@ import { ApiProperty } from '@nestjs/swagger';
  *     "media_diaria": 10.0
  *   },
  *   "comparativo_ciclos": [
- *     { "numero_ciclo": 1, "total_produzido": 2500, "duracao_dias": 305 },
- *     { "numero_ciclo": 2, "total_produzido": 2800, "duracao_dias": 310 }
+ *     {
+ *       "id_ciclo_lactacao": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+ *       "numero_ciclo": 1,
+ *       "total_produzido": 2500,
+ *       "duracao_dias": 305
+ *     },
+ *     {
+ *       "id_ciclo_lactacao": "b2c3d4e5-f6a7-8901-bcde-f12345678901",
+ *       "numero_ciclo": 2,
+ *       "total_produzido": 2800,
+ *       "duracao_dias": 310
+ *     }
  *   ],
  *   "grafico_producao": [
  *     { "data": "2025-01-01", "quantidade": 12.5 },
@@ -168,14 +178,19 @@ export class ResumoProducaoBufalaDto {
    * Útil para análise de tendências e comparação de desempenho.
    */
   @ApiProperty({
-    description: 'Histórico comparativo de todos os ciclos anteriores',
+    description: 'Histórico comparativo de todos os ciclos anteriores finalizados (secos)',
     type: 'array',
     items: {
       type: 'object',
       properties: {
+        id_ciclo_lactacao: {
+          type: 'string',
+          format: 'uuid',
+          description: 'ID único do ciclo de lactação - use para buscar ordenhas detalhadas via GET /lactacao/ciclo/{id_ciclo_lactacao}',
+        },
         numero_ciclo: {
           type: 'integer',
-          description: 'Número sequencial do ciclo',
+          description: 'Número sequencial do ciclo (1, 2, 3...)',
         },
         dt_parto: {
           type: 'string',
@@ -186,17 +201,19 @@ export class ResumoProducaoBufalaDto {
           type: 'string',
           format: 'date',
           nullable: true,
-          description: 'Data em que o ciclo foi encerrado (null se ainda ativo)',
+          description: 'Data em que a búfala foi seca (null se ciclo ativo)',
         },
         total_produzido: {
           type: 'number',
           format: 'float',
-          description: 'Total de litros produzidos no ciclo completo',
+          description: 'Total de litros produzidos durante todo o ciclo',
+          minimum: 0,
         },
         media_diaria: {
           type: 'number',
           format: 'float',
-          description: 'Média de produção diária no ciclo',
+          description: 'Média de produção diária (total_produzido / duracao_dias)',
+          minimum: 0,
         },
         duracao_dias: {
           type: 'integer',
@@ -206,6 +223,8 @@ export class ResumoProducaoBufalaDto {
     },
   })
   comparativo_ciclos: Array<{
+    /** ID único do ciclo de lactação */
+    id_ciclo_lactacao: string;
     /** Número do ciclo */
     numero_ciclo: number;
     /** Data do parto */
