@@ -73,18 +73,6 @@ export class AlertasScheduler implements OnModuleInit {
     this.logger.log('═══════════════════════════════════════════════════════════════');
   }
 
-  /**
-   * TESTE: Scheduler de teste que executa A CADA MINUTO.
-   * Use para confirmar que os CRON jobs estão funcionando.
-   * REMOVER APÓS CONFIRMAR FUNCIONAMENTO EM PRODUÇÃO!
-   */
-  @Cron('* * * * *')
-  async testeSchedulerAtivo() {
-    const agora = new Date();
-    const horaLocal = agora.toLocaleTimeString('pt-BR');
-    this.logger.warn(`[TESTE] Scheduler FUNCIONANDO - ${agora.toISOString()} (${horaLocal})`);
-  }
-
   // ═══════════════════════════════════════════════════════════════════════
   // SANITÁRIO
   // ═══════════════════════════════════════════════════════════════════════
