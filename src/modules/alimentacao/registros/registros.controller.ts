@@ -52,7 +52,7 @@ export class RegistrosController {
     
     **Inclui joins com:**
     - alimentacao_def: tipo_alimentacao e descricao
-    - grupo: nome_grupo e nivel_maturidade
+    - grupo: nome_grupo
     - usuario: nome do usuário que registrou
     
     **Ordenação:** Por data de criação (mais recentes primeiro).`,

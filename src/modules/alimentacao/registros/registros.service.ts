@@ -77,7 +77,7 @@ export class RegistrosService {
         `
         *,
         alimentacao_def:alimentacaodef!id_aliment_def(tipo_alimentacao, descricao),
-        grupo:grupo!id_grupo(nome_grupo, nivel_maturidade),
+        grupo:grupo!id_grupo(nome_grupo),
         usuario:usuario!id_usuario(nome)
       `,
       )
