@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { AlertaReproducaoService } from './services/alerta-reproducao.service';
 import { AlertaSanitarioService } from './services/alerta-sanitario.service';
@@ -27,7 +27,7 @@ import { SupabaseClient } from '@supabase/supabase-js';
  * - 06:00 - Sinais clínicos precoces (CLINICO)
  */
 @Injectable()
-export class AlertasScheduler {
+export class AlertasScheduler implements OnModuleInit {
   private readonly logger = new Logger(AlertasScheduler.name);
   private supabase: SupabaseClient;
 
@@ -40,19 +40,49 @@ export class AlertasScheduler {
     private readonly supabaseService: SupabaseService,
   ) {
     this.supabase = this.supabaseService.getAdminClient();
-    this.logger.log(' ═══════════════════════════════════════════════════════');
-    this.logger.log(' AlertasScheduler INICIALIZADO COM SUCESSO!');
-    this.logger.log(' ═══════════════════════════════════════════════════════');
-    this.logger.log(' Schedulers configurados:');
-    this.logger.log('    00:00 - Tratamentos sanitários');
-    this.logger.log('    00:05 - Nascimentos previstos');
-    this.logger.log('    01:00 - Coberturas sem diagnóstico');
-    this.logger.log('    02:00 - Fêmeas vazias');
-    this.logger.log('    03:00 - Vacinações programadas');
-    this.logger.log('    04:00 - Queda de produção');
-    this.logger.log('    05:00 - Secagem pendente');
-    this.logger.log('    06:00 - Sinais clínicos precoces');
-    this.logger.log(' ═══════════════════════════════════════════════════════');
+  }
+
+  /**
+   * Hook executado quando o módulo é inicializado.
+   * Confirma que o scheduler foi carregado e exibe informações de debug.
+   */
+  onModuleInit() {
+    const now = new Date();
+    const timezone = process.env.TZ || 'UTC';
+    const ambiente = process.env.NODE_ENV || 'development';
+
+    this.logger.log('═══════════════════════════════════════════════════════════════');
+    this.logger.log('ALERTAS SCHEDULER INICIALIZADO COM SUCESSO');
+    this.logger.log('═══════════════════════════════════════════════════════════════');
+    this.logger.log(`Data/Hora Sistema: ${now.toISOString()}`);
+    this.logger.log(`Data/Hora Local: ${now.toLocaleString('pt-BR', { timeZone: timezone })}`);
+    this.logger.log(`Timezone: ${timezone}`);
+    this.logger.log(`Ambiente: ${ambiente}`);
+    this.logger.log('═══════════════════════════════════════════════════════════════');
+    this.logger.log('CRON JOBS CONFIGURADOS:');
+    this.logger.log('   [00:00] Tratamentos sanitários');
+    this.logger.log('   [00:05] Nascimentos previstos');
+    this.logger.log('   [01:00] Coberturas sem diagnóstico');
+    this.logger.log('   [02:00] Fêmeas vazias');
+    this.logger.log('   [03:00] Vacinações programadas');
+    this.logger.log('   [04:00] Queda de produção');
+    this.logger.log('   [05:00] Secagem pendente');
+    this.logger.log('   [06:00] Sinais clínicos precoces');
+    this.logger.log('═══════════════════════════════════════════════════════════════');
+    this.logger.warn('Scheduler está ATIVO e aguardando horários programados');
+    this.logger.log('═══════════════════════════════════════════════════════════════');
+  }
+
+  /**
+   * TESTE: Scheduler de teste que executa A CADA MINUTO.
+   * Use para confirmar que os CRON jobs estão funcionando.
+   * REMOVER APÓS CONFIRMAR FUNCIONAMENTO EM PRODUÇÃO!
+   */
+  @Cron('* * * * *')
+  async testeSchedulerAtivo() {
+    const agora = new Date();
+    const horaLocal = agora.toLocaleTimeString('pt-BR');
+    this.logger.warn(`[TESTE] Scheduler FUNCIONANDO - ${agora.toISOString()} (${horaLocal})`);
   }
 
   // ═══════════════════════════════════════════════════════════════════════
