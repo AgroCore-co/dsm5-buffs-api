@@ -184,7 +184,7 @@ export class FemeaEmLactacaoDto {
       media_diaria: {
         type: 'number',
         format: 'float',
-        description: 'Média de litros por dia (total_produzido / dias_em_lactacao)',
+        description: 'Média de litros por controle leiteiro realizado (total_produzido / quantidade_de_ordenhas_registradas)',
         minimum: 0,
       },
       ultima_ordenha: {
@@ -215,7 +215,7 @@ export class FemeaEmLactacaoDto {
   producao_atual: {
     /** Total acumulado de litros no ciclo */
     total_produzido: number;
-    /** Média diária de produção (litros/dia) */
+    /** Média por controle leiteiro (litros/ordenha) */
     media_diaria: number;
     /** Dados da ordenha mais recente */
     ultima_ordenha: {

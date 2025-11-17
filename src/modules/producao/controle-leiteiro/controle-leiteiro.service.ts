@@ -759,7 +759,8 @@ export class ControleLeiteiroService implements ISoftDelete {
         .order('dt_ordenha', { ascending: false });
 
       const totalProduzido = lactacoes?.reduce((sum, l) => sum + (l.qt_ordenha || 0), 0) || 0;
-      const mediaDiaria = diasEmLactacao > 0 ? totalProduzido / diasEmLactacao : 0;
+      const diasComOrdenha = lactacoes?.length || 0;
+      const mediaDiaria = diasComOrdenha > 0 ? totalProduzido / diasComOrdenha : 0;
       const ultimaOrdenha = lactacoes?.[0] || null;
 
       // 4. Buscar raça
@@ -873,7 +874,8 @@ export class ControleLeiteiroService implements ISoftDelete {
         .order('dt_ordenha', { ascending: false });
 
       const totalProduzido = ordenhasCiclo?.reduce((sum, o) => sum + (o.qt_ordenha || 0), 0) || 0;
-      const mediaDiaria = diasEmLactacao > 0 ? totalProduzido / diasEmLactacao : 0;
+      const diasComOrdenha = ordenhasCiclo?.length || 0;
+      const mediaDiaria = diasComOrdenha > 0 ? totalProduzido / diasComOrdenha : 0;
       const ultimaOrdenha = ordenhasCiclo?.[0] || null;
 
       // Contar número do ciclo

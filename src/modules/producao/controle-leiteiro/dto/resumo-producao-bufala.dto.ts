@@ -117,7 +117,7 @@ export class ResumoProducaoBufalaDto {
       media_diaria: {
         type: 'number',
         format: 'float',
-        description: 'Média de litros/dia (total / dias_em_lactacao)',
+        description: 'Média de litros por controle leiteiro realizado (total_produzido / quantidade_de_ordenhas_registradas)',
         minimum: 0,
       },
       dt_secagem_prevista: {
@@ -160,7 +160,7 @@ export class ResumoProducaoBufalaDto {
     dias_em_lactacao: number;
     /** Total acumulado (litros) */
     total_produzido: number;
-    /** Média diária (litros/dia) */
+    /** Média por controle leiteiro (litros/ordenha) */
     media_diaria: number;
     /** Data prevista de secagem */
     dt_secagem_prevista: string;
