@@ -30,6 +30,8 @@ import {
   estatisticasRebanho,
 } from './utils/reproducao-queries.util';
 import { calcularIdadeEmMeses, determinarStatusFemea } from './utils/reproducao-helpers.util';
+import { CoberturaRepository } from './repositories/cobertura.repository';
+import { mapCoberturaResponse, mapCoberturasResponse } from './mappers/cobertura.mapper';
 
 @Injectable()
 export class CoberturaService implements ISoftDelete {
@@ -37,6 +39,7 @@ export class CoberturaService implements ISoftDelete {
     private readonly supabase: SupabaseService,
     private readonly alertasService: AlertasService,
     private readonly validator: CoberturaValidator,
+    private readonly coberturaRepo: CoberturaRepository,
   ) {}
 
   private readonly tableName = 'dadosreproducao';
@@ -176,12 +179,23 @@ export class CoberturaService implements ISoftDelete {
       status: dto.status || 'Em andamento',
     };
 
-    const { data, error } = await this.supabase.getAdminClient().from(this.tableName).insert(dtoComStatus).select().single();
+    const { data, error } = await this.coberturaRepo.create(dtoComStatus);
 
     if (error) {
       throw new InternalServerErrorException(`Falha ao criar dado de reprodução: ${error.message}`);
     }
-    return formatDateFields(data);
+
+    // Buscar novamente com joins para retornar dados completos
+    const { data: coberturaCompleta, error: errorBusca } = await this.coberturaRepo.findById(data.id_reproducao);
+
+    if (errorBusca || !coberturaCompleta) {
+      // Se falhar ao buscar com joins, retorna o dado básico
+      return formatDateFields(data);
+    }
+
+    // Mapear dados para incluir informações dos animais
+    const mappedData = mapCoberturaResponse(coberturaCompleta);
+    return formatDateFields(mappedData);
   }
 
   async findAll(paginationDto: PaginationDto = {}): Promise<PaginatedResponse<any>> {
@@ -189,30 +203,22 @@ export class CoberturaService implements ISoftDelete {
     const { limit: limitValue, offset } = calculatePaginationParams(page, limit);
 
     // Contar total de registros (excluindo deletados)
-    const { count, error: countError } = await this.supabase
-      .getAdminClient()
-      .from(this.tableName)
-      .select('*', { count: 'exact', head: true })
-      .is('deleted_at', null);
+    const { count, error: countError } = await this.coberturaRepo.count(false);
 
     if (countError) {
       throw new InternalServerErrorException(`Falha ao contar dados de reprodução: ${countError.message}`);
     }
 
     // Buscar registros com paginação (excluindo deletados)
-    const { data, error } = await this.supabase
-      .getAdminClient()
-      .from(this.tableName)
-      .select('*')
-      .is('deleted_at', null)
-      .order('dt_evento', { ascending: false })
-      .range(offset, offset + limitValue - 1);
+    const { data, error } = await this.coberturaRepo.findAll({ offset, limit: limitValue }, false);
 
     if (error) {
       throw new InternalServerErrorException(`Falha ao buscar dados de reprodução: ${error.message}`);
     }
 
-    const formattedData = formatDateFieldsArray(data);
+    // Mapear dados para incluir informações dos animais
+    const mappedData = mapCoberturasResponse(data);
+    const formattedData = formatDateFieldsArray(mappedData);
     return createPaginatedResponse(formattedData, count || 0, page, limitValue);
   }
 
@@ -220,39 +226,36 @@ export class CoberturaService implements ISoftDelete {
     const { page = 1, limit = 10 } = paginationDto;
     const { limit: limitValue, offset } = calculatePaginationParams(page, limit);
 
-    const { count, error: countError } = await this.supabase
-      .getAdminClient()
-      .from(this.tableName)
-      .select('*', { count: 'exact', head: true })
-      .eq('id_propriedade', id_propriedade);
+    // Contar total de registros da propriedade
+    const { count, error: countError } = await this.coberturaRepo.countByPropriedade(id_propriedade);
 
     if (countError) {
       throw new InternalServerErrorException(`Falha ao contar dados de reprodução da propriedade: ${countError.message}`);
     }
 
-    const { data, error } = await this.supabase
-      .getAdminClient()
-      .from(this.tableName)
-      .select('*')
-      .eq('id_propriedade', id_propriedade)
-      .order('dt_evento', { ascending: false })
-      .range(offset, offset + limitValue - 1);
+    // Buscar registros da propriedade com paginação
+    const { data, error } = await this.coberturaRepo.findByPropriedade(id_propriedade, { offset, limit: limitValue });
 
     if (error) {
       throw new InternalServerErrorException(`Falha ao buscar dados de reprodução da propriedade: ${error.message}`);
     }
 
-    const formattedData = formatDateFieldsArray(data);
+    // Mapear dados para incluir informações dos animais
+    const mappedData = mapCoberturasResponse(data);
+    const formattedData = formatDateFieldsArray(mappedData);
     return createPaginatedResponse(formattedData, count || 0, page, limitValue);
   }
 
   async findOne(id_repro: string) {
-    const { data, error } = await this.supabase.getAdminClient().from(this.tableName).select('*').eq('id_reproducao', id_repro).single();
+    const { data, error } = await this.coberturaRepo.findById(id_repro);
 
     if (error || !data) {
       throw new NotFoundException(`Dado de reprodução com ID ${id_repro} não encontrado.`);
     }
-    return formatDateFields(data);
+
+    // Mapear dados para incluir informações dos animais
+    const mappedData = mapCoberturaResponse(data);
+    return formatDateFields(mappedData);
   }
 
   async update(id_repro: string, dto: UpdateCoberturaDto) {
@@ -265,12 +268,15 @@ export class CoberturaService implements ISoftDelete {
       );
     }
 
-    const { data, error } = await this.supabase.getAdminClient().from(this.tableName).update(dto).eq('id_reproducao', id_repro).select().single();
+    const { data, error } = await this.coberturaRepo.update(id_repro, dto);
 
     if (error) {
       throw new InternalServerErrorException(`Falha ao atualizar dado de reprodução: ${error.message}`);
     }
-    return formatDateFields(data);
+
+    // Mapear dados para incluir informações dos animais
+    const mappedData = mapCoberturaResponse(data);
+    return formatDateFields(mappedData);
   }
 
   async remove(id_repro: string) {
@@ -280,13 +286,7 @@ export class CoberturaService implements ISoftDelete {
   async softDelete(id: string) {
     await this.findOne(id);
 
-    const { data, error } = await this.supabase
-      .getAdminClient()
-      .from(this.tableName)
-      .update({ deleted_at: new Date().toISOString() })
-      .eq('id_reproducao', id)
-      .select()
-      .single();
+    const { data, error } = await this.coberturaRepo.softDelete(id);
 
     if (error) {
       throw new InternalServerErrorException(`Falha ao remover dado de reprodução: ${error.message}`);
@@ -299,7 +299,7 @@ export class CoberturaService implements ISoftDelete {
   }
 
   async restore(id: string) {
-    const { data: cobertura } = await this.supabase.getAdminClient().from(this.tableName).select('deleted_at').eq('id_reproducao', id).single();
+    const { data: cobertura } = await this.coberturaRepo.findByIdSimple(id);
 
     if (!cobertura) {
       throw new NotFoundException(`Registro de reprodução com ID ${id} não encontrado`);
@@ -309,13 +309,7 @@ export class CoberturaService implements ISoftDelete {
       throw new BadRequestException('Este registro não está removido');
     }
 
-    const { data, error } = await this.supabase
-      .getAdminClient()
-      .from(this.tableName)
-      .update({ deleted_at: null })
-      .eq('id_reproducao', id)
-      .select()
-      .single();
+    const { data, error } = await this.coberturaRepo.restore(id);
 
     if (error) {
       throw new InternalServerErrorException(`Falha ao restaurar dado de reprodução: ${error.message}`);
@@ -328,18 +322,15 @@ export class CoberturaService implements ISoftDelete {
   }
 
   async findAllWithDeleted(): Promise<any[]> {
-    const { data, error } = await this.supabase
-      .getAdminClient()
-      .from(this.tableName)
-      .select('*')
-      .order('deleted_at', { ascending: false, nullsFirst: true })
-      .order('dt_evento', { ascending: false });
+    const { data, error } = await this.coberturaRepo.findAllWithDeleted();
 
     if (error) {
       throw new InternalServerErrorException('Erro ao buscar dados de reprodução (incluindo deletados)');
     }
 
-    return formatDateFieldsArray(data || []);
+    // Mapear dados para incluir informações dos animais
+    const mappedData = mapCoberturasResponse(data || []);
+    return formatDateFieldsArray(mappedData);
   }
 
   /**
@@ -490,17 +481,11 @@ export class CoberturaService implements ISoftDelete {
       throw new BadRequestException('Apenas coberturas confirmadas (prenhez confirmada) podem ter parto registrado.');
     }
 
-    // 2. Atualizar cobertura com dados do parto
-    const { data: coberturaAtualizada, error: updateError } = await this.supabase
-      .getAdminClient()
-      .from(this.tableName)
-      .update({
-        tipo_parto: dto.tipo_parto,
-        status: 'Concluída',
-      })
-      .eq('id_reproducao', id_repro)
-      .select()
-      .single();
+    // 2. Atualizar cobertura com dados do parto usando repository
+    const { data: coberturaAtualizada, error: updateError } = await this.coberturaRepo.update(id_repro, {
+      tipo_parto: dto.tipo_parto,
+      status: 'Concluída',
+    });
 
     if (updateError) {
       throw new InternalServerErrorException(`Falha ao atualizar cobertura: ${updateError.message}`);
@@ -602,7 +587,7 @@ export class CoberturaService implements ISoftDelete {
     }
 
     return {
-      cobertura: coberturaAtualizada,
+      cobertura: mapCoberturaResponse(coberturaAtualizada),
       ciclo_lactacao: cicloLactacao,
       message: cicloLactacao ? 'Parto registrado, ciclo de lactação criado e alerta de secagem agendado com sucesso' : 'Parto registrado com sucesso',
     };
