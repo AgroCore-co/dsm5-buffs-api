@@ -1,4 +1,5 @@
-import { Controller, Get, Param, ParseUUIDPipe, Query, UseGuards } from '@nestjs/common';
+import { Controller, Get, Param, ParseUUIDPipe, Query, UseGuards, UseInterceptors } from '@nestjs/common';
+import { CacheInterceptor, CacheTTL } from '@nestjs/cache-manager';
 import { ApiTags, ApiOperation, ApiResponse, ApiParam, ApiBearerAuth, ApiQuery } from '@nestjs/swagger';
 import { SupabaseAuthGuard } from '../auth/guards/auth.guard';
 import { DashboardService } from './dashboard.service';
@@ -8,13 +9,15 @@ import { DashboardStatsDto, DashboardLactacaoDto, DashboardProducaoMensalDto, Da
 @UseGuards(SupabaseAuthGuard)
 @ApiTags('Dashboard')
 @Controller('dashboard')
+@UseInterceptors(CacheInterceptor)
 export class DashboardController {
   constructor(private readonly dashboardService: DashboardService) {}
 
   @Get(':id_propriedade')
+  @CacheTTL(300) // 5 minutos
   @ApiOperation({
     summary: 'Obter estatísticas do dashboard para uma propriedade',
-    description: 'Retorna estatísticas completas de uma propriedade específica incluindo contagens de animais, lotes e usuários',
+    description: 'Retorna estatísticas completas de uma propriedade específica incluindo contagens de animais, lotes e usuários (Cache: 5min)',
   })
   @ApiParam({
     name: 'id_propriedade',
@@ -40,9 +43,10 @@ export class DashboardController {
   }
 
   @Get('lactacao/:id_propriedade')
+  @CacheTTL(300) // 5 minutos
   @ApiOperation({
     summary: 'Obter métricas de lactação por ciclo de uma propriedade',
-    description: 'Retorna ciclos de lactação de todas as bufalas fêmeas com classificação (Ótima, Boa, Mediana, Ruim)',
+    description: 'Retorna ciclos de lactação de todas as bufalas fêmeas com classificação (Ótima, Boa, Mediana, Ruim) (Cache: 5min)',
   })
   @ApiParam({
     name: 'id_propriedade',
@@ -71,9 +75,10 @@ export class DashboardController {
   }
 
   @Get('producao-mensal/:id_propriedade')
+  @CacheTTL(600) // 10 minutos
   @ApiOperation({
     summary: 'Obter métricas de produção mensal de leite',
-    description: 'Retorna produção total mensal, comparativo com mês anterior e série histórica anual',
+    description: 'Retorna produção total mensal, comparativo com mês anterior e série histórica anual (Cache: 10min)',
   })
   @ApiParam({
     name: 'id_propriedade',
