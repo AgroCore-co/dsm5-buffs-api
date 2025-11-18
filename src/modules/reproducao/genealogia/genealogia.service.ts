@@ -103,14 +103,15 @@ export class GenealogiaService {
       mae: null,
     };
 
-    // Busca pai e mãe recursivamente se ainda não atingiu o limite
+    // Busca pai e mãe recursivamente em PARALELO se ainda não atingiu o limite
     if (geracoes > 1) {
-      if (bufalo.id_pai) {
-        arvore.pai = await this.construirArvoreCompleta(bufalo.id_pai, geracoes - 1);
-      }
-      if (bufalo.id_mae) {
-        arvore.mae = await this.construirArvoreCompleta(bufalo.id_mae, geracoes - 1);
-      }
+      const [pai, mae] = await Promise.all([
+        bufalo.id_pai ? this.construirArvoreCompleta(bufalo.id_pai, geracoes - 1) : Promise.resolve(null),
+        bufalo.id_mae ? this.construirArvoreCompleta(bufalo.id_mae, geracoes - 1) : Promise.resolve(null),
+      ]);
+
+      arvore.pai = pai;
+      arvore.mae = mae;
     }
 
     return arvore;
@@ -138,14 +139,15 @@ export class GenealogiaService {
       mae: null,
     };
 
-    // Busca pai e mãe se necessário (até 4 gerações)
+    // Busca pai e mãe se necessário (até 4 gerações) em PARALELO
     if (geracao <= 4) {
-      if (bufalo.id_pai) {
-        arvore.pai = await this.construirArvoreParaCategoria(bufalo.id_pai, geracao + 1);
-      }
-      if (bufalo.id_mae) {
-        arvore.mae = await this.construirArvoreParaCategoria(bufalo.id_mae, geracao + 1);
-      }
+      const [pai, mae] = await Promise.all([
+        bufalo.id_pai ? this.construirArvoreParaCategoria(bufalo.id_pai, geracao + 1) : Promise.resolve(null),
+        bufalo.id_mae ? this.construirArvoreParaCategoria(bufalo.id_mae, geracao + 1) : Promise.resolve(null),
+      ]);
+
+      arvore.pai = pai;
+      arvore.mae = mae;
     }
 
     return arvore;

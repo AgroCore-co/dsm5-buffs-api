@@ -36,45 +36,40 @@ export class DashboardService {
         throw new NotFoundException(`Propriedade com ID ${id_propriedade} não encontrada.`);
       }
 
-      // Busca estatísticas dos búfalos com informação da raça
-      const { data: bufalosStats, error: bufalosError } = await supabase
-        .from('bufalo')
-        .select('sexo, nivel_maturidade, status, id_raca, raca:id_raca(nome)')
-        .eq('id_propriedade', id_propriedade);
+      // Executa queries em paralelo para melhor performance
+      const [
+        { data: bufalosStats, error: bufalosError },
+        { data: bufalasLactando, error: lactacaoError },
+        { count: qtdLotes, error: lotesError },
+        { count: qtdUsuarios, error: usuariosError },
+      ] = await Promise.all([
+        // 1. Busca estatísticas dos búfalos
+        supabase.from('bufalo').select('sexo, nivel_maturidade, status, id_raca, raca:id_raca(nome)').eq('id_propriedade', id_propriedade),
+
+        // 2. Busca búfalas em lactação
+        supabase.from('ciclolactacao').select('id_bufala').eq('id_propriedade', id_propriedade).eq('status', 'Em Lactação'),
+
+        // 3. Busca quantidade de lotes
+        supabase.from('lote').select('*', { count: 'exact', head: true }).eq('id_propriedade', id_propriedade),
+
+        // 4. Busca quantidade de usuários
+        supabase.from('usuariopropriedade').select('*', { count: 'exact', head: true }).eq('id_propriedade', id_propriedade),
+      ]);
 
       if (bufalosError) {
         this.logger.logError(bufalosError, { module: 'Dashboard', method: 'getStats', context: 'bufalos', id_propriedade });
         throw new InternalServerErrorException(`Erro ao buscar dados dos búfalos: ${bufalosError.message}`);
       }
 
-      // Busca búfalas em lactação
-      const { data: bufalasLactando, error: lactacaoError } = await supabase
-        .from('ciclolactacao')
-        .select('id_bufala')
-        .eq('id_propriedade', id_propriedade)
-        .eq('status', 'Em Lactação');
-
       if (lactacaoError) {
         this.logger.logError(lactacaoError, { module: 'Dashboard', method: 'getStats', context: 'lactacao', id_propriedade });
         throw new InternalServerErrorException(`Erro ao buscar dados de lactação: ${lactacaoError.message}`);
       }
 
-      // Busca quantidade de lotes
-      const { count: qtdLotes, error: lotesError } = await supabase
-        .from('lote')
-        .select('*', { count: 'exact', head: true })
-        .eq('id_propriedade', id_propriedade);
-
       if (lotesError) {
         this.logger.logError(lotesError, { module: 'Dashboard', method: 'getStats', context: 'lotes', id_propriedade });
         throw new InternalServerErrorException(`Erro ao buscar dados dos lotes: ${lotesError.message}`);
       }
-
-      // Busca quantidade de usuários vinculados à propriedade
-      const { count: qtdUsuarios, error: usuariosError } = await supabase
-        .from('usuariopropriedade')
-        .select('*', { count: 'exact', head: true })
-        .eq('id_propriedade', id_propriedade);
 
       if (usuariosError) {
         this.logger.logError(usuariosError, { module: 'Dashboard', method: 'getStats', context: 'usuarios', id_propriedade });
