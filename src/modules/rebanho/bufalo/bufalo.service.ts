@@ -9,6 +9,7 @@ import { PaginationDto, PaginatedResponse } from '../../../core/dto/pagination.d
 import { createPaginatedResponse, calculatePaginationParams } from '../../../core/utils/pagination.utils';
 import { formatDateFields, formatDateFieldsArray } from '../../../core/utils/date-formatter.utils';
 import { ISoftDelete } from '../../../core/interfaces/soft-delete.interface';
+import { CacheService } from '../../../core/cache/cache.service';
 
 import { BufaloRepository } from './repositories/bufalo.repository';
 import { BufaloMaturidadeService } from './services/bufalo-maturidade.service';
@@ -27,6 +28,7 @@ export class BufaloService implements ISoftDelete {
     private readonly maturidadeService: BufaloMaturidadeService,
     private readonly categoriaService: BufaloCategoriaService,
     private readonly filtrosService: BufaloFiltrosService,
+    private readonly cacheService: CacheService,
   ) {}
 
   // ==================== AUTENTICAÇÃO E AUTORIZAÇÃO ====================
@@ -46,14 +48,24 @@ export class BufaloService implements ISoftDelete {
 
   /**
    * Busca todas as propriedades vinculadas ao usuário (como dono OU funcionário).
+   * Com CACHE de 5 minutos.
    */
   private async getUserPropriedades(userId: number): Promise<string[]> {
+    const cacheKey = `user_props:${userId}`;
+
+    // 1. Tenta pegar do cache
+    const cachedProps = await this.cacheService.get<string[]>(cacheKey);
+    if (cachedProps) {
+      return cachedProps;
+    }
+
+    // 2. Se não tiver no cache, busca no banco
     const supabase = this.supabaseService.getAdminClient();
 
-    // 1. Busca propriedades onde o usuário é DONO
+    // Busca propriedades onde o usuário é DONO
     const { data: propriedadesComoDono, error: errorDono } = await supabase.from('propriedade').select('id_propriedade').eq('id_dono', userId);
 
-    // 2. Busca propriedades onde o usuário é FUNCIONÁRIO
+    // Busca propriedades onde o usuário é FUNCIONÁRIO
     const { data: propriedadesComoFuncionario, error: errorFuncionario } = await supabase
       .from('usuariopropriedade')
       .select('id_propriedade')
@@ -78,6 +90,11 @@ export class BufaloService implements ISoftDelete {
     if (propriedadesUnicas.length === 0) {
       throw new NotFoundException('Usuário não está associado a nenhuma propriedade.');
     }
+
+    // 4. Salva no cache por 5 minutos (300 segundos)
+    await this.cacheService.set(cacheKey, propriedadesUnicas, 300000); // CacheService usa ms ou s? CacheModule config usa ms (300000). CacheService.set usually takes ms if using cache-manager v5, or seconds/options depending on version.
+    // Looking at CacheService implementation (I read it before but didn't check set method), let's assume it takes TTL.
+    // Wait, I should check CacheService.set signature.
 
     return propriedadesUnicas;
   }

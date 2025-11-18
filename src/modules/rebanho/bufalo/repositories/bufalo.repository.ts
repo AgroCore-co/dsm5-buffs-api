@@ -106,7 +106,8 @@ export class BufaloRepository {
     }
 
     if (filtros.nome) {
-      query = query.ilike('nome', `%${filtros.nome}%`);
+      // Otimização: Busca apenas pelo início do nome para usar índices
+      query = query.ilike('nome', `${filtros.nome}%`);
     }
 
     // Aplica ordenação

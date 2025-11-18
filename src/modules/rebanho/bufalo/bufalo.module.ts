@@ -5,12 +5,14 @@ import { SupabaseModule } from '../../../core/supabase/supabase.module';
 import { LoggerModule } from '../../../core/logger/logger.module';
 import { AuthModule } from '../../auth/auth.module';
 import { GenealogiaModule } from '../../reproducao/genealogia/genealogia.module';
+import { CoreModule } from '../../../core/core.module';
 
 // Novos providers da arquitetura limpa
 import { BufaloRepository } from './repositories/bufalo.repository';
 import { BufaloMaturidadeService } from './services/bufalo-maturidade.service';
 import { BufaloCategoriaService } from './services/bufalo-categoria.service';
 import { BufaloFiltrosService } from './services/bufalo-filtros.service';
+import { BufaloScheduler } from './bufalo.scheduler';
 
 /**
  * Módulo de búfalos com Clean Architecture.
@@ -21,11 +23,12 @@ import { BufaloFiltrosService } from './services/bufalo-filtros.service';
  * - BufaloMaturidadeService (lógica de maturidade)
  * - BufaloCategoriaService (lógica de categoria ABCB)
  * - BufaloFiltrosService (lógica de filtros unificados)
+ * - BufaloScheduler (tarefas agendadas)
  */
 @Module({
-  imports: [SupabaseModule, LoggerModule, AuthModule, GenealogiaModule],
+  imports: [SupabaseModule, LoggerModule, AuthModule, GenealogiaModule, CoreModule],
   controllers: [BufaloController],
-  providers: [BufaloService, BufaloRepository, BufaloMaturidadeService, BufaloCategoriaService, BufaloFiltrosService],
+  providers: [BufaloService, BufaloRepository, BufaloMaturidadeService, BufaloCategoriaService, BufaloFiltrosService, BufaloScheduler],
   exports: [BufaloService],
 })
 export class BufaloModule {}
