@@ -15,7 +15,7 @@ export class GenealogiaController {
   constructor(private readonly genealogiaService: GenealogiaService) {}
 
   @Get(':id')
-  @CacheTTL(300) // 5 minutos
+  @CacheTTL(300000) // 5 minutos
   @ApiOperation({ summary: 'Obter a árvore genealógica de um búfalo (Cache: 5min)' })
   @ApiParam({ name: 'id', description: 'ID do búfalo', type: 'string' })
   @ApiQuery({ name: 'geracoes', description: 'Número de gerações a serem exibidas', required: false, type: 'number', example: 3 })
