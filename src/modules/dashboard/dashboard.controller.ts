@@ -43,7 +43,7 @@ export class DashboardController {
   }
 
   @Get('lactacao/:id_propriedade')
-  @CacheTTL(300) // 5 minutos
+  @CacheTTL(300000) // 5 minutos
   @ApiOperation({
     summary: 'Obter métricas de lactação por ciclo de uma propriedade',
     description: 'Retorna ciclos de lactação de todas as bufalas fêmeas com classificação (Ótima, Boa, Mediana, Ruim) (Cache: 5min)',
